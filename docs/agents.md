@@ -68,7 +68,7 @@ On `__aenter__` the session enters every transport in order (via an `AsyncExitSt
 
 ```python
 AgentSession(
-    client=...,  # LLMClientBase (e.g. LLMClient(model=...))
+    client=...,  # any ChatClient (e.g. LLMClient(model=...) or a ScriptedClient in tests)
     system=None,  # system prompt, stored in ConversationState
     mcp_tools=[],  # McpTool | McpTransport instances
     max_tool_rounds=5,  # round cap; None = unbounded (use with care)
