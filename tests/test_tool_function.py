@@ -2,7 +2,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from contextlib import nullcontext
 from dataclasses import dataclass
 from importlib.util import find_spec
-from typing import Annotated, Any, Literal, cast
+from typing import Annotated, Any, Literal, cast, get_type_hints
 
 import pytest
 
@@ -196,7 +196,7 @@ def test_default_validator_is_the_only_installed_one(
         lambda name: object() if name in installed else None,
     )
     with raises:
-        assert isinstance(_resolve(None), expected)
+        assert isinstance(_resolve(None, {}), expected)
 
 
 async def test_a_custom_validator_instance_is_used_as_is() -> None:
@@ -215,3 +215,56 @@ async def test_a_custom_validator_instance_is_used_as_is() -> None:
     t = tool(echo, validator=cast(ToolValidator, Passthrough()))
     assert t.input_schema == {"type": "object", "x": "echo_args"}
     assert await t.handler({"query": "hi"}) == {"wrapped": "hi"}
+
+
+@pytest.mark.skipif(
+    find_spec("msgspec") is None or find_spec("pydantic") is None,
+    reason="needs both libs",
+)
+@pytest.mark.parametrize(
+    ("case", "expected"),
+    [
+        pytest.param("msgspec_meta", MsgspecValidator, id="msgspec_meta"),
+        pytest.param("pydantic_field", PydanticValidator, id="pydantic_field"),
+        pytest.param("struct_in_return", MsgspecValidator, id="struct_in_return"),
+        pytest.param(
+            "base_model_in_optional", PydanticValidator, id="base_model_in_optional"
+        ),
+        pytest.param("mixed", None, id="mixed_raises"),
+    ],
+)
+def test_default_validator_follows_the_annotations(
+    case: str, expected: type | None
+) -> None:
+    import msgspec
+    import pydantic
+
+    class Ref(msgspec.Struct):
+        id: int
+
+    class Model(pydantic.BaseModel):
+        id: int
+
+    async def msgspec_meta(n: Annotated[int, msgspec.Meta(ge=1)]) -> int:
+        return n
+
+    async def pydantic_field(n: Annotated[int, pydantic.Field(ge=1)]) -> int:
+        return n
+
+    async def struct_in_return(query: str) -> list[Ref]:
+        return []
+
+    async def base_model_in_optional(item: Model | None = None) -> str:
+        return ""
+
+    async def mixed(n: Annotated[int, msgspec.Meta(ge=1)]) -> Model:
+        return Model(id=n)
+
+    hints = get_type_hints(locals()[case], include_extras=True)
+    raises = (
+        pytest.raises(ValueError, match="mix msgspec and pydantic")
+        if expected is None
+        else nullcontext()
+    )
+    with raises:
+        assert type(_resolve(None, hints)) is expected

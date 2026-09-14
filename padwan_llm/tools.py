@@ -1,7 +1,15 @@
 import inspect
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from importlib.util import find_spec
-from typing import Any, Literal, Protocol, get_type_hints
+from typing import (
+    Annotated,
+    Any,
+    Literal,
+    Protocol,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 from .mcp import McpTool
 
@@ -97,16 +105,57 @@ _BACKENDS: dict[str, type[ToolValidator]] = {
 }
 
 
-def _resolve(validator: ToolValidator | str | None) -> ToolValidator:
+def _markers(lib: str) -> tuple[type, ...]:
+    """Classes whose presence in an annotation ties it to `lib`."""
+    if lib == "msgspec":
+        import msgspec
+
+        return (msgspec.Meta, msgspec.Struct)
+    import annotated_types
+    import pydantic
+    from pydantic.fields import FieldInfo
+
+    return (FieldInfo, annotated_types.BaseMetadata, pydantic.BaseModel)
+
+
+def _annotated_libs(hints: Mapping[str, Any]) -> set[str]:
+    """Libraries the annotations name, through Annotated metadata, unions and generics."""
+    markers = {lib: _markers(lib) for lib in _BACKENDS if find_spec(lib) is not None}
+    found: set[str] = set()
+
+    def walk(tp: Any) -> None:
+        if get_origin(tp) is Annotated or get_origin(tp) is not None:
+            for arg in get_args(tp):
+                walk(arg)
+            return
+        for lib, classes in markers.items():
+            if isinstance(tp, classes) or (
+                isinstance(tp, type) and issubclass(tp, classes)
+            ):
+                found.add(lib)
+
+    for tp in hints.values():
+        walk(tp)
+    return found
+
+
+def _resolve(
+    validator: ToolValidator | str | None, hints: Mapping[str, Any]
+) -> ToolValidator:
     if validator is None:
-        installed = [lib for lib in _BACKENDS if find_spec(lib) is not None]
+        libs = _annotated_libs(hints)
+        if len(libs) > 1:
+            raise ValueError("annotations mix msgspec and pydantic types; pick one")
+        installed = list(libs) or [
+            lib for lib in _BACKENDS if find_spec(lib) is not None
+        ]
         if not installed:
             raise ImportError(
                 "padwan_llm.tools.tool needs a validator: pip install msgspec or pydantic"
             )
         if len(installed) > 1:
             raise ValueError(
-                "both msgspec and pydantic are installed; "
+                "both msgspec and pydantic are installed and the annotations name neither; "
                 "pass validator='msgspec' or validator='pydantic' to tool()"
             )
         return _BACKENDS[installed[0]]()
@@ -127,8 +176,8 @@ def tool(
     ``name`` defaults to the function name and ``description`` to its docstring. Every
     parameter needs a type annotation and must be passable by keyword; a default makes it
     optional. ``validator`` picks the library doing schema, validation and result dumping
-    (``"msgspec"``, ``"pydantic"`` or any `ToolValidator`); when omitted, the only installed
-    one is used. Constraints and error text are the chosen library's own.
+    (``"msgspec"``, ``"pydantic"`` or any `ToolValidator`); when omitted, the library the
+    annotations name is used, else the only installed one. Constraints and error text are the chosen library's own.
     """
     hints = get_type_hints(fn, include_extras=True)
     fields: list[_Field] = []
@@ -145,7 +194,7 @@ def tool(
             fields.append((param_name, hints[param_name]))
         else:
             fields.append((param_name, hints[param_name], param.default))
-    backend = _resolve(validator)
+    backend = _resolve(validator, hints)
     schema, validate = backend.compile(f"{fn.__name__}_args", fields)
 
     async def handler(args: dict[str, Any]) -> Any:

@@ -74,10 +74,12 @@ Writing a JSON Schema by hand for every local tool gets old.
 - the arguments the model sends are validated before the function runs
 
 Validation needs either `msgspec` or `pydantic` installed (neither is a dependency
-of padwan-llm). With no `validator=`, `tool()` uses the only one installed and
-raises when both are (pydantic is often pulled in by another SDK). Pass
-`validator="msgspec"` or `validator="pydantic"` to choose, or any object
-implementing `ToolValidator` to plug in another library.
+of padwan-llm). With no `validator=`, `tool()` follows the annotations: a
+`msgspec.Meta` constraint or `Struct` type picks msgspec, a `pydantic.Field`
+constraint or `BaseModel` type picks pydantic. A signature of plain types uses the
+only library installed and raises when both are (pydantic is often pulled in by
+another SDK). Pass `validator="msgspec"` or `validator="pydantic"` to choose, or
+any object implementing `ToolValidator` to plug in another library.
 
 ```python
 from padwan_llm.tools import tool
