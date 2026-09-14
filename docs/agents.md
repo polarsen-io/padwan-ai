@@ -88,40 +88,43 @@ weather_tool = tool(get_weather)   # `city` required, `unit` optional
 
 ### Picking the validator
 
-With no `validator=`, `tool()` follows the annotations. A `msgspec.Meta` constraint
-or `Struct` type picks msgspec:
+With no `validator=`, `tool()` follows the annotations: a `msgspec.Meta` constraint
+or `Struct` type picks msgspec, a `pydantic.Field` constraint or `BaseModel` type
+picks pydantic.
 
-```python
-from typing import Annotated
-import msgspec
+=== "msgspec"
 
-class Ref(msgspec.Struct):
-    id: int
-    name: str
+    ```python
+    from typing import Annotated
+    import msgspec
 
-async def search(query: str, limit: Annotated[int, msgspec.Meta(ge=1, le=10)] = 5) -> list[Ref]:
-    """Search the references by name."""
-    return [Ref(id=1, name=query)]
+    class Ref(msgspec.Struct):
+        id: int
+        name: str
 
-search_tool = tool(search)   # msgspec; `limit` carries minimum/maximum in the schema
-```
+    async def search(query: str, limit: Annotated[int, msgspec.Meta(ge=1, le=10)] = 5) -> list[Ref]:
+        """Search the references by name."""
+        return [Ref(id=1, name=query)]
 
-A `pydantic.Field` constraint or `BaseModel` type picks pydantic:
+    search_tool = tool(search)   # `limit` carries minimum/maximum in the schema
+    ```
 
-```python
-from typing import Annotated
-import pydantic
+=== "pydantic"
 
-class Ref(pydantic.BaseModel):
-    id: int
-    name: str
+    ```python
+    from typing import Annotated
+    import pydantic
 
-async def read(ref_id: Annotated[int, pydantic.Field(ge=1)]) -> Ref | None:
-    """Read one reference."""
-    return Ref(id=ref_id, name="EXCAVATOR 20-22T")
+    class Ref(pydantic.BaseModel):
+        id: int
+        name: str
 
-read_tool = tool(read)   # pydantic; the model is dumped to JSON data
-```
+    async def read(ref_id: Annotated[int, pydantic.Field(ge=1)]) -> Ref | None:
+        """Read one reference."""
+        return Ref(id=ref_id, name="EXCAVATOR 20-22T")
+
+    read_tool = tool(read)   # the model is dumped to JSON data
+    ```
 
 A signature of plain types uses the only library installed and raises when both
 are (pydantic is often pulled in by another SDK). Pass `validator=` to choose, or
