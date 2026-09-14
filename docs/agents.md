@@ -154,25 +154,28 @@ serialise is reported as a tool error.
 
 ## Typed answers
 
-An agent that must end on data, not prose, sets `output=AgentOutput(cls)` and calls `run()` instead of `send()`. The model sees one extra tool, `submit` (rename it with `AgentOutput(tool=)`), whose parameters are the answer's JSON Schema; the loop ends when a call to it validates, and `run()` returns the instance.
+An agent that must end on data, not prose, sets `output=AgentOutput(cls)` and calls `run()` instead of `send()`. 
+The model sees one extra tool, `submit` (rename it with `AgentOutput(tool=)`), whose parameters are the answer's JSON Schema; the loop ends when a call to it validates, and `run()` returns the instance.
 
 ```python
+from typing import Literal
+
 import msgspec
 
 
-class Verdict(msgspec.Struct):
-    decision: str  # "match" | "create" | "review"
-    reason: str
-    article_id: int | None = None
+class Triage(msgspec.Struct):
+    priority: Literal["low", "normal", "urgent"]
+    team: str
+    summary: str
 
 
 async with AgentSession(
-    client=client, mcp_tools=[search_tool], output=AgentOutput(Verdict)
+    client=client, mcp_tools=[search_tool], output=AgentOutput(Triage)
 ) as session:
-    verdict = await session.run("Excavator 21 t, tracked")  # a Verdict, validated
+    triage = await session.run("Checkout returns a 500 since 9am, payments are blocked")
 ```
 
-`run()` is typed: `AgentSession(output=AgentOutput(Verdict))` is an `AgentSession[Verdict]`, so `verdict` is a `Verdict` for the type checker too.
+`run()` is typed: `AgentSession(output=AgentOutput(Triage))` is an `AgentSession[Triage]`, so `triage` is a `Triage` for the type checker too.
 
 The answer class is a `msgspec.Struct` or a `pydantic.BaseModel`, validated by its own library through the same backends as `tool()`.
 

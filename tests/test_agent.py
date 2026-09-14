@@ -980,7 +980,7 @@ def verdict(request: pytest.FixtureRequest) -> type:
 
 
 async def _search(_args: dict[str, Any]) -> dict[str, Any]:
-    return {"refs": [{"id": 12, "name": "EXCAVATOR 20-22T"}]}
+    return {"refs": [{"id": 12, "name": "billing"}]}
 
 
 SEARCH = McpTool(
@@ -1010,7 +1010,7 @@ async def test_run_ends_on_a_valid_submit(verdict: type) -> None:
         output=AgentOutput(verdict),
     )
     async with session:
-        answer = await session.run("Excavator 21 t")
+        answer = await session.run("triage this")
     assert answer == verdict(decision="match", article_id=12)  # "12" coerced
     assert len(client.calls) == 2  # no third round after submit
     # the model sees submit from round one, with the answer's schema and no title
