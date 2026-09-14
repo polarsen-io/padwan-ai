@@ -204,7 +204,7 @@ def _extract_text(result: Any) -> str:
 
 
 @dataclass
-class AgentSession[T = Any]:
+class AgentSession[T = object]:
     """Multi-turn conversation runner with streaming and tool dispatch.
 
     Wraps a `ConversationState` with the loop that calls the LLM, dispatches
@@ -324,7 +324,7 @@ class AgentSession[T = Any]:
         self.store.save(self.session_id, self._state.snapshot())
 
     @classmethod
-    def load[O = Any](
+    def load[O = object](
         cls,
         *,
         store: ConversationStore,
