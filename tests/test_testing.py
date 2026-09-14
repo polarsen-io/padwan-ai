@@ -2,7 +2,7 @@ from typing import Any, cast
 
 import pytest
 
-from padwan_llm import AgentSession, ChatStream, LLMClientBase, McpTool
+from padwan_llm import AgentSession, ChatStream, LLMClientBase, McpTool, Message
 from padwan_llm.testing import ScriptedClient, Step
 
 
@@ -29,7 +29,7 @@ async def test_complete_chat_with_tool_calls() -> None:
 
 async def test_requests_are_recorded_and_the_script_ends() -> None:
     client = ScriptedClient([Step(text="ok")])
-    messages: list[Any] = [{"role": "user", "content": "q"}]
+    messages: list[Message] = [{"role": "user", "content": "q"}]
     extra_params = {"metadata": {"trace_id": "abc"}}
     await _drain(
         client.stream_chat(
