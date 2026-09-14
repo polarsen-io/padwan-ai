@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789422494951,
+  "lastUpdate": 1789422962057,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -1050,6 +1050,48 @@ window.BENCHMARK_DATA = {
             "value": 241.75,
             "unit": "ms",
             "range": 3.32
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "711cf1ac41f28e4eef84cc6708b64b087a6cce9d",
+          "message": "chore(release): release 0.10.0 (#74)",
+          "timestamp": "2026-09-14T23:55:31+02:00",
+          "tree_id": "1508c74a0a6ee28b436b1165881af859d8b599ee",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/711cf1ac41f28e4eef84cc6708b64b087a6cce9d"
+        },
+        "date": 1789422961502,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 216.43,
+            "unit": "ms",
+            "range": 4.55
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 215.96,
+            "unit": "ms",
+            "range": 2.63
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 229.82,
+            "unit": "ms",
+            "range": 2.85
           }
         ]
       }
