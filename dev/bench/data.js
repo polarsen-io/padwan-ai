@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789412812956,
+  "lastUpdate": 1789416236134,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -756,6 +756,48 @@ window.BENCHMARK_DATA = {
             "value": 232.2,
             "unit": "ms",
             "range": 5.18
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad9666e3d60604b321dccb59de03bf5deac29190",
+          "message": "feat(tools): pluggable validator for tool() (msgspec or pydantic) (#67)\n\n* feat(tools): build an McpTool from a typed async function\n\ntool(fn) turns a typed async function into an McpTool: the signature becomes the JSON\nSchema the model sees, the docstring the description, and the arguments the model sends\nare validated (and coerced) before the function runs. Pydantic does the work, behind a\nnew optional extra: pip install \"padwan-llm[pydantic]\".\n\n* feat(tools): validate tool arguments with msgspec instead of pydantic\n\nSwap the pydantic extra for msgspec: single wheel, no transitive deps, and the\nconsumers already use it. Keep Annotated constraints in the schema\n(include_extras), refuse positional-only and variadic parameters at build time,\ndrop per-property title noise from the schema, and dump results through\nmsgspec.to_builtins.\n\n* feat(tools): let the caller pick the validator (msgspec or pydantic)\n\ntool() takes validator=\"msgspec\" | \"pydantic\" | ToolValidator instance. With\nnone given it uses the only installed backend and raises when both are, since\nconstraint annotations are library-specific and a guessed backend would drop\nthem silently. Neither library is a dependency or extra; both are dev deps so\nthe suite covers both. Pydantic results are dumped with\npydantic_core.to_jsonable_python; unserialisable results now raise inside the\nhandler so they reach the model as a tool error instead of crashing the session.\n\n* feat(tools): pick the validator from the annotations\n\nWith no validator= given, a msgspec.Meta constraint or Struct type selects\nmsgspec and a pydantic.Field constraint or BaseModel type selects pydantic,\nthrough Annotated metadata, unions and generics. Mixed annotations raise. Plain\nsignatures keep the only-installed rule.\n\n* docs(agents): examples for msgspec, pydantic and explicit validators\n\n* docs(agents): msgspec / pydantic examples as content tabs\n\n* docs(agents): ruff-format the code blocks\n\n---------\n\nCo-authored-by: Carlo Abi Chahine <carlo.abichahine@gmail.com>",
+          "timestamp": "2026-09-14T22:03:21+02:00",
+          "tree_id": "65057c50de962d572c98f4f584d0104f3e98f29a",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/ad9666e3d60604b321dccb59de03bf5deac29190"
+        },
+        "date": 1789416235132,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 210.05,
+            "unit": "ms",
+            "range": 3.06
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 211.71,
+            "unit": "ms",
+            "range": 3.73
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 225.4,
+            "unit": "ms",
+            "range": 4.69
           }
         ]
       }
