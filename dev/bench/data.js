@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789416544901,
+  "lastUpdate": 1789418270455,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -798,6 +798,48 @@ window.BENCHMARK_DATA = {
             "value": 225.4,
             "unit": "ms",
             "range": 4.69
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0d6d67298105e71cddafb878af69aaf2c45a6714",
+          "message": "feat(langfuse): time to first token as completion_start_time (#69)\n\n* feat(langfuse): map the first streamed chunk to completion_start_time\n\nStreams already carried `gen_ai.response.time_to_first_chunk` (a duration), but\nLangfuse only shows time to first token when a generation has an absolute\n`completion_start_time`, and the OTel mask hook does not expose span start\ntimes, so the duration alone could not be converted.\n\n- otel: the two streaming paths share `_record_first_chunk`, which also stamps\n  `padwan_llm.response.first_chunk_time` (ISO 8601 UTC) on the chat span.\n- langfuse: `_mapped_attributes` serializes that instant as\n  `langfuse.observation.completion_start_time`, the same JSON form the SDK uses.\n- docs: both attribute tables list the new mapping.\n\n* fix(otel): count the first raw provider chunk on the active chat span\n\nThe chat wrapper only sees the text chunks a `ChatStream` yields, so a\nstream that answers with tool calls or reasoning alone never recorded a\ntime to first chunk. The raw `stream()` wrapper, which already enriches\nthe active chat span, now records the first provider chunk on it; the\nchat wrapper's own text-chunk record becomes a fallback for providers\nwhose raw stream is not wrapped. `_record_first_chunk` records once per\nspan.\n\nThe wall-clock instant now uses the `Z` suffix, like the Langfuse SDK.\n\n* fix(otel): keep the stream label on the raw first-chunk histogram\n\nThe raw stream wrapper recorded time_to_first_chunk without\ngen_ai.request.stream=True, unlike the chat wrapper it replaces. Also\nshortens the new docstring and comment, and states in the docs which\nproviders count the first raw chunk versus the first text chunk.\n\n---------\n\nCo-authored-by: Carlo Abi Chahine <carlo.abichahine@gmail.com>",
+          "timestamp": "2026-09-14T22:37:07+02:00",
+          "tree_id": "040f8bcd481ea9c1779a9989a8d6268c44b4500d",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/0d6d67298105e71cddafb878af69aaf2c45a6714"
+        },
+        "date": 1789418268912,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 154.72,
+            "unit": "ms",
+            "range": 5.14
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 148.97,
+            "unit": "ms",
+            "range": 5.24
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 157.84,
+            "unit": "ms",
+            "range": 4.09
           }
         ]
       }
