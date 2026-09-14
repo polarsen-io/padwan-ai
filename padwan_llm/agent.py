@@ -134,7 +134,7 @@ class _OutputRun[T]:
             "details": reason,
         }
 
-    async def _handle(self, args: dict[str, Any]) -> Any:
+    async def _handle(self, args: dict[str, Any]) -> str | dict[str, str]:
         if self.done:
             return {"error": f"{self.spec.tool} already settled this run, call ignored"}
         try:
