@@ -13,7 +13,6 @@ from padwan_llm import (
     ChatStream,
     ConversationSnapshot,
     ConversationState,
-    LLMClientBase,
     McpTool,
     ToolCall,
     ToolCallFunction,
@@ -84,7 +83,7 @@ def make_session(
     # Pass mcp_tools through by reference so tests can mutate the same list
     # the session reads each round.
     session = AgentSession(
-        client=cast(LLMClientBase, client),
+        client=client,
         mcp_tools=mcp_tools,
         **kwargs,
     )
@@ -253,7 +252,7 @@ async def test_max_tool_rounds_limits_llm_calls() -> None:
 
 def test_invalid_max_tool_rounds_rejected() -> None:
     with pytest.raises(ValueError, match="max_tool_rounds"):
-        AgentSession(client=cast(LLMClientBase, FakeClient([])), max_tool_rounds=0)
+        AgentSession(client=FakeClient([]), max_tool_rounds=0)
 
 
 # Context truncation
@@ -535,7 +534,7 @@ async def test_load_restores_state_from_store(
 
     client2 = FakeClient(responses=[FakeChatStream(chunks=["y"])])
     session2 = AgentSession.load(
-        client=cast(LLMClientBase, client2),
+        client=client2,
         store=store,
         session_id="abc",
         system=load_system,
@@ -572,7 +571,7 @@ async def test_load_starts_fresh_when_no_snapshot(
     store = FakeStore()
     fake = FakeClient(responses=[FakeChatStream(chunks=["hi"])])
     session = AgentSession.load(
-        client=cast(LLMClientBase, fake),
+        client=fake,
         store=store,
         session_id=session_id_arg,
     )
@@ -595,7 +594,7 @@ async def test_load_rejects_both_model_and_client() -> None:
     fake = FakeClient(responses=[FakeChatStream(chunks=["y"])])
     with pytest.raises(ValueError, match="exactly one of model= or client="):
         AgentSession.load(
-            client=cast(LLMClientBase, fake),
+            client=fake,
             model="gpt-4o",
             store=store,
             session_id="abc",
@@ -887,7 +886,7 @@ async def test_aenter_unwinds_on_partial_failure() -> None:
 
     with pytest.raises(RuntimeError, match="boom: server unavailable"):
         async with AgentSession(
-            client=cast(LLMClientBase, fake),
+            client=fake,
             mcp_tools=cast(Sequence[McpTool], [failing]),
         ):
             pytest.fail("AgentSession.__aenter__ should have raised")
@@ -934,7 +933,7 @@ async def test_on_mcp_connect(transports, expected_count) -> None:
     connected: list[object] = []
     fake = FakeClient(responses=[FakeChatStream(chunks=["hi"])])
     async with AgentSession(
-        client=cast(LLMClientBase, fake),
+        client=fake,
         mcp_tools=cast(Sequence[McpTool], transports()),
         on_mcp_connect=connected.append,
     ):
@@ -948,7 +947,7 @@ async def test_on_mcp_connect_ping_failure_unwinds() -> None:
     failing = _PingFailTransport(_tools=[])
     with pytest.raises(RuntimeError, match="ping failed"):
         async with AgentSession(
-            client=cast(LLMClientBase, fake),
+            client=fake,
             mcp_tools=cast(Sequence[McpTool], [failing]),
         ):
             pytest.fail("should have raised")
