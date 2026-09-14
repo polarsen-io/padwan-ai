@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789419128814,
+  "lastUpdate": 1789422453665,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -1008,6 +1008,48 @@ window.BENCHMARK_DATA = {
             "value": 241.44,
             "unit": "ms",
             "range": 4.82
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ad0a31abab8ccd05935b0707daeda3dc35bb984f",
+          "message": "feat(agent): typed final answer through an output tool (#73)\n\n* feat(agent): typed final answer through an output tool\n\nAgentSession(output=Model) adds a `submit` tool whose parameters are the\nanswer's schema; run() drives the loop until a call validates and returns\nthe instance. Invalid calls go back to the model up to max_repairs times,\nthen OutputError; a text answer or the round limit raise OutputError too.\n\nThe answer class goes through the tool() validators: ToolValidator gains\nschema(cls) and convert(obj, cls), compile() is built on them, and the\nbackend is resolved from the class (Struct, BaseModel) or output_validator=.\n\n* perf(tools): build the validator adapter once per class\n\nToolValidator.schema/convert become adapt(cls) -> (schema, convert): a pydantic\nTypeAdapter is built once and reused, per the pydantic performance docs, instead\nof once per tool call.\n\n* refactor(agent): group the typed-answer settings in AgentOutput\n\nAgentSession(output=AgentOutput(cls, validator=, tool=, max_repairs=)) replaces\nfour output_* fields; per-run state moves to a private _OutputRun so one\nAgentOutput can be shared across sessions.\n\n* fix(agent): settle the typed answer once, reject broken JSON, keep recursive schemas valid\n\n- the first accepted submit or the exhausted repair budget settles a run;\n  later calls in the round are answered with an error and ignored\n- tool arguments that are not valid JSON are returned as an error instead\n  of running the handler on {}; for the output tool it counts as a repair\n- ToolValidator.adapt keeps a recursive class under $defs so its inner\n  $refs resolve, for msgspec and pydantic alike\n- AgentOutput[T] / AgentSession[T = Any]: run() returns T, load() infers it\n- docs: output= in the configuration block, approval and sibling-tool notes\n\n* refactor(agent): type the output handler's result\n\n* refactor(agent): default the session's answer type to object, not Any\n\n* refactor(agent): bound the answer type to Struct | BaseModel\n\nThe bound lives under TYPE_CHECKING (PEP 695 bounds are lazy), so neither\nlibrary is imported at runtime. A Struct or BaseModel always names its\nvalidator, so AgentOutput loses validator= and dataclass answers.\n\n* docs(agent): generic triage example for typed answers\n\n* docs(agent): note how the answer bound behaves with one library missing\n\n* refactor(agent): build AgentSession[O] in load() instead of casting",
+          "timestamp": "2026-09-14T23:47:01+02:00",
+          "tree_id": "5b91285faabbc60c98dcf9f96b77ec931811a20d",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/ad0a31abab8ccd05935b0707daeda3dc35bb984f"
+        },
+        "date": 1789422452989,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 229.69,
+            "unit": "ms",
+            "range": 3.51
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 227.87,
+            "unit": "ms",
+            "range": 4.22
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 241.75,
+            "unit": "ms",
+            "range": 3.32
           }
         ]
       }
