@@ -26,6 +26,7 @@ from .models import ToolCall, ToolDefinition, UsageToken
 from .tools import _resolve
 
 if TYPE_CHECKING:
+    # a library that is not installed makes its name Unknown: the bound loosens, no false errors
     from msgspec import Struct
     from pydantic import BaseModel
 
