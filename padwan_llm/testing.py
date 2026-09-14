@@ -1,7 +1,7 @@
 import copy
 import json
 from collections.abc import AsyncIterator, Sequence
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 from typing import Any, Self
 
 from ._base import ChatStream
@@ -61,16 +61,20 @@ def _tool_calls(step: Step, round_no: int) -> list[ToolCall] | None:
     return calls or None
 
 
+@dataclass
 class ScriptedClient:
     """Client stand-in that replays `Step`s in order and records each round's request.
 
     Raises `AssertionError` when asked for more rounds than scripted.
     """
 
-    def __init__(self, steps: Sequence[Step]) -> None:
+    steps: InitVar[Sequence[Step]]
+    requests: list[Request] = field(default_factory=list, init=False)
+    _steps: list[Step] = field(init=False, repr=False)
+    _is_open: bool = field(default=False, init=False, repr=False)
+
+    def __post_init__(self, steps: Sequence[Step]) -> None:
         self._steps = list(steps)
-        self.requests: list[Request] = []
-        self._is_open = False
 
     @property
     def is_open(self) -> bool:
