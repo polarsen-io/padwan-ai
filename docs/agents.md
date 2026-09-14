@@ -248,6 +248,6 @@ A script that runs out raises `AssertionError` on the next round: a test that dr
 
 ## Limitations
 
-- **No mid-stream approval.** `ChatStream.tool_calls` is only populated after iteration completes, so `approve_tool` runs once all tool calls for a round are known. Streaming-with-interrupt is not yet supported.
-- **Untyped tool results.** Results are normalized to strings via a small `_extract_text` helper (handles MCP wire format, plain strings, and JSON fallback). Structured result objects would require a wider refactor.
+- **No mid-stream approval.** `ChatStream.tool_calls` is only populated after iteration completes, so `approve_tool` runs once all tool calls for a round are known.
+- **Untyped tool results.** Results are normalized to strings (MCP wire format, plain strings, JSON fallback).
 - **No per-call cancellation.** You can cancel the whole `session.send()` / `session.stream()` task, but not an individual in-flight tool call.
