@@ -8,6 +8,7 @@ from typing import Any, cast
 import pytest
 
 from padwan_llm import (
+    AgentOutput,
     AgentSession,
     ChatMessage,
     ChatStream,
@@ -1006,7 +1007,7 @@ async def test_run_ends_on_a_valid_submit(verdict: type) -> None:
             ),
         ],
         mcp_tools=[SEARCH],
-        output=verdict,
+        output=AgentOutput(verdict),
     )
     async with session:
         answer = await session.run("Excavator 21 t")
@@ -1027,7 +1028,7 @@ async def test_an_invalid_submit_is_repaired_once(verdict: type) -> None:
                 chunks=[], tool_calls=[_submit({"decision": "review"}, "c2")]
             ),
         ],
-        output=verdict,
+        output=AgentOutput(verdict),
     )
     async with session:
         assert await session.run("go") == verdict(decision="review")
@@ -1052,7 +1053,9 @@ async def test_too_many_invalid_submits_fail_the_run(
         FakeChatStream(chunks=[], tool_calls=[_submit({}, f"c{i}")])
         for i in range(invalid_rounds + 2)
     ]
-    session, client = make_session(responses, output=verdict, max_repairs=max_repairs)
+    session, client = make_session(
+        responses, output=AgentOutput(verdict, max_repairs=max_repairs)
+    )
     async with session:
         with pytest.raises(OutputError, match="invalid submit answer") as exc:
             await session.run("go")
@@ -1086,7 +1089,7 @@ async def test_a_run_without_submit_fails(
     verdict: type, responses: list[FakeChatStream], match: str, details: str | None
 ) -> None:
     session, _ = make_session(
-        responses, mcp_tools=[SEARCH], output=verdict, max_tool_rounds=2
+        responses, mcp_tools=[SEARCH], output=AgentOutput(verdict), max_tool_rounds=2
     )
     async with session:
         with pytest.raises(OutputError, match=match) as exc:
@@ -1101,8 +1104,7 @@ async def test_the_output_tool_can_be_renamed(verdict: type) -> None:
                 chunks=[], tool_calls=[make_tool_call("answer", {"decision": "create"})]
             )
         ],
-        output=verdict,
-        output_tool="answer",
+        output=AgentOutput(verdict, tool="answer"),
     )
     async with session:
         assert await session.run("go") == verdict(decision="create")
@@ -1116,7 +1118,7 @@ async def test_a_second_run_starts_from_a_clean_slate(verdict: type) -> None:
             FakeChatStream(chunks=[], tool_calls=[_submit({"article_id": 1}, "c2")]),
             FakeChatStream(chunks=[], tool_calls=[_submit({"decision": "b"}, "c3")]),
         ],
-        output=verdict,
+        output=AgentOutput(verdict),
     )
     async with session:
         assert await session.run("first") == verdict(decision="a")
@@ -1133,8 +1135,7 @@ async def test_output_validator_picks_the_backend_for_a_plain_class() -> None:
 
     session, _ = make_session(
         [FakeChatStream(chunks=[], tool_calls=[_submit({"decision": "x"})])],
-        output=Answer,
-        output_validator="msgspec",
+        output=AgentOutput(Answer, validator="msgspec"),
     )
     async with session:
         assert await session.run("go") == Answer("x")
@@ -1145,15 +1146,13 @@ async def test_output_validator_picks_the_backend_for_a_plain_class() -> None:
     [
         pytest.param({"max_repairs": -1}, "max_repairs", id="negative_max_repairs"),
         pytest.param(
-            {"output": object},
-            "both msgspec and pydantic",
-            id="plain_output_needs_a_validator",
+            {}, "both msgspec and pydantic", id="plain_class_needs_a_validator"
         ),
     ],
 )
 def test_invalid_output_settings_rejected(kwargs: dict[str, Any], match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        AgentSession(client=FakeClient([]), **kwargs)
+        AgentSession(client=FakeClient([]), output=AgentOutput(object, **kwargs))
 
 
 def test_run_without_output_is_a_programming_error() -> None:
@@ -1167,7 +1166,7 @@ def test_a_user_tool_named_like_the_output_tool_is_refused(verdict: type) -> Non
     session, _ = make_session(
         [FakeChatStream(chunks=[], tool_calls=[_submit({"decision": "x"})])],
         mcp_tools=[clash],
-        output=verdict,
+        output=AgentOutput(verdict),
     )
     with pytest.raises(ValueError, match="Duplicate tool name 'submit'"):
         asyncio.run(session.run("go"))
@@ -1178,8 +1177,7 @@ async def test_load_builds_a_typed_session(verdict: type) -> None:
         [FakeChatStream(chunks=[], tool_calls=[_submit({"decision": "match"})])]
     )
     session = AgentSession.load(
-        store=FakeStore(), client=client, output=verdict, max_repairs=0
+        store=FakeStore(), client=client, output=AgentOutput(verdict, max_repairs=0)
     )
     async with session:
         assert await session.run("go") == verdict(decision="match")
-    assert session.max_repairs == 0

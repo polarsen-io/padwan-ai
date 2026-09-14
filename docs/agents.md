@@ -154,7 +154,7 @@ serialise is reported as a tool error.
 
 ## Typed answers
 
-An agent that must end on data, not prose, sets `output=` to the answer's class and calls `run()` instead of `send()`. The model sees one extra tool, `submit` (rename it with `output_tool=`), whose parameters are the answer's JSON Schema; the loop ends when a call to it validates, and `run()` returns the instance.
+An agent that must end on data, not prose, sets `output=AgentOutput(cls)` and calls `run()` instead of `send()`. The model sees one extra tool, `submit` (rename it with `AgentOutput(tool=)`), whose parameters are the answer's JSON Schema; the loop ends when a call to it validates, and `run()` returns the instance.
 
 ```python
 import msgspec
@@ -166,13 +166,15 @@ class Verdict(msgspec.Struct):
     article_id: int | None = None
 
 
-async with AgentSession(client=client, mcp_tools=[search_tool], output=Verdict) as session:
+async with AgentSession(
+    client=client, mcp_tools=[search_tool], output=AgentOutput(Verdict)
+) as session:
     verdict = await session.run("Excavator 21 t, tracked")  # a Verdict, validated
 ```
 
-`output` goes through the same validators as `tool()`: a `msgspec.Struct` picks msgspec, a `pydantic.BaseModel` picks pydantic, and a plain class (a dataclass, say) needs `output_validator=` when both libraries are installed.
+The answer class goes through the same validators as `tool()`: a `msgspec.Struct` picks msgspec, a `pydantic.BaseModel` picks pydantic, and a plain class (a dataclass, say) needs `AgentOutput(validator=)` when both libraries are installed.
 
-An invalid `submit` goes back to the model as the tool result, with the validation error, up to `max_repairs` times (1 by default); one more failure raises `OutputError`. A text answer without `submit`, or the round limit, raise `OutputError` too: a typed run never returns prose. `OutputError.attempts` and `.details` say what happened.
+An invalid `submit` goes back to the model as the tool result, with the validation error, up to `AgentOutput(max_repairs=)` times (1 by default); one more failure raises `OutputError`. A text answer without `submit`, or the round limit, raise `OutputError` too: a typed run never returns prose. `OutputError.attempts` and `.details` say what happened.
 
 ## Configuration
 

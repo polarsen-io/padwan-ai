@@ -24,7 +24,13 @@ from importlib.metadata import version as _pkg_version
 
 from ._base import ChatStream, LLMClientBase, OnThought, RealtimeClientBase
 from ._deprecation import ModelDeprecationWarning
-from .agent import AgentSession, ConversationStore, OnMcpConnect, ToolCallContext
+from .agent import (
+    AgentOutput,
+    AgentSession,
+    ConversationStore,
+    OnMcpConnect,
+    ToolCallContext,
+)
 from .anthropic import (
     ANTHROPIC_MODELS,
     AnthropicClient,
@@ -92,6 +98,7 @@ __all__ = (
     "MISTRAL_MODELS",
     "OPENAI_CHAT_MODELS",
     "OPENAI_MODELS",
+    "AgentOutput",
     "AgentSession",
     "AnthropicClient",
     "AnthropicModel",
