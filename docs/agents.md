@@ -79,11 +79,13 @@ of padwan-llm).
 ```python
 from padwan_llm.tools import tool
 
+
 async def get_weather(city: str, unit: str = "celsius") -> dict:
     """Return current weather for a city."""
     return {"city": city, "temp": 22, "unit": unit}
 
-weather_tool = tool(get_weather)   # `city` required, `unit` optional
+
+weather_tool = tool(get_weather)  # `city` required, `unit` optional
 ```
 
 ### Picking the validator
@@ -98,15 +100,20 @@ picks pydantic.
     from typing import Annotated
     import msgspec
 
+
     class Ref(msgspec.Struct):
         id: int
         name: str
 
-    async def search(query: str, limit: Annotated[int, msgspec.Meta(ge=1, le=10)] = 5) -> list[Ref]:
+
+    async def search(
+        query: str, limit: Annotated[int, msgspec.Meta(ge=1, le=10)] = 5
+    ) -> list[Ref]:
         """Search the references by name."""
         return [Ref(id=1, name=query)]
 
-    search_tool = tool(search)   # `limit` carries minimum/maximum in the schema
+
+    search_tool = tool(search)  # `limit` carries minimum/maximum in the schema
     ```
 
 === "pydantic"
@@ -115,15 +122,18 @@ picks pydantic.
     from typing import Annotated
     import pydantic
 
+
     class Ref(pydantic.BaseModel):
         id: int
         name: str
+
 
     async def read(ref_id: Annotated[int, pydantic.Field(ge=1)]) -> Ref | None:
         """Read one reference."""
         return Ref(id=ref_id, name="EXCAVATOR 20-22T")
 
-    read_tool = tool(read)   # the model is dumped to JSON data
+
+    read_tool = tool(read)  # the model is dumped to JSON data
     ```
 
 A signature of plain types uses the only library installed and raises when both
@@ -132,7 +142,7 @@ any object implementing `ToolValidator` to plug in another library:
 
 ```python
 tool(get_weather, validator="msgspec")
-tool(get_weather, validator=MyValidator())   # compile(name, fields) + dump(result)
+tool(get_weather, validator=MyValidator())  # compile(name, fields) + dump(result)
 ```
 
 Malformed arguments raise the chosen library's `ValidationError` inside the handler,
