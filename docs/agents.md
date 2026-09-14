@@ -172,9 +172,13 @@ async with AgentSession(
     verdict = await session.run("Excavator 21 t, tracked")  # a Verdict, validated
 ```
 
+`run()` is typed: `AgentSession(output=AgentOutput(Verdict))` is an `AgentSession[Verdict]`, so `verdict` is a `Verdict` for the type checker too.
+
 The answer class goes through the same validators as `tool()`: a `msgspec.Struct` picks msgspec, a `pydantic.BaseModel` picks pydantic, and a plain class (a dataclass, say) needs `AgentOutput(validator=)` when both libraries are installed.
 
-An invalid `submit` goes back to the model as the tool result, with the validation error, up to `AgentOutput(max_repairs=)` times (1 by default); one more failure raises `OutputError`. A text answer without `submit`, or the round limit, raise `OutputError` too: a typed run never returns prose. `OutputError.attempts` and `.details` say what happened.
+An invalid `submit` (a failed validation, or arguments that are not JSON) goes back to the model as the tool result, with the error, up to `AgentOutput(max_repairs=)` times (1 by default); one more failure raises `OutputError`. A text answer without `submit`, or the round limit, raise `OutputError` too: a typed run never returns prose. `OutputError.attempts` and `.details` say what happened.
+
+The first accepted answer, or the exhausted repair budget, settles the run: a second `submit` in the same round is answered with an error and ignored. Other tools called alongside `submit` still run (their results are recorded, the model just gets no further round). `submit` is dispatched like any tool, so `approve_tool` and `on_tool` see it; a hook that denies it ends the run at the round limit without consuming a repair.
 
 ## Configuration
 
@@ -192,6 +196,7 @@ AgentSession(
     on_mcp_connect=None,  # fired per MCP transport after entering + pinging
     session_id=...,  # auto-generated; override to resume a saved session
     store=None,  # optional ConversationStore for persistence
+    output=None,  # AgentOutput(cls, ...) for a typed answer through run() — see above
 )
 ```
 

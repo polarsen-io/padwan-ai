@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Any, Literal, Protocol, Self
+from typing import Any, Literal, Protocol, Self, cast
 
 from ._base import ChatStream
 from ._json import dumps as _json_dumps, loads as _json_loads
@@ -71,10 +71,10 @@ class ChatClient(Protocol):
 
 
 @dataclass(frozen=True)
-class AgentOutput:
+class AgentOutput[T]:
     """The typed final answer of a run: `cls` is what `run()` returns, submitted through a tool."""
 
-    cls: type
+    cls: type[T]
     """Answer class (msgspec Struct, pydantic model, dataclass...)."""
     validator: ToolValidator | Literal["msgspec", "pydantic"] | None = None
     """Library validating `cls`, resolved like `tool(validator=)` when omitted."""
@@ -89,14 +89,16 @@ class AgentOutput:
 
 
 @dataclass
-class _OutputRun:
+class _OutputRun[T]:
     """The output tool of one session, and what the model has submitted in the current run."""
 
-    spec: AgentOutput
+    spec: AgentOutput[T]
     tool: McpTool = field(init=False)
-    result: Any = None
+    result: T | None = None
     attempts: int = 0
     failure: OutputError | None = None
+    done: bool = False
+    """The first accepted answer or exhausted repair budget settles the run; later calls are ignored."""
 
     def __post_init__(self) -> None:
         spec = self.spec
@@ -111,26 +113,36 @@ class _OutputRun:
         )
 
     def reset(self) -> None:
-        self.result, self.attempts, self.failure = None, 0, None
+        self.result, self.attempts, self.failure, self.done = None, 0, None, False
+
+    def reject(self, reason: str) -> dict[str, str]:
+        """Count an invalid call; the tool result to send back, and past `max_repairs` the failure."""
+        if self.done:
+            return {"error": f"{self.spec.tool} already settled this run, call ignored"}
+        self.attempts += 1
+        if self.attempts > self.spec.max_repairs:
+            # stored, not raised: _dispatch_one would turn the exception into a tool result
+            self.failure = OutputError(
+                f"invalid {self.spec.tool} answer after {self.attempts} attempt(s): {reason}",
+                attempts=self.attempts,
+                details=reason,
+            )
+            self.done = True
+            return {"error": "invalid answer, run aborted"}
+        return {
+            "error": f"invalid answer, fix the fields below and call {self.spec.tool} again",
+            "details": reason,
+        }
 
     async def _handle(self, args: dict[str, Any]) -> Any:
-        # a failure past max_repairs is stored, not raised: _dispatch_one would turn
-        # the exception into a tool result and the loop would go on
-        self.attempts += 1
+        if self.done:
+            return {"error": f"{self.spec.tool} already settled this run, call ignored"}
         try:
-            self.result = self._convert(args)
+            result = self._convert(args)
         except Exception as exc:
-            if self.attempts > self.spec.max_repairs:
-                self.failure = OutputError(
-                    f"invalid {self.spec.tool} answer after {self.attempts} attempt(s): {exc}",
-                    attempts=self.attempts,
-                    details=str(exc),
-                )
-                return {"error": "invalid answer, run aborted"}
-            return {
-                "error": f"invalid answer, fix the fields below and call {self.spec.tool} again",
-                "details": str(exc),
-            }
+            return self.reject(str(exc))
+        self.attempts += 1
+        self.result, self.done = result, True
         return "accepted"
 
 
@@ -192,7 +204,7 @@ def _extract_text(result: Any) -> str:
 
 
 @dataclass
-class AgentSession:
+class AgentSession[T = Any]:
     """Multi-turn conversation runner with streaming and tool dispatch.
 
     Wraps a `ConversationState` with the loop that calls the LLM, dispatches
@@ -235,9 +247,9 @@ class AgentSession:
     """Extra fields merged verbatim into every request body (e.g. provider-specific kwargs)."""
     session_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     store: ConversationStore | None = None
-    output: AgentOutput | None = None
+    output: AgentOutput[T] | None = None
     """Typed final answer; enables `run()`."""
-    _output: _OutputRun | None = field(init=False, default=None, repr=False)
+    _output: _OutputRun[T] | None = field(init=False, default=None, repr=False)
     _state: ConversationState = field(init=False)
     _exit_stack: contextlib.AsyncExitStack = field(init=False)
     _dispatch_cache: tuple[list[ToolDefinition], dict[str, McpTool]] | None = field(
@@ -312,7 +324,7 @@ class AgentSession:
         self.store.save(self.session_id, self._state.snapshot())
 
     @classmethod
-    def load(
+    def load[O = Any](
         cls,
         *,
         store: ConversationStore,
@@ -329,8 +341,8 @@ class AgentSession:
         approve_tool: ApprovalHook | None = None,
         on_mcp_connect: OnMcpConnect | None = None,
         extra_params: dict[str, Any] | None = None,
-        output: AgentOutput | None = None,
-    ) -> Self:
+        output: AgentOutput[O] | None = None,
+    ) -> "AgentSession[O]":
         """Construct an AgentSession, optionally restoring state from `store`.
 
         If `session_id` is provided and the store has a matching snapshot,
@@ -366,21 +378,25 @@ class AgentSession:
             except LookupError:
                 pass
 
-        instance = cls(
-            client=_client,
-            store=store,
-            system=snapshot.get("system") if snapshot else system,
-            **({} if session_id is None else {"session_id": session_id}),
-            mcp_tools=mcp_tools,
-            max_tool_rounds=max_tool_rounds,
-            max_tool_result_chars=max_tool_result_chars,
-            execution=execution,
-            on_tool=on_tool,
-            on_tool_error=on_tool_error,
-            approve_tool=approve_tool,
-            on_mcp_connect=on_mcp_connect,
-            extra_params=extra_params,
-            output=output,
+        # cls[O] is not spellable on type[Self]: the class is built directly, then cast
+        instance = cast(
+            "AgentSession[O]",
+            cls(
+                client=_client,
+                store=store,
+                system=snapshot.get("system") if snapshot else system,
+                **({} if session_id is None else {"session_id": session_id}),
+                mcp_tools=mcp_tools,
+                max_tool_rounds=max_tool_rounds,
+                max_tool_result_chars=max_tool_result_chars,
+                execution=execution,
+                on_tool=on_tool,
+                on_tool_error=on_tool_error,
+                approve_tool=approve_tool,
+                on_mcp_connect=on_mcp_connect,
+                extra_params=extra_params,
+                output=cast("AgentOutput[T] | None", output),
+            ),
         )
         if snapshot:
             instance._state = ConversationState.from_snapshot(snapshot)
@@ -512,7 +528,7 @@ class AgentSession:
         self,
         tc: ToolCall,
         tool: McpTool | None,
-        args: dict[str, Any],
+        args: dict[str, Any] | str,
         approved: bool,
     ) -> str:
         name = tc["function"]["name"]
@@ -520,6 +536,11 @@ class AgentSession:
             return _json_dumps({"error": f"Unknown tool: {name}"})
         if not approved:
             return _json_dumps({"error": f"Tool call denied by approval hook: {name}"})
+        if isinstance(args, str):  # the arguments were not valid JSON
+            reason = f"arguments are not valid JSON: {args}"
+            if self._output is not None and tool is self._output.tool:
+                return _json_dumps(self._output.reject(reason))
+            return _json_dumps({"error": reason})
         try:
             result: Any = tool.handler(args)
             if inspect.isawaitable(result):
@@ -542,26 +563,37 @@ class AgentSession:
         `self.execution`. Results are appended to state in original call
         order regardless of execution policy.
         """
-        plan: list[tuple[ToolCall, McpTool | None, dict[str, Any], bool]] = []
+        # args is the parse error message when the model sent invalid JSON
+        plan: list[tuple[ToolCall, McpTool | None, dict[str, Any] | str, bool]] = []
         for tc in tool_calls:
             name = tc["function"]["name"]
+            args: dict[str, Any] | str
             try:
                 args = _json_loads(tc["function"]["arguments"])
             except ValueError as exc:
                 log.warning("Bad tool args for %r: %s", name, exc)
-                args = {}
+                args = str(exc)
             tool = dispatch.get(name)
-            approved = await self._approve(tool, args) if tool is not None else False
+            approved = (
+                await self._approve(tool, args)
+                if tool is not None and isinstance(args, dict)
+                else tool is not None
+            )
             plan.append((tc, tool, args, approved))
 
         async def _dispatch_with_hook(
             tc: ToolCall,
             tool: McpTool | None,
-            args: dict[str, Any],
+            args: dict[str, Any] | str,
             ok: bool,
         ) -> str:
             cm = (
-                self.on_tool(ToolCallContext(name=tc["function"]["name"], args=args))
+                self.on_tool(
+                    ToolCallContext(
+                        name=tc["function"]["name"],
+                        args=args if isinstance(args, dict) else {},
+                    )
+                )
                 if self.on_tool
                 else nullcontext()
             )
@@ -642,11 +674,10 @@ class AgentSession:
                 )
             )
             await self._run_tool_calls(chat_stream.tool_calls, dispatch)
-            if self._output is not None:
-                if self._output.result is not None:
-                    return  # a valid answer is in hand: no further round
+            if self._output is not None and self._output.done:
                 if self._output.failure is not None:
                     raise self._output.failure
+                return  # a valid answer is in hand: no further round
 
         msg = (
             f"(reached tool call limit of {self.max_tool_rounds} rounds "
@@ -667,7 +698,7 @@ class AgentSession:
             chunks.append(chunk)
         return "".join(chunks)
 
-    async def run(self, user_input: str | list[ContentPart]) -> Any:
+    async def run(self, user_input: str | list[ContentPart]) -> T:
         """Send a message and return the validated `output.cls` instance.
 
         Raises `OutputError` when the model answers in text without calling the
@@ -679,4 +710,4 @@ class AgentSession:
                 "run() needs an output schema: set AgentSession(output=...)"
             )
         await self.send(user_input)
-        return self._output.result
+        return cast(T, self._output.result)

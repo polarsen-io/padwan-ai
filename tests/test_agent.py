@@ -1128,6 +1128,92 @@ async def test_a_second_run_starts_from_a_clean_slate(verdict: type) -> None:
     assert len(client.calls) == 3
 
 
+@pytest.mark.parametrize(
+    "execution", [pytest.param("sequential"), pytest.param("parallel")]
+)
+@pytest.mark.parametrize(
+    "calls, expect",
+    [
+        pytest.param(
+            [{}, {"decision": "late"}],
+            "error",
+            id="failure_then_valid_keeps_the_failure",
+        ),
+        pytest.param(
+            [{"decision": "first"}, {"decision": "second"}],
+            "first",
+            id="two_valid_keeps_the_first",
+        ),
+        pytest.param(
+            [{"decision": "first"}, {}],
+            "first",
+            id="valid_then_invalid_keeps_the_answer",
+        ),
+    ],
+)
+async def test_the_first_settled_submit_wins_within_a_round(
+    verdict: type, execution: str, calls: list[dict[str, Any]], expect: str
+) -> None:
+    tool_calls = [_submit(args, f"c{i}") for i, args in enumerate(calls)]
+    session, _ = make_session(
+        [FakeChatStream(chunks=[], tool_calls=tool_calls)],
+        output=AgentOutput(verdict, max_repairs=0),
+        execution=execution,
+    )
+    async with session:
+        if expect == "error":
+            with pytest.raises(OutputError, match="after 1 attempt"):
+                await session.run("go")
+        else:
+            assert await session.run("go") == verdict(decision=expect)
+    ignored = [m for m in session.messages if m.get("role") == "tool"][-1]
+    assert "already settled" in cast(str, ignored["content"])  # type: ignore[typeddict-item]
+
+
+async def test_a_submit_with_broken_json_is_a_repair_attempt(verdict: type) -> None:
+    broken = ToolCall(
+        id="c1",
+        type="function",
+        function=ToolCallFunction(name="submit", arguments="{"),
+    )
+    session, client = make_session(
+        [
+            FakeChatStream(chunks=[], tool_calls=[broken]),
+            FakeChatStream(chunks=[], tool_calls=[_submit({"decision": "ok"}, "c2")]),
+        ],
+        output=AgentOutput(verdict),
+    )
+    async with session:
+        assert await session.run("go") == verdict(decision="ok")
+    tool_msg = next(m for m in client.calls[1][0] if m.get("role") == "tool")
+    content = json.loads(cast(str, tool_msg["content"]))  # type: ignore[typeddict-item]
+    assert "not valid JSON" in content["details"]
+
+
+async def test_broken_json_is_an_error_for_any_tool() -> None:
+    seen: list[dict[str, Any]] = []
+
+    async def echo(args: dict[str, Any]) -> str:
+        seen.append(args)
+        return "ran"
+
+    tool = McpTool(name="echo", description="", input_schema={}, handler=echo)
+    broken = ToolCall(
+        id="c1", type="function", function=ToolCallFunction(name="echo", arguments="{")
+    )
+    session, client = make_session(
+        [
+            FakeChatStream(chunks=[], tool_calls=[broken]),
+            FakeChatStream(chunks=["done"]),
+        ],
+        mcp_tools=[tool],
+    )
+    assert await session.send("go") == "done"
+    assert seen == []  # the handler never ran on guessed arguments
+    tool_msg = next(m for m in client.calls[1][0] if m.get("role") == "tool")
+    assert "not valid JSON" in cast(str, tool_msg["content"])  # type: ignore[typeddict-item]
+
+
 async def test_output_validator_picks_the_backend_for_a_plain_class() -> None:
     @dataclass
     class Answer:

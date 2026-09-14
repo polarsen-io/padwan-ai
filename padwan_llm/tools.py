@@ -1,4 +1,5 @@
 import inspect
+import json
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from importlib.util import find_spec
 from typing import (
@@ -25,6 +26,24 @@ _KEYWORD_KINDS = (
     inspect.Parameter.POSITIONAL_OR_KEYWORD,
     inspect.Parameter.KEYWORD_ONLY,
 )
+
+
+def _inline_root(raw: dict[str, Any]) -> dict[str, Any]:
+    """Lift the class behind a top-level `$ref` out of `$defs`, dropping its title.
+
+    A recursive class keeps its definition under `$defs` so the inner `$ref`s stay valid.
+    """
+    if "$ref" not in raw:
+        raw.pop("title", None)
+        return raw
+    name = raw["$ref"].rsplit("/", 1)[-1]
+    defs: dict[str, Any] = raw["$defs"]
+    schema = {k: v for k, v in defs[name].items() if k != "title"}
+    if f'"#/$defs/{name}"' not in json.dumps(defs):
+        del defs[name]
+    if defs:
+        schema["$defs"] = defs
+    return schema
 
 
 class ToolValidator(Protocol):
@@ -66,12 +85,7 @@ class MsgspecValidator:
     def adapt(self, cls: type) -> tuple[dict[str, Any], _Convert]:
         import msgspec
 
-        # msgspec puts the class itself under $defs behind a top-level $ref; inline it
-        raw = msgspec.json.schema(cls)
-        schema: dict[str, Any] = raw["$defs"].pop(raw["$ref"].rsplit("/", 1)[-1])
-        schema.pop("title", None)
-        if raw["$defs"]:
-            schema["$defs"] = raw["$defs"]
+        schema = _inline_root(msgspec.json.schema(cls))
 
         def convert(obj: Any) -> Any:
             # strict=False: models send "3" for ints, coerce instead of rejecting
@@ -115,9 +129,7 @@ class PydanticValidator:
 
         # building the adapter is the expensive part; do it once per class, not per call
         adapter = TypeAdapter(cls)
-        schema = adapter.json_schema()
-        schema.pop("title", None)
-        return schema, adapter.validate_python
+        return _inline_root(adapter.json_schema()), adapter.validate_python
 
     def dump(self, result: Any) -> Any:
         from pydantic_core import to_jsonable_python
@@ -177,7 +189,7 @@ def _resolve(
         ]
         if not installed:
             raise ImportError(
-                "padwan_llm.tools.tool needs a validator: pip install msgspec or pydantic"
+                "validation needs a library: pip install msgspec or pydantic"
             )
         if len(installed) > 1:
             raise ValueError(
