@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789404730972,
+  "lastUpdate": 1789404770619,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -1346,6 +1346,48 @@ window.BENCHMARK_DATA = {
             "value": 238.3,
             "unit": "ms",
             "range": 1.49
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1582d3b35dac07cb297dd7506aaa405b9f6c456f",
+          "message": "ci(perf): skip benchmark PR comments on fork PRs (#68)\n\nThe GITHUB_TOKEN is read-only on pull requests from forks, so posting the\nbenchmark comment fails with \"Resource not accessible by integration\" and\nmarks the job failed. Only comment when the head repo is this repo.",
+          "timestamp": "2026-09-14T18:51:29+02:00",
+          "tree_id": "e2a9ed43df0372653552769ff47c69425484977e",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/1582d3b35dac07cb297dd7506aaa405b9f6c456f"
+        },
+        "date": 1789404768352,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 51.93,
+            "unit": "ms",
+            "range": 1.38
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 206.14,
+            "unit": "ms",
+            "range": 6.53
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 228.28,
+            "unit": "ms",
+            "range": 1.72
           }
         ]
       }
