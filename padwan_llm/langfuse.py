@@ -1,9 +1,10 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import TYPE_CHECKING, Self
+from typing import Self
 
 try:
+    import httpx
     from langfuse import Langfuse
     from langfuse.span_filter import is_default_export_span
     from langfuse.types import (
@@ -21,9 +22,6 @@ except ImportError as e:
     raise ImportError(
         "padwan_llm.langfuse requires Langfuse: pip install 'padwan-llm[langfuse]'"
     ) from e
-
-if TYPE_CHECKING:
-    import httpx
 
 from . import otel
 from ._json import dumps as _json_dumps, loads as _json_loads
