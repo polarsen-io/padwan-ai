@@ -233,15 +233,19 @@ session.total_usage  # accumulated usage across all rounds in this session
 from padwan_llm import AgentSession, McpTool
 from padwan_llm.testing import ScriptedClient, Step
 
-client = ScriptedClient([
-    Step(tool_calls=[("get_weather", {"city": "Paris"})]),  # round 1: the model calls a tool
-    Step(text="Sunny in Paris."),                           # round 2: it answers
-])
+# round 1: the model calls a tool, round 2: it answers
+client = ScriptedClient(
+    [
+        Step(tool_calls=[("get_weather", {"city": "Paris"})]),
+        Step(text="Sunny in Paris."),
+    ]
+)
 async with AgentSession(client=client, mcp_tools=[weather_tool]) as session:
     assert await session.send("Weather in Paris?") == "Sunny in Paris."
 
-assert client.requests[1].messages[-1]["role"] == "tool"  # the tool result went back to the model
-assert client.remaining == 0                              # the whole script ran
+# the tool result went back to the model, and the whole script ran
+assert client.requests[1].messages[-1]["role"] == "tool"
+assert client.remaining == 0
 ```
 
 A script that runs out raises `AssertionError` on the next round: a test that drifts from its script fails loudly instead of hanging on an empty answer. `complete_chat` is scripted the same way for non-streaming callers.
