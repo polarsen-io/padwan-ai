@@ -227,7 +227,7 @@ session.total_usage  # accumulated usage across all rounds in this session
 
 ## Testing an agent
 
-`padwan_llm.testing.ScriptedClient` stands in for any client: it answers each round with the next `Step` of a script and records what the model would have seen, so a test asserts on the conversation as well as on the outcome — without a provider, a key or a socket.
+`padwan_llm.testing.ScriptedClient` stands in for any client: it answers each round with the next `Step` of a script and records what the model would have seen, so a test asserts on the conversation as well as on the outcome (no provider, key or socket needed).
 
 ```python
 from typing import cast
