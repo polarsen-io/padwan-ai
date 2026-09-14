@@ -64,6 +64,22 @@ async with AgentSession(
 
 On `__aenter__` the session enters every transport in order (via an `AsyncExitStack`), pings each one to prove the connection is live, and then fires the optional `on_mcp_connect` callback with the transport instance. All transports are torn down in LIFO order on exit — even if one of them fails to initialize or ping.
 
+## Tools from typed functions
+
+Writing a JSON Schema by hand for every local tool gets old. With the `pydantic` extra (`pip install "padwan-llm[pydantic]"`), `tool()` builds an `McpTool` from a typed async function: the signature is the schema, the docstring the description, and the arguments the model sends are validated before the function runs.
+
+```python
+from padwan_llm.tools import tool
+
+async def get_weather(city: str, unit: str = "celsius") -> dict:
+    """Return current weather for a city."""
+    return {"city": city, "temp": 22, "unit": unit}
+
+weather_tool = tool(get_weather)   # name "get_weather", `city` required, `unit` optional
+```
+
+Malformed arguments raise `pydantic.ValidationError` inside the handler, which `AgentSession` reports to the model as a tool error like any other exception. A `pydantic.BaseModel` result (or a list/dict of them) is dumped to plain JSON data.
+
 ## Configuration
 
 ```python
