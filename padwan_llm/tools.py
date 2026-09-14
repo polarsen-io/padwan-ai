@@ -19,6 +19,7 @@ type _Field = tuple[str, Any] | tuple[str, Any, Any]
 """(name, annotation[, default]); a 2-tuple is a required parameter."""
 
 type _Validate = Callable[[dict[str, Any]], dict[str, Any]]
+type _Convert = Callable[[Any], Any]
 
 _KEYWORD_KINDS = (
     inspect.Parameter.POSITIONAL_OR_KEYWORD,
@@ -35,12 +36,11 @@ class ToolValidator(Protocol):
         """JSON Schema for the model, and validate(raw_args) -> typed kwargs, raising on bad input."""
         ...
 
-    def schema(self, cls: type) -> dict[str, Any]:
-        """JSON Schema of `cls` (a class the library can describe), top-level inlined, no title."""
-        ...
+    def adapt(self, cls: type) -> tuple[dict[str, Any], _Convert]:
+        """JSON Schema of `cls` (top-level inlined, no title) and convert(json_data) -> instance.
 
-    def convert(self, obj: Any, cls: type) -> Any:
-        """Validate JSON data into an instance of `cls`, coercing where the library allows."""
+        Called once per class: the returned converter holds whatever the library builds up front.
+        """
         ...
 
     def dump(self, result: Any) -> Any:
@@ -55,14 +55,15 @@ class MsgspecValidator:
         import msgspec
 
         struct = msgspec.defstruct(name, fields, kw_only=True)
+        schema, convert = self.adapt(struct)
 
         def validate(args: dict[str, Any]) -> dict[str, Any]:
-            parsed = self.convert(args, struct)
+            parsed = convert(args)
             return {f: getattr(parsed, f) for f in struct.__struct_fields__}
 
-        return self.schema(struct), validate
+        return schema, validate
 
-    def schema(self, cls: type) -> dict[str, Any]:
+    def adapt(self, cls: type) -> tuple[dict[str, Any], _Convert]:
         import msgspec
 
         # msgspec puts the class itself under $defs behind a top-level $ref; inline it
@@ -71,13 +72,12 @@ class MsgspecValidator:
         schema.pop("title", None)
         if raw["$defs"]:
             schema["$defs"] = raw["$defs"]
-        return schema
 
-    def convert(self, obj: Any, cls: type) -> Any:
-        import msgspec
+        def convert(obj: Any) -> Any:
+            # strict=False: models send "3" for ints, coerce instead of rejecting
+            return msgspec.convert(obj, cls, strict=False)
 
-        # strict=False: models send "3" for ints, coerce instead of rejecting
-        return msgspec.convert(obj, cls, strict=False)
+        return schema, convert
 
     def dump(self, result: Any) -> Any:
         import msgspec
@@ -102,24 +102,22 @@ class PydanticValidator:
             f[0]: (f[1], ... if len(f) == 2 else f[2]) for f in fields
         }
         model = pydantic.create_model(name, **defs)
+        schema, convert = self.adapt(model)
 
         def validate(args: dict[str, Any]) -> dict[str, Any]:
-            parsed = self.convert(args, model)
+            parsed = convert(args)
             return {f: getattr(parsed, f) for f in model.model_fields}
 
-        return self.schema(model), validate
+        return schema, validate
 
-    def schema(self, cls: type) -> dict[str, Any]:
+    def adapt(self, cls: type) -> tuple[dict[str, Any], _Convert]:
         from pydantic import TypeAdapter
 
-        schema = TypeAdapter(cls).json_schema()
+        # building the adapter is the expensive part; do it once per class, not per call
+        adapter = TypeAdapter(cls)
+        schema = adapter.json_schema()
         schema.pop("title", None)
-        return schema
-
-    def convert(self, obj: Any, cls: type) -> Any:
-        from pydantic import TypeAdapter
-
-        return TypeAdapter(cls).validate_python(obj)
+        return schema, adapter.validate_python
 
     def dump(self, result: Any) -> Any:
         from pydantic_core import to_jsonable_python

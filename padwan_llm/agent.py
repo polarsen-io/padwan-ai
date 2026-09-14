@@ -448,14 +448,16 @@ class AgentSession:
         return tool_defs, dispatch
 
     def _build_output_tool(self, output: type) -> McpTool:
-        backend = _resolve(self.output_validator, {"output": output})
+        schema, convert = _resolve(self.output_validator, {"output": output}).adapt(
+            output
+        )
 
         async def handle(args: dict[str, Any]) -> Any:
             # a failure past max_repairs is stored, not raised: _dispatch_one would turn
             # the exception into a tool result and the loop would go on
             self._output_attempts += 1
             try:
-                self._output_result = backend.convert(args, output)
+                self._output_result = convert(args)
             except Exception as exc:
                 if self._output_attempts > self.max_repairs:
                     self._output_failure = OutputError(
@@ -474,7 +476,7 @@ class AgentSession:
         return McpTool(
             name=self.output_tool,
             description="Submit the final answer. Call it exactly once, when the work is done.",
-            input_schema=backend.schema(output),
+            input_schema=schema,
             handler=handle,
         )
 
