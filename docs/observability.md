@@ -97,7 +97,7 @@ def redact_inputs(*, params: MaskOtelSpansParams) -> MaskOtelSpansResult:
 telemetry = instrument(capture_content=True, mask_otel_spans=redact_inputs)
 ```
 
-`instrument()` accepts Langfuse credentials and routing (`public_key`, `secret_key`, `base_url`), trace metadata (`environment`, `release`), delivery controls (`sample_rate`, `timeout`, `flush_at`, `flush_interval`), `debug`, an existing `tracer_provider`, and `should_export_span`. The credential arguments fall back to the standard Langfuse environment variables. A custom span filter is applied after the adapter includes Padwan spans.
+`instrument()` accepts Langfuse credentials and routing (`public_key`, `secret_key`, `base_url`), trace metadata (`environment`, `release`), delivery controls (`sample_rate`, `timeout`, `flush_at`, `flush_interval`), `debug`, an existing `tracer_provider`, and `should_export_span`. For tests, `span_exporter` (e.g. an `InMemorySpanExporter`) and `httpx_client` (e.g. an `httpx.MockTransport`) are handed to the Langfuse client as-is, so a test can assert on every attribute the integration would send without opening a socket. The credential arguments fall back to the standard Langfuse environment variables. A custom span filter is applied after the adapter includes Padwan spans.
 
 The integration exports traces only. Padwan metrics and exception log events still require separately configured OpenTelemetry meter and logger providers. Start the Langfuse integration before using Padwan; if `padwan_llm.otel.instrument()` is already active, the adapter raises instead of silently attaching to a different provider. See the [Langfuse OpenTelemetry integration](https://langfuse.com/integrations/native/opentelemetry) for backend configuration and troubleshooting.
 

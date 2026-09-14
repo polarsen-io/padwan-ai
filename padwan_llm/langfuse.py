@@ -1,7 +1,7 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 try:
     from langfuse import Langfuse
@@ -15,11 +15,15 @@ try:
         OtelSpanPatch,
     )
     from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
+    from opentelemetry.sdk.trace.export import SpanExporter
     from opentelemetry.util.types import AttributeValue
 except ImportError as e:
     raise ImportError(
         "padwan_llm.langfuse requires Langfuse: pip install 'padwan-llm[langfuse]'"
     ) from e
+
+if TYPE_CHECKING:
+    import httpx
 
 from . import otel
 from ._json import dumps as _json_dumps, loads as _json_loads
@@ -230,6 +234,8 @@ def instrument(
     debug: bool = False,
     mask_otel_spans: MaskOtelSpansFunction | None = None,
     should_export_span: Callable[[ReadableSpan], bool] | None = None,
+    span_exporter: SpanExporter | None = None,
+    httpx_client: httpx.Client | None = None,
 ) -> LangfuseIntegration:
     """Instrument Padwan and export enriched spans through Langfuse."""
     if otel.is_instrumented():
@@ -252,6 +258,8 @@ def instrument(
         debug=debug,
         mask_otel_spans=_SpanAdapter(mask_otel_spans),
         should_export_span=_SpanFilter(should_export_span),
+        span_exporter=span_exporter,
+        httpx_client=httpx_client,
     )
     try:
         otel.instrument(tracer_provider=provider, capture_content=capture_content)
