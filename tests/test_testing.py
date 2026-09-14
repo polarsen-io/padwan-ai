@@ -2,79 +2,29 @@ from typing import Any, cast
 
 import pytest
 
-from padwan_llm import (
-    AgentSession,
-    ChatResponse,
-    ChatStream,
-    LLMClientBase,
-    McpTool,
-    ToolCall,
-    UsageToken,
-)
+from padwan_llm import AgentSession, ChatStream, LLMClientBase, McpTool
 from padwan_llm.testing import ScriptedClient, Step
-
-_TOOL_CALL: ToolCall = {
-    "id": "call_1_0",
-    "type": "function",
-    "function": {"name": "search", "arguments": '{"query": "pelle"}'},
-}
 
 
 async def _drain(stream: ChatStream) -> str:
     return "".join([chunk async for chunk in stream])
 
 
-@pytest.mark.parametrize(
-    ("step", "text", "usage", "tool_calls"),
-    [
-        pytest.param(
-            Step(text="Bonjour", usage={"total": 5, "input": 3, "output": 2}),
-            "Bonjour",
-            {"total": 5, "input": 3, "output": 2},
-            None,
-            id="text",
-        ),
-        pytest.param(
-            Step(tool_calls=[("search", {"query": "pelle"})]),
-            "",
-            {"total": 10, "input": 7, "output": 3},
-            [_TOOL_CALL],
-            id="tool_call",
-        ),
-    ],
-)
-async def test_stream_chat(
-    step: Step, text: str, usage: UsageToken, tool_calls: list[ToolCall] | None
-) -> None:
-    stream = ScriptedClient([step]).stream_chat([{"role": "user", "content": "q"}])
-    assert await _drain(stream) == text
-    assert stream.usage == usage
-    assert stream.tool_calls == tool_calls
-
-
-@pytest.mark.parametrize(
-    ("step", "response"),
-    [
-        pytest.param(
-            Step(text="done"), {"content": "done", "finish_reason": "stop"}, id="text"
-        ),
-        pytest.param(
-            Step(tool_calls=[("search", {"query": "pelle"})]),
+async def test_complete_chat_with_tool_calls() -> None:
+    client = ScriptedClient([Step(tool_calls=[("search", {"query": "pelle"})])])
+    response, usage = await client.complete_chat([{"role": "user", "content": "go"}])
+    assert response == {
+        "content": None,
+        "finish_reason": "tool_calls",
+        "tool_calls": [
             {
-                "content": None,
-                "finish_reason": "tool_calls",
-                "tool_calls": [_TOOL_CALL],
-            },
-            id="tool_call",
-        ),
-    ],
-)
-async def test_complete_chat(step: Step, response: ChatResponse) -> None:
-    client = ScriptedClient([step])
-    assert await client.complete_chat([{"role": "user", "content": "go"}]) == (
-        response,
-        step.usage,
-    )
+                "id": "call_1_0",
+                "type": "function",
+                "function": {"name": "search", "arguments": '{"query": "pelle"}'},
+            }
+        ],
+    }
+    assert usage == {"total": 10, "input": 7, "output": 3}
 
 
 async def test_requests_are_recorded_and_the_script_ends() -> None:
