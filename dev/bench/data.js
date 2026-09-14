@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789404770619,
+  "lastUpdate": 1789412780266,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -714,6 +714,48 @@ window.BENCHMARK_DATA = {
             "value": 229.65,
             "unit": "ms",
             "range": 3.46
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "carlo.abichahine@gmail.com",
+            "name": "Carlo Abi Chahine",
+            "username": "cabichahine"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f0f3eb05a241fa1bf9ea4ff4a235d7cc13c541fd",
+          "message": "feat(testing): ScriptedClient, a scripted stand-in for any client (#59)\n\n* feat(testing): ScriptedClient, a scripted stand-in for any client\n\nA client that replays a script of rounds (text and/or tool calls) instead of calling a\nprovider, records what the model would have seen round by round, and fails loudly when\nthe script runs out. Drives an AgentSession end to end in tests without a key or a socket.\n\n* fix(testing): snapshot recorded requests, align ScriptedClient with repo conventions (#63)\n\n* fix(testing): snapshot recorded requests, align ScriptedClient with repo conventions\n\nDeep-copy messages, tools and extra_params when recording a round so later\nmutation by the caller does not alter the record. Drop the future import and\nmodule docstring, use text: str | None, parametrize tests, and fix the\nNotRequired access that failed pyright on tests/.\n\n* refactor(testing): make ScriptedClient a dataclass\n\n* test(testing): keep only the essential ScriptedClient tests\n\n* test(testing): type recorded messages as Message\n\n* refactor(agent): type the session client as a ChatClient protocol\n\nAny async context manager with stream_chat now satisfies AgentSession, so\ntest doubles no longer need cast(LLMClientBase, ...). ScriptedClient uses\nMapping[str, object] instead of Any for tool arguments and extra_params.\n\n* docs(agents): client accepts any ChatClient\n\n* docs(agents): drop roadmap prose from limitations\n\n* docs(agents): keep the testing example ruff-format stable\n\n* docs(testing): one-line docstrings on ScriptedClient helpers\n\n(cherry picked from commit 2f76772748f98013458a7fb47d34b31b6c583500)\n\n---------\n\nCo-authored-by: Julien Brayere <julien.brayere@obitrain.com>",
+          "timestamp": "2026-09-14T21:05:48+02:00",
+          "tree_id": "25ebc58ff46254841c95e7d2c9743c2f985edde2",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/f0f3eb05a241fa1bf9ea4ff4a235d7cc13c541fd"
+        },
+        "date": 1789412779677,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 213.45,
+            "unit": "ms",
+            "range": 3.47
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 211.38,
+            "unit": "ms",
+            "range": 2.08
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 232.2,
+            "unit": "ms",
+            "range": 5.18
           }
         ]
       }
