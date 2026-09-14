@@ -73,6 +73,7 @@ The adapter enriches the copy of each span sent to Langfuse while leaving its st
 | `gen_ai.input.messages`, system instructions, tool definitions, or tool arguments | observation input |
 | `gen_ai.output.messages` or tool result | observation output |
 | `gen_ai.conversation.id` | session id |
+| `padwan_llm.response.first_chunk_time` | completion start time (time to first token on generations) |
 
 Langfuse reads the standard GenAI model, usage, and cost attributes directly. Inputs and outputs remain absent unless `capture_content=True`.
 
@@ -120,6 +121,7 @@ Each chat call emits one `CLIENT` span named `chat <model>` (or `chat` when no m
 | `gen_ai.usage.reasoning.output_tokens` | `5` | when the provider reports thought/reasoning tokens separately¹ |
 | `gen_ai.response.finish_reasons` | `["stop"]` | |
 | `gen_ai.response.time_to_first_chunk` | `0.4` | streams only |
+| `padwan_llm.response.first_chunk_time` | `2026-09-14T10:00:00.412+00:00` | streams only: wall-clock instant of the first chunk, ISO 8601 UTC (custom attribute) |
 | `openai.api.type`, `openai.request.service_tier`, `openai.response.service_tier`, `openai.response.system_fingerprint` | | OpenAI vendor extras, including streamed responses |
 | `padwan_llm.response.tool_names` | `["get_weather"]` | tool calls requested by the model (custom attribute) |
 | `padwan_llm.thinking.duration` | `1.2` | seconds between the first and last `on_thought` chunk of a stream (custom attribute) |

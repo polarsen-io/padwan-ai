@@ -78,6 +78,12 @@ def _output_attribute(attributes: Mapping[str, AttributeValue]) -> str | None:
     )
 
 
+def _completion_start_time(attributes: Mapping[str, AttributeValue]) -> str | None:
+    """Serialize the first streamed chunk instant the way the Langfuse SDK does."""
+    value = _string_attribute(attributes, "padwan_llm.response.first_chunk_time")
+    return _json_dumps(value) if value is not None else None
+
+
 # Map only gaps in https://langfuse.com/integrations/native/opentelemetry#attribute-mapping
 def _mapped_attributes(
     span: OtelSpanData, attributes: Mapping[str, AttributeValue]
@@ -97,6 +103,10 @@ def _mapped_attributes(
         (
             "langfuse.session.id",
             _string_attribute(attributes, "gen_ai.conversation.id"),
+        ),
+        (
+            "langfuse.observation.completion_start_time",
+            _completion_start_time(attributes),
         ),
     )
     for name, value in values:

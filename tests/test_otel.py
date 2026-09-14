@@ -1,7 +1,8 @@
 import asyncio
 from contextlib import asynccontextmanager, nullcontext
 from dataclasses import dataclass, field
-from typing import ClassVar
+from datetime import UTC, datetime
+from typing import ClassVar, cast
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -208,6 +209,12 @@ async def test_stream_chat_span(otel_setup, client, make_sse_event, make_sse_res
     assert attrs["gen_ai.usage.input_tokens"] == 10
     assert attrs["gen_ai.response.finish_reasons"] == ("stop",)
     assert attrs["gen_ai.response.time_to_first_chunk"] > 0
+    first_chunk = datetime.fromisoformat(
+        cast(str, attrs["padwan_llm.response.first_chunk_time"])
+    )
+    assert first_chunk.tzinfo is UTC
+    assert span.start_time is not None
+    assert first_chunk.timestamp() >= span.start_time / 1e9 - 1e-3
     assert attrs["openai.api.type"] == "chat_completions"
     assert attrs["openai.request.service_tier"] == "flex"
     assert attrs["openai.response.service_tier"] == "flex"
@@ -773,6 +780,7 @@ async def test_raw_openai_call_opens_span(
     assert attrs["openai.request.service_tier"] == "flex"
     assert attrs["openai.response.service_tier"] == "flex"
     assert attrs.get("gen_ai.request.stream", False) is streaming
+    assert ("padwan_llm.response.first_chunk_time" in attrs) is streaming
     assert {"gen_ai.client.operation.duration", "gen_ai.client.token.usage"} <= (
         _metric_names(reader)
     )
