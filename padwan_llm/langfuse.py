@@ -1,10 +1,9 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
 try:
-    import httpx
     from langfuse import Langfuse
     from langfuse.span_filter import is_default_export_span
     from langfuse.types import (
@@ -22,6 +21,9 @@ except ImportError as e:
     raise ImportError(
         "padwan_llm.langfuse requires Langfuse: pip install 'padwan-llm[langfuse]'"
     ) from e
+
+if TYPE_CHECKING:
+    import httpx
 
 from . import otel
 from ._json import dumps as _json_dumps, loads as _json_loads
@@ -233,7 +235,7 @@ def instrument(
     mask_otel_spans: MaskOtelSpansFunction | None = None,
     should_export_span: Callable[[ReadableSpan], bool] | None = None,
     span_exporter: SpanExporter | None = None,
-    httpx_client: httpx.Client | None = None,
+    httpx_client: "httpx.Client | None" = None,
 ) -> LangfuseIntegration:
     """Instrument Padwan and export enriched spans through Langfuse."""
     if otel.is_instrumented():
