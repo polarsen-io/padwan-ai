@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789418876221,
+  "lastUpdate": 1789419091456,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -966,6 +966,48 @@ window.BENCHMARK_DATA = {
             "value": 223.64,
             "unit": "ms",
             "range": 1.51
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "julien",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "julien",
+            "username": "Andarius"
+          },
+          "distinct": true,
+          "id": "793ca31ada775f20042a3d59029a26ec400f7760",
+          "message": "chore(just): docs recipe takes a port\n\nClaude-Session: https://claude.ai/code/session_01KTHPAvoDsiAWntwyc8JSF1",
+          "timestamp": "2026-09-14T22:50:52+02:00",
+          "tree_id": "be6ddcbd482cd8c52314521e18262ef7e766f5d1",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/793ca31ada775f20042a3d59029a26ec400f7760"
+        },
+        "date": 1789419090272,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 223.29,
+            "unit": "ms",
+            "range": 2.67
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 224.34,
+            "unit": "ms",
+            "range": 1.61
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 241.44,
+            "unit": "ms",
+            "range": 4.82
           }
         ]
       }
