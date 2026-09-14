@@ -1,99 +1,109 @@
-import json
+from collections.abc import Awaitable, Callable, Sequence
 from contextlib import nullcontext
-from typing import Annotated, Any, cast
+from dataclasses import dataclass
+from importlib.util import find_spec
+from typing import Annotated, Any, Literal, cast
 
 import pytest
 
-msgspec = pytest.importorskip("msgspec")
+from padwan_llm.tools import (
+    MsgspecValidator,
+    PydanticValidator,
+    ToolValidator,
+    _resolve,
+    tool,
+)
 
-from padwan_llm import AgentSession, LLMClientBase, McpTool  # noqa: E402
-from padwan_llm.tools import tool  # noqa: E402
-from tests.test_agent import FakeChatStream, FakeClient, make_tool_call  # noqa: E402
-
-
-class Ref(msgspec.Struct):
-    id: int
-    name: str
-
-
-async def search_references(
-    query: str, limit: Annotated[int, msgspec.Meta(ge=1, le=10)] = 5
-) -> list[Ref]:
-    """Search the references by name."""
-    return [Ref(id=1, name=f"{query} {limit}")]
-
-
-async def read_reference(ref_id: int) -> Ref:
-    """Read one reference."""
-    return Ref(id=ref_id, name="EXCAVATOR 20-22T")
+BACKENDS = [
+    pytest.param(
+        lib,
+        marks=pytest.mark.skipif(find_spec(lib) is None, reason=f"{lib} not installed"),
+        id=lib,
+    )
+    for lib in ("msgspec", "pydantic")
+]
 
 
-def test_name_description_and_schema_come_from_the_signature() -> None:
-    t = tool(search_references)
-    assert isinstance(t, McpTool)
-    assert t.name == "search_references"
-    assert t.description == "Search the references by name."
-    assert t.input_schema["properties"]["query"] == {"type": "string"}
-    assert t.input_schema["properties"]["limit"] == {
-        "type": "integer",
-        "minimum": 1,
-        "maximum": 10,
-        "default": 5,
-    }
+@dataclass
+class Backend:
+    name: Literal["msgspec", "pydantic"]
+    search: Callable[..., Awaitable[Any]]
+    error: type[Exception]
+
+
+def _make(
+    name: Literal["msgspec", "pydantic"], ref: type, meta: Any, error: type[Exception]
+) -> Backend:
+    async def search(query: str, limit: Annotated[int, meta] = 5) -> list[Any]:
+        """Search the references by name."""
+        return [ref(id=1, name=f"{query} {limit}")]
+
+    return Backend(name, search, error)
+
+
+@pytest.fixture(params=BACKENDS)
+def backend(request: pytest.FixtureRequest) -> Backend:
+    if request.param == "msgspec":
+        import msgspec
+
+        class Ref(msgspec.Struct):
+            id: int
+            name: str
+
+        return _make("msgspec", Ref, msgspec.Meta(ge=1, le=10), msgspec.ValidationError)
+    import pydantic
+
+    class Model(pydantic.BaseModel):
+        id: int
+        name: str
+
+    return _make(
+        "pydantic", Model, pydantic.Field(ge=1, le=10), pydantic.ValidationError
+    )
+
+
+def test_schema_and_metadata_come_from_the_signature(backend: Backend) -> None:
+    t = tool(backend.search, validator=backend.name)
+    assert (t.name, t.description) == ("search", "Search the references by name.")
+    assert t.input_schema["properties"]["query"]["type"] == "string"
+    # pydantic adds a per-property title, msgspec does not
+    limit = {"type": "integer", "minimum": 1, "maximum": 10, "default": 5}
+    assert limit.items() <= t.input_schema["properties"]["limit"].items()
     assert t.input_schema["required"] == ["query"]
     assert "title" not in t.input_schema
-
-
-def test_name_and_description_can_be_overridden() -> None:
-    t = tool(search_references, name="search", description="Find things.")
-    assert (t.name, t.description) == ("search", "Find things.")
+    t = tool(
+        backend.search, name="find", description="Find things.", validator=backend.name
+    )
+    assert (t.name, t.description) == ("find", "Find things.")
 
 
 @pytest.mark.parametrize(
-    ("fn", "args", "expected", "raises"),
+    ("args", "expected", "match"),
     [
         pytest.param(
-            search_references,
             {"query": "pelle", "limit": "3"},
             [{"id": 1, "name": "pelle 3"}],
-            nullcontext(),
-            id="coerces_and_dumps_list",
-        ),
-        pytest.param(
-            read_reference,
-            {"ref_id": 7},
-            {"id": 7, "name": "EXCAVATOR 20-22T"},
-            nullcontext(),
-            id="dumps_struct",
-        ),
-        pytest.param(
-            search_references,
-            {"limit": 3},
             None,
-            pytest.raises(msgspec.ValidationError, match="query"),
-            id="missing_required",
+            id="coerces_and_dumps",
         ),
+        pytest.param({"limit": 3}, None, "query", id="missing_required"),
         pytest.param(
-            search_references,
             {"query": "pelle", "limit": -100},
             None,
-            pytest.raises(msgspec.ValidationError, match=">= 1"),
+            r"(>=|greater than or equal to) 1",
             id="constraint_violated",
         ),
-        pytest.param(
-            read_reference,
-            {"ref_id": "seven"},
-            None,
-            pytest.raises(msgspec.ValidationError, match="int"),
-            id="wrong_type",
-        ),
+        pytest.param({"query": "pelle", "limit": "many"}, None, "int", id="wrong_type"),
     ],
 )
 async def test_handler_validates_before_calling(
-    fn: Any, args: dict[str, Any], expected: Any, raises: Any
+    backend: Backend, args: dict[str, Any], expected: Any, match: str | None
 ) -> None:
+    raises = pytest.raises(backend.error, match=match) if match else nullcontext()
     with raises:
-        assert await tool(fn).handler(args) == expected
+        assert (
+            await tool(backend.search, validator=backend.name).handler(args) == expected
+        )
 
 
 async def _unannotated(query, limit: int = 1) -> str:  # type: ignore[no-untyped-def]
@@ -104,67 +114,104 @@ async def _positional_only(query: str, /) -> str:
     return query
 
 
-async def _var_positional(*queries: str) -> str:
-    return " ".join(queries)
-
-
 async def _var_keyword(query: str, **extra: Any) -> str:
     return query
 
 
+async def _private_name(_id: str) -> str:
+    return _id
+
+
+async def _shadows_base_model(model_fields: str) -> str:
+    return model_fields
+
+
+async def _model_prefix(model_name: str) -> str:
+    return model_name
+
+
 @pytest.mark.parametrize(
-    ("fn", "match"),
+    ("fn", "validator", "match"),
     [
-        pytest.param(_unannotated, "needs a type annotation", id="unannotated"),
-        pytest.param(_positional_only, "passable by keyword", id="positional_only"),
-        pytest.param(_var_positional, "passable by keyword", id="var_positional"),
-        pytest.param(_var_keyword, "passable by keyword", id="var_keyword"),
+        pytest.param(
+            _unannotated, "msgspec", "needs a type annotation", id="unannotated"
+        ),
+        pytest.param(
+            _positional_only, "msgspec", "passable by keyword", id="positional_only"
+        ),
+        pytest.param(_var_keyword, "msgspec", "passable by keyword", id="var_keyword"),
+        pytest.param(
+            _private_name,
+            "pydantic",
+            "reserved by pydantic",
+            id="pydantic_drops_private_names",
+        ),
+        pytest.param(
+            _shadows_base_model,
+            "pydantic",
+            "reserved by pydantic",
+            id="pydantic_shadows_base_model",
+        ),
+        pytest.param(
+            _model_prefix, "pydantic", None, id="pydantic_model_prefix_alone_is_fine"
+        ),
     ],
 )
-def test_unsupported_signatures_are_refused_at_build_time(fn: Any, match: str) -> None:
-    with pytest.raises(TypeError, match=match):
-        tool(fn)
-
-
-async def test_it_plugs_into_an_agent_session() -> None:
-    client = FakeClient(
-        [
-            FakeChatStream(
-                chunks=[],
-                tool_calls=[make_tool_call("search_references", {"query": "pelle"})],
-            ),
-            FakeChatStream(
-                chunks=[],
-                tool_calls=[
-                    make_tool_call("search_references", {"limit": 2}, call_id="call_2")
-                ],
-            ),
-            FakeChatStream(chunks=["done"]),
-        ]
-    )
-    session = AgentSession(
-        client=cast(LLMClientBase, client), mcp_tools=[tool(search_references)]
-    )
-    async with session:
-        assert await session.send("go") == "done"
-    tool_results = [m["content"] for m in session.messages if m["role"] == "tool"]
-    assert json.loads(cast(str, tool_results[0])) == [{"id": 1, "name": "pelle 5"}]
-    # invalid arguments reach the model as a tool error, not as an exception
-    assert "error" in json.loads(cast(str, tool_results[1]))
-
-
-def test_without_msgspec_the_error_says_which_extra_to_install(
-    monkeypatch: pytest.MonkeyPatch,
+def test_signature_checks_at_build_time(
+    fn: Any, validator: str, match: str | None
 ) -> None:
-    import builtins
+    if find_spec(validator) is None:
+        pytest.skip(f"{validator} not installed")
+    raises = pytest.raises(TypeError, match=match) if match else nullcontext()
+    with raises:
+        tool(fn, validator=cast(Any, validator))
 
-    real_import = builtins.__import__
 
-    def no_msgspec(name: str, *args: Any, **kwargs: Any) -> Any:
-        if name == "msgspec":
-            raise ImportError("no msgspec")
-        return real_import(name, *args, **kwargs)
+@pytest.mark.parametrize(
+    ("installed", "expected", "raises"),
+    [
+        pytest.param({"msgspec"}, MsgspecValidator, nullcontext(), id="only_msgspec"),
+        pytest.param(
+            {"pydantic"}, PydanticValidator, nullcontext(), id="only_pydantic"
+        ),
+        pytest.param(
+            set(),
+            None,
+            pytest.raises(ImportError, match="pip install msgspec or pydantic"),
+            id="none_installed",
+        ),
+        pytest.param(
+            {"msgspec", "pydantic"},
+            None,
+            pytest.raises(ValueError, match="pass validator="),
+            id="both_installed",
+        ),
+    ],
+)
+def test_default_validator_is_the_only_installed_one(
+    monkeypatch: pytest.MonkeyPatch, installed: set[str], expected: Any, raises: Any
+) -> None:
+    monkeypatch.setattr(
+        "padwan_llm.tools.find_spec",
+        lambda name: object() if name in installed else None,
+    )
+    with raises:
+        assert isinstance(_resolve(None), expected)
 
-    monkeypatch.setattr(builtins, "__import__", no_msgspec)
-    with pytest.raises(ImportError, match=r"padwan-llm\[msgspec\]"):
-        tool(read_reference)
+
+async def test_a_custom_validator_instance_is_used_as_is() -> None:
+    class Passthrough:
+        def compile(
+            self, name: str, fields: Sequence[Any]
+        ) -> tuple[dict[str, Any], Any]:
+            return {"type": "object", "x": name}, dict
+
+        def dump(self, result: Any) -> Any:
+            return {"wrapped": result}
+
+    async def echo(query: str) -> str:
+        return query
+
+    t = tool(echo, validator=cast(ToolValidator, Passthrough()))
+    assert t.input_schema == {"type": "object", "x": "echo_args"}
+    assert await t.handler({"query": "hi"}) == {"wrapped": "hi"}

@@ -14,7 +14,6 @@ dependencies = [
 [project.optional-dependencies]
 langfuse = ["langfuse>=4.9", "opentelemetry-api>=1.44"]
 otel = ["opentelemetry-api>=1.44"]
-msgspec = ["msgspec>=0.19"]
 realtime = ["niquests[ws]>=3.21.0"]
 
 [project.scripts]
@@ -31,9 +30,11 @@ module-name = "padwan_llm"
 
 [dependency-groups]
 dev = [
+    "msgspec>=0.19",
     "opentelemetry-exporter-otlp-proto-http>=1.44",
     "opentelemetry-sdk>=1.44",
     "prek>=0.2.30",
+    "pydantic>=2.0",
     "pyright>=1.1.400",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.25.0",

@@ -66,7 +66,18 @@ On `__aenter__` the session enters every transport in order (via an `AsyncExitSt
 
 ## Tools from typed functions
 
-Writing a JSON Schema by hand for every local tool gets old. With the `msgspec` extra (`pip install "padwan-llm[msgspec]"`), `tool()` builds an `McpTool` from a typed async function: the signature is the schema, the docstring the description, and the arguments the model sends are validated before the function runs. Constraints go through `Annotated[int, msgspec.Meta(ge=1)]`.
+Writing a JSON Schema by hand for every local tool gets old.
+`tool()` builds an `McpTool` from a typed async function:
+
+- the signature is the schema
+- the docstring the description
+- the arguments the model sends are validated before the function runs
+
+Validation needs either `msgspec` or `pydantic` installed (neither is a dependency
+of padwan-llm). With no `validator=`, `tool()` uses the only one installed and
+raises when both are (pydantic is often pulled in by another SDK). Pass
+`validator="msgspec"` or `validator="pydantic"` to choose, or any object
+implementing `ToolValidator` to plug in another library.
 
 ```python
 from padwan_llm.tools import tool
@@ -78,7 +89,14 @@ async def get_weather(city: str, unit: str = "celsius") -> dict:
 weather_tool = tool(get_weather)   # name "get_weather", `city` required, `unit` optional
 ```
 
-Malformed arguments raise `msgspec.ValidationError` inside the handler, which `AgentSession` reports to the model as a tool error like any other exception. The result goes through `msgspec.to_builtins`, so `msgspec.Struct` and dataclass results reach the model as plain JSON data.
+Malformed arguments raise the chosen library's `ValidationError` inside the handler,
+which `AgentSession` reports to the model as a tool error like any other exception.
+Constraints go through `Annotated[int, msgspec.Meta(ge=1)]` or
+`Annotated[int, pydantic.Field(ge=1)]`, matching the validator in use (the other
+library's metadata is ignored). Results are dumped with `msgspec.to_builtins` /
+`pydantic_core.to_jsonable_python`, so structs, models and dataclasses reach the
+model as plain JSON data; a result the chosen library cannot serialise is reported
+as a tool error.
 
 ## Configuration
 

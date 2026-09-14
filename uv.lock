@@ -2082,9 +2082,6 @@ langfuse = [
     { name = "langfuse" },
     { name = "opentelemetry-api" },
 ]
-msgspec = [
-    { name = "msgspec" },
-]
 otel = [
     { name = "opentelemetry-api" },
 ]
@@ -2097,9 +2094,11 @@ bump = [
     { name = "commitizen" },
 ]
 dev = [
+    { name = "msgspec" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
     { name = "prek" },
+    { name = "pydantic" },
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -2126,7 +2125,6 @@ research = [
 [package.metadata]
 requires-dist = [
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = ">=4.9" },
-    { name = "msgspec", marker = "extra == 'msgspec'", specifier = ">=0.19" },
     { name = "niquests", specifier = ">=3.21.0" },
     { name = "niquests", extras = ["ws"], marker = "extra == 'realtime'", specifier = ">=3.21.0" },
     { name = "opentelemetry-api", marker = "extra == 'langfuse'", specifier = ">=1.44" },
@@ -2134,14 +2132,16 @@ requires-dist = [
     { name = "qh3", specifier = ">=1.7.1" },
     { name = "urllib3-future", specifier = ">=2.24.904" },
 ]
-provides-extras = ["langfuse", "otel", "msgspec", "realtime"]
+provides-extras = ["langfuse", "otel", "realtime"]
 
 [package.metadata.requires-dev]
 bump = [{ name = "commitizen", specifier = ">=4.0.0" }]
 dev = [
+    { name = "msgspec", specifier = ">=0.19" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.44" },
     { name = "opentelemetry-sdk", specifier = ">=1.44" },
     { name = "prek", specifier = ">=0.2.30" },
+    { name = "pydantic", specifier = ">=2.0" },
     { name = "pyright", specifier = ">=1.1.400" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "pytest-asyncio", specifier = ">=0.25.0" },
