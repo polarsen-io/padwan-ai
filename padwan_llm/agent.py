@@ -382,25 +382,21 @@ class AgentSession[T: Answer = Answer]:
             except LookupError:
                 pass
 
-        # cls[O] is not spellable on type[Self]: the class is built directly, then cast
-        instance = cast(
-            "AgentSession[O]",
-            cls(
-                client=_client,
-                store=store,
-                system=snapshot.get("system") if snapshot else system,
-                **({} if session_id is None else {"session_id": session_id}),
-                mcp_tools=mcp_tools,
-                max_tool_rounds=max_tool_rounds,
-                max_tool_result_chars=max_tool_result_chars,
-                execution=execution,
-                on_tool=on_tool,
-                on_tool_error=on_tool_error,
-                approve_tool=approve_tool,
-                on_mcp_connect=on_mcp_connect,
-                extra_params=extra_params,
-                output=cast("AgentOutput[T] | None", output),
-            ),
+        instance = AgentSession[O](
+            client=_client,
+            store=store,
+            system=snapshot.get("system") if snapshot else system,
+            **({} if session_id is None else {"session_id": session_id}),
+            mcp_tools=mcp_tools,
+            max_tool_rounds=max_tool_rounds,
+            max_tool_result_chars=max_tool_result_chars,
+            execution=execution,
+            on_tool=on_tool,
+            on_tool_error=on_tool_error,
+            approve_tool=approve_tool,
+            on_mcp_connect=on_mcp_connect,
+            extra_params=extra_params,
+            output=output,
         )
         if snapshot:
             instance._state = ConversationState.from_snapshot(snapshot)
