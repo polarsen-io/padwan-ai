@@ -230,16 +230,14 @@ session.total_usage  # accumulated usage across all rounds in this session
 `padwan_llm.testing.ScriptedClient` stands in for any client: it answers each round with the next `Step` of a script and records what the model would have seen, so a test asserts on the conversation as well as on the outcome (no provider, key or socket needed).
 
 ```python
-from typing import cast
-
-from padwan_llm import AgentSession, LLMClientBase, McpTool
+from padwan_llm import AgentSession, McpTool
 from padwan_llm.testing import ScriptedClient, Step
 
 client = ScriptedClient([
     Step(tool_calls=[("get_weather", {"city": "Paris"})]),  # round 1: the model calls a tool
     Step(text="Sunny in Paris."),                           # round 2: it answers
 ])
-async with AgentSession(client=cast(LLMClientBase, client), mcp_tools=[weather_tool]) as session:
+async with AgentSession(client=client, mcp_tools=[weather_tool]) as session:
     assert await session.send("Weather in Paris?") == "Sunny in Paris."
 
 assert client.requests[1].messages[-1]["role"] == "tool"  # the tool result went back to the model

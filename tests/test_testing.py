@@ -1,8 +1,6 @@
-from typing import Any, cast
-
 import pytest
 
-from padwan_llm import AgentSession, ChatStream, LLMClientBase, McpTool, Message
+from padwan_llm import AgentSession, ChatStream, McpTool, Message
 from padwan_llm.testing import ScriptedClient, Step
 
 
@@ -51,15 +49,15 @@ async def test_requests_are_recorded_and_the_script_ends() -> None:
 
 
 async def test_it_drives_an_agent_session() -> None:
-    seen: list[dict[str, Any]] = []
+    seen: list[dict[str, object]] = []
 
-    async def echo(args: dict[str, Any]) -> dict[str, Any]:
+    async def echo(args: dict[str, object]) -> dict[str, object]:
         seen.append(args)
         return {"found": 1}
 
     client = ScriptedClient([Step(tool_calls=[("echo", {"x": 1})]), Step(text="done")])
     session = AgentSession(
-        client=cast(LLMClientBase, client),
+        client=client,
         system="s",
         mcp_tools=[McpTool("echo", "", {"type": "object"}, echo)],
     )

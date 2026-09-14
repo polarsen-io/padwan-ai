@@ -1,8 +1,8 @@
 import copy
 import json
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Mapping, Sequence
 from dataclasses import InitVar, dataclass, field
-from typing import Any, Self
+from typing import Self
 
 from ._base import ChatStream
 from .conversation import ChatMessage
@@ -20,7 +20,7 @@ class Step:
     """One scripted round: what the model says and/or the `(tool_name, arguments)` it calls."""
 
     text: str | None = None
-    tool_calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
+    tool_calls: list[tuple[str, Mapping[str, object]]] = field(default_factory=list)
     usage: UsageToken = field(default_factory=_default_usage)
 
 
@@ -30,7 +30,7 @@ class Request:
 
     messages: list[ChatMessage]
     tools: list[ToolDefinition]
-    extra_params: dict[str, Any] | None = None
+    extra_params: Mapping[str, object] | None = None
 
     @property
     def tool_names(self) -> list[str]:
@@ -96,7 +96,7 @@ class ScriptedClient:
         self,
         messages: Sequence[ChatMessage],
         tools: Sequence[ToolDefinition] | None,
-        extra_params: dict[str, Any] | None,
+        extra_params: Mapping[str, object] | None,
     ) -> tuple[Step, int]:
         if not self._steps:
             raise AssertionError(
@@ -116,7 +116,7 @@ class ScriptedClient:
         self,
         messages: Sequence[ChatMessage],
         tools: Sequence[ToolDefinition] | None = None,
-        extra_params: dict[str, Any] | None = None,
+        extra_params: Mapping[str, object] | None = None,
     ) -> ChatStream:
         step, round_no = self._next(messages, tools, extra_params)
         return _ScriptedStream(step, round_no)

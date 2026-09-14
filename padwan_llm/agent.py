@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from types import TracebackType
 from typing import Any, Literal, Protocol, Self
 
-from ._base import LLMClientBase
+from ._base import ChatStream
 from ._json import dumps as _json_dumps, loads as _json_loads
 from .client import LLMClient
 from .content import ContentPart
@@ -39,6 +39,27 @@ class ToolCallContext:
 
 
 type OnTool = Callable[[ToolCallContext], AbstractContextManager[None]]
+
+
+class ChatClient(Protocol):
+    """What `AgentSession` needs of a client: an async context manager that streams chat."""
+
+    async def __aenter__(self) -> Self: ...
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+        /,
+    ) -> None: ...
+
+    def stream_chat(
+        self,
+        messages: Sequence[ChatMessage],
+        tools: Sequence[ToolDefinition] | None = None,
+        extra_params: dict[str, Any] | None = None,
+    ) -> ChatStream: ...
 
 
 class ConversationStore(Protocol):
@@ -114,7 +135,7 @@ class AgentSession:
     updated set on the next iteration without restarting the session.
     """
 
-    client: LLMClientBase
+    client: ChatClient
     system: str | None = None
     mcp_tools: Sequence[McpTool | McpTransport] = field(default_factory=list)
     max_tool_rounds: int | None = 5
@@ -213,7 +234,7 @@ class AgentSession:
         store: ConversationStore,
         session_id: str | None = None,
         model: str | None = None,
-        client: LLMClientBase | None = None,
+        client: ChatClient | None = None,
         system: str | None = None,
         mcp_tools: Sequence[McpTool | McpTransport] = (),
         max_tool_rounds: int | None = 5,
@@ -247,7 +268,7 @@ class AgentSession:
         if model is not None and client is not None:
             raise ValueError("Provide exactly one of model= or client=, not both")
         if model is not None:
-            _client: LLMClientBase = LLMClient(model=model)
+            _client: ChatClient = LLMClient(model=model)
         elif client is not None:
             _client = client
         else:
