@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Any, Literal, Protocol, Self, cast
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, cast
 
 from ._base import ChatStream
 from ._json import dumps as _json_dumps, loads as _json_loads
@@ -23,7 +23,14 @@ from .errors import OutputError
 from .logs import log
 from .mcp import McpTool, McpTransport
 from .models import ToolCall, ToolDefinition, UsageToken
-from .tools import ToolValidator, _resolve
+from .tools import _resolve
+
+if TYPE_CHECKING:
+    from msgspec import Struct
+    from pydantic import BaseModel
+
+    type Answer = Struct | BaseModel
+    """What an `AgentOutput.cls` can be: the validators are picked from the class."""
 
 __all__ = (
     "AgentOutput",
@@ -71,13 +78,11 @@ class ChatClient(Protocol):
 
 
 @dataclass(frozen=True)
-class AgentOutput[T]:
+class AgentOutput[T: Answer]:
     """The typed final answer of a run: `cls` is what `run()` returns, submitted through a tool."""
 
     cls: type[T]
-    """Answer class (msgspec Struct, pydantic model, dataclass...)."""
-    validator: ToolValidator | Literal["msgspec", "pydantic"] | None = None
-    """Library validating `cls`, resolved like `tool(validator=)` when omitted."""
+    """Answer class: a msgspec Struct or a pydantic model, validated by its own library."""
     tool: str = "submit"
     """Name of the tool the model calls to answer."""
     max_repairs: int = 1
@@ -89,7 +94,7 @@ class AgentOutput[T]:
 
 
 @dataclass
-class _OutputRun[T]:
+class _OutputRun[T: Answer]:
     """The output tool of one session, and what the model has submitted in the current run."""
 
     spec: AgentOutput[T]
@@ -102,9 +107,7 @@ class _OutputRun[T]:
 
     def __post_init__(self) -> None:
         spec = self.spec
-        schema, self._convert = _resolve(spec.validator, {"output": spec.cls}).adapt(
-            spec.cls
-        )
+        schema, self._convert = _resolve(None, {"output": spec.cls}).adapt(spec.cls)
         self.tool = McpTool(
             name=spec.tool,
             description="Submit the final answer. Call it exactly once, when the work is done.",
@@ -204,7 +207,7 @@ def _extract_text(result: Any) -> str:
 
 
 @dataclass
-class AgentSession[T = object]:
+class AgentSession[T: Answer = Answer]:
     """Multi-turn conversation runner with streaming and tool dispatch.
 
     Wraps a `ConversationState` with the loop that calls the LLM, dispatches
@@ -324,7 +327,7 @@ class AgentSession[T = object]:
         self.store.save(self.session_id, self._state.snapshot())
 
     @classmethod
-    def load[O = object](
+    def load[O: Answer = Answer](
         cls,
         *,
         store: ConversationStore,

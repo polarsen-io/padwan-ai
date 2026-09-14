@@ -1214,31 +1214,9 @@ async def test_broken_json_is_an_error_for_any_tool() -> None:
     assert "not valid JSON" in cast(str, tool_msg["content"])  # type: ignore[typeddict-item]
 
 
-async def test_output_validator_picks_the_backend_for_a_plain_class() -> None:
-    @dataclass
-    class Answer:
-        decision: str
-
-    session, _ = make_session(
-        [FakeChatStream(chunks=[], tool_calls=[_submit({"decision": "x"})])],
-        output=AgentOutput(Answer, validator="msgspec"),
-    )
-    async with session:
-        assert await session.run("go") == Answer("x")
-
-
-@pytest.mark.parametrize(
-    "kwargs, match",
-    [
-        pytest.param({"max_repairs": -1}, "max_repairs", id="negative_max_repairs"),
-        pytest.param(
-            {}, "both msgspec and pydantic", id="plain_class_needs_a_validator"
-        ),
-    ],
-)
-def test_invalid_output_settings_rejected(kwargs: dict[str, Any], match: str) -> None:
-    with pytest.raises(ValueError, match=match):
-        AgentSession(client=FakeClient([]), output=AgentOutput(object, **kwargs))
+def test_invalid_max_repairs_rejected(verdict: type) -> None:
+    with pytest.raises(ValueError, match="max_repairs"):
+        AgentOutput(verdict, max_repairs=-1)
 
 
 def test_run_without_output_is_a_programming_error() -> None:

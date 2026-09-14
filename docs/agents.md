@@ -174,7 +174,7 @@ async with AgentSession(
 
 `run()` is typed: `AgentSession(output=AgentOutput(Verdict))` is an `AgentSession[Verdict]`, so `verdict` is a `Verdict` for the type checker too.
 
-The answer class goes through the same validators as `tool()`: a `msgspec.Struct` picks msgspec, a `pydantic.BaseModel` picks pydantic, and a plain class (a dataclass, say) needs `AgentOutput(validator=)` when both libraries are installed.
+The answer class is a `msgspec.Struct` or a `pydantic.BaseModel`, validated by its own library through the same backends as `tool()`.
 
 An invalid `submit` (a failed validation, or arguments that are not JSON) goes back to the model as the tool result, with the error, up to `AgentOutput(max_repairs=)` times (1 by default); one more failure raises `OutputError`. A text answer without `submit`, or the round limit, raise `OutputError` too: a typed run never returns prose. `OutputError.attempts` and `.details` say what happened.
 
