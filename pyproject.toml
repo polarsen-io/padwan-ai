@@ -30,9 +30,11 @@ module-name = "padwan_llm"
 
 [dependency-groups]
 dev = [
+    "msgspec>=0.19",
     "opentelemetry-exporter-otlp-proto-http>=1.44",
     "opentelemetry-sdk>=1.44",
     "prek>=0.2.30",
+    "pydantic>=2.0",
     "pyright>=1.1.400",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.25.0",

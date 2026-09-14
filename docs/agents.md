@@ -64,6 +64,94 @@ async with AgentSession(
 
 On `__aenter__` the session enters every transport in order (via an `AsyncExitStack`), pings each one to prove the connection is live, and then fires the optional `on_mcp_connect` callback with the transport instance. All transports are torn down in LIFO order on exit — even if one of them fails to initialize or ping.
 
+## Tools from typed functions
+
+Writing a JSON Schema by hand for every local tool gets old.
+`tool()` builds an `McpTool` from a typed async function:
+
+- the signature is the schema
+- the docstring the description
+- the arguments the model sends are validated before the function runs
+
+Validation needs either `msgspec` or `pydantic` installed (neither is a dependency
+of padwan-llm).
+
+```python
+from padwan_llm.tools import tool
+
+
+async def get_weather(city: str, unit: str = "celsius") -> dict:
+    """Return current weather for a city."""
+    return {"city": city, "temp": 22, "unit": unit}
+
+
+weather_tool = tool(get_weather)  # `city` required, `unit` optional
+```
+
+### Picking the validator
+
+With no `validator=`, `tool()` follows the annotations: a `msgspec.Meta` constraint
+or `Struct` type picks msgspec, a `pydantic.Field` constraint or `BaseModel` type
+picks pydantic.
+
+=== "msgspec"
+
+    ```python
+    from typing import Annotated
+    import msgspec
+
+
+    class Ref(msgspec.Struct):
+        id: int
+        name: str
+
+
+    async def search(
+        query: str, limit: Annotated[int, msgspec.Meta(ge=1, le=10)] = 5
+    ) -> list[Ref]:
+        """Search the references by name."""
+        return [Ref(id=1, name=query)]
+
+
+    search_tool = tool(search)  # `limit` carries minimum/maximum in the schema
+    ```
+
+=== "pydantic"
+
+    ```python
+    from typing import Annotated
+    import pydantic
+
+
+    class Ref(pydantic.BaseModel):
+        id: int
+        name: str
+
+
+    async def read(ref_id: Annotated[int, pydantic.Field(ge=1)]) -> Ref | None:
+        """Read one reference."""
+        return Ref(id=ref_id, name="EXCAVATOR 20-22T")
+
+
+    read_tool = tool(read)  # the model is dumped to JSON data
+    ```
+
+A signature of plain types uses the only library installed and raises when both
+are (pydantic is often pulled in by another SDK). Pass `validator=` to choose, or
+any object implementing `ToolValidator` to plug in another library:
+
+```python
+tool(get_weather, validator="msgspec")
+tool(get_weather, validator=MyValidator())  # compile(name, fields) + dump(result)
+```
+
+Malformed arguments raise the chosen library's `ValidationError` inside the handler,
+which `AgentSession` reports to the model as a tool error like any other exception.
+The other library's constraint metadata is ignored. Results are dumped with
+`msgspec.to_builtins` / `pydantic_core.to_jsonable_python`, so structs, models and
+dataclasses reach the model as plain JSON data; a result the chosen library cannot
+serialise is reported as a tool error.
+
 ## Configuration
 
 ```python
