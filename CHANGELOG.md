@@ -1,3 +1,28 @@
+## 0.10.0 (2026-09-14)
+
+Agent release: typed answers, tools built from typed functions with a pluggable validator, and a scripted client for testing agents. Plus Langfuse time to first token and OpenTelemetry fixes.
+
+### Features
+
+- **Typed final answers.** `AgentSession(output=AgentOutput(Verdict))` adds a `submit` tool whose parameters are the answer's JSON Schema; `run()` drives the loop until a call validates and returns the instance. The answer class is a `msgspec.Struct` or a `pydantic.BaseModel`, validated by its own library. An invalid call (or arguments that are not JSON) goes back to the model up to `max_repairs` times, then `OutputError`; a text answer or the round limit raise `OutputError` too. `run()` is typed: `AgentSession[Verdict]` returns a `Verdict`. (#73)
+- **Tools from typed functions.** `padwan_llm.tools.tool(fn)` builds an `McpTool` from a typed async function: the signature is the schema, the docstring the description, and the arguments are validated and coerced before the function runs. `validator=` picks msgspec or pydantic, or any `ToolValidator`; with none given, the annotations decide. Neither library is a dependency. (#67)
+- **Scripted client for tests.** `padwan_llm.testing.ScriptedClient` replays a script of `Step`s (text and/or tool calls) in place of a provider, records every round's request, and raises when the script runs out. (#59)
+- **Langfuse time to first token.** Streamed chat spans record the first chunk time, mapped to Langfuse's `completion_start_time`. `langfuse.instrument()` also accepts `span_exporter` and `httpx_client`, so a test can capture every attribute without a socket. (#69, #70)
+
+### Fixes
+
+- **Raw OpenAI `complete()` / `stream()` calls are traced** when no chat span is open, with usage, finish reasons, tool names and time to first chunk. (#55)
+- **Caller context restored between stream chunks**, so unrelated work no longer inherits the chat span and cross-task iteration no longer raises. (#58)
+- **Audio formats inferred from file extensions**, so `.m4a` / `.aac` files are accepted regardless of the host's MIME mappings. (#57)
+- **`padwan_llm.langfuse` imports on Python 3.13**; `httpx` stays a type-only import and a missing optional dependency is still reported as Langfuse. (#71, #72)
+
+### Dev
+
+- Unparsable tool-call arguments are returned to the model as an error for every tool instead of running the handler on `{}`. (#73)
+- Weekly LLM SDK refreshes; the perf workflow skips benchmark comments on fork PRs. (#54, #56, #65, #68)
+
+**Full Changelog**: https://github.com/polarsen-io/padwan-llm/compare/0.9.4...0.10.0
+
 ## 0.9.4 (2026-08-25)
 
 ### Changes
