@@ -626,10 +626,7 @@ def _sent_temperature(client: LLMClientBase) -> float | None:
 def _record_first_chunk(
     span: trace.Span, inst: _Instruments, attrs: dict[str, Any], elapsed: float
 ) -> None:
-    """Record the first streamed chunk once per span: latency on the span and
-    histogram, plus the wall-clock instant so backends can show when the
-    completion started. Later calls (a text chunk after a raw provider chunk
-    already counted) are no-ops."""
+    """Record the first streamed chunk once per span: latency, histogram and wall-clock instant."""
     recorded = getattr(span, "attributes", None) or {}
     if "gen_ai.response.time_to_first_chunk" in recorded:
         return
@@ -962,10 +959,8 @@ def _wrap_openai_stream(original: Any, inst: _Instruments) -> Any:
         self: Any, body: Any, *args: Any, **kwargs: Any
     ) -> AsyncIterator[Any]:
         if (active := _active_chat_span.get()) is not None:
-            # The chat wrapper only sees text chunks; count the first raw provider
-            # chunk here so tool-call-only and reasoning-first streams get a time
-            # to first chunk too.
-            attrs = _raw_request_attrs(self, body)
+            # count the first raw chunk here: tool-call-only streams never yield text
+            attrs = {**_raw_request_attrs(self, body), "gen_ai.request.stream": True}
             if active.is_recording():
                 _set_openai_request_attrs(active, body)
             start = time.perf_counter()

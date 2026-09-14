@@ -259,7 +259,9 @@ async def test_stream_chat_tool_calls_only_records_first_chunk(
     assert attrs["padwan_llm.response.tool_names"] == ("get_weather",)
     assert attrs["gen_ai.response.time_to_first_chunk"] > 0
     datetime.fromisoformat(cast(str, attrs["padwan_llm.response.first_chunk_time"]))
-    assert _histogram_count(reader, "gen_ai.client.operation.time_to_first_chunk") == 1
+    (point,) = _histogram_points(reader, "gen_ai.client.operation.time_to_first_chunk")
+    assert point.count == 1
+    assert dict(point.attributes or {})["gen_ai.request.stream"] is True
 
 
 @pytest.mark.parametrize(
