@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789418380574,
+  "lastUpdate": 1789418574742,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -882,6 +882,48 @@ window.BENCHMARK_DATA = {
             "value": 224.84,
             "unit": "ms",
             "range": 2.82
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6b6d48b2da64ff4091d6d292a9cc857b7dc96a9f",
+          "message": "fix(langfuse): import httpx at runtime, the annotation is evaluated on Python 3.13 (#71)",
+          "timestamp": "2026-09-14T22:41:46+02:00",
+          "tree_id": "8423b6193f65cfe249308f0464ec8d40751680d0",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/6b6d48b2da64ff4091d6d292a9cc857b7dc96a9f"
+        },
+        "date": 1789418574161,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 209.9,
+            "unit": "ms",
+            "range": 1.38
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 211.75,
+            "unit": "ms",
+            "range": 1.31
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 224.13,
+            "unit": "ms",
+            "range": 1.8
           }
         ]
       }
