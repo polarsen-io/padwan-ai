@@ -626,11 +626,17 @@ def _sent_temperature(client: LLMClientBase) -> float | None:
 def _record_first_chunk(
     span: trace.Span, inst: _Instruments, attrs: dict[str, Any], elapsed: float
 ) -> None:
-    """Record the first streamed chunk: latency on the span and histogram, plus the
-    wall-clock instant so backends can show when the completion started."""
+    """Record the first streamed chunk once per span: latency on the span and
+    histogram, plus the wall-clock instant so backends can show when the
+    completion started. Later calls (a text chunk after a raw provider chunk
+    already counted) are no-ops."""
+    recorded = getattr(span, "attributes", None) or {}
+    if "gen_ai.response.time_to_first_chunk" in recorded:
+        return
     span.set_attribute("gen_ai.response.time_to_first_chunk", elapsed)
     span.set_attribute(
-        "padwan_llm.response.first_chunk_time", datetime.now(UTC).isoformat()
+        "padwan_llm.response.first_chunk_time",
+        datetime.now(UTC).isoformat().replace("+00:00", "Z"),
     )
     inst.time_to_first_chunk.record(elapsed, attrs)
 
@@ -956,10 +962,18 @@ def _wrap_openai_stream(original: Any, inst: _Instruments) -> Any:
         self: Any, body: Any, *args: Any, **kwargs: Any
     ) -> AsyncIterator[Any]:
         if (active := _active_chat_span.get()) is not None:
+            # The chat wrapper only sees text chunks; count the first raw provider
+            # chunk here so tool-call-only and reasoning-first streams get a time
+            # to first chunk too.
+            attrs = _raw_request_attrs(self, body)
             if active.is_recording():
                 _set_openai_request_attrs(active, body)
+            start = time.perf_counter()
             async for chunk in original(self, body, *args, **kwargs):
                 if active.is_recording():
+                    _record_first_chunk(
+                        active, inst, attrs, time.perf_counter() - start
+                    )
                     _set_openai_response_attrs(active, chunk)
                 yield chunk
             return

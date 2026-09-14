@@ -215,6 +215,7 @@ async def test_stream_chat_span(otel_setup, client, make_sse_event, make_sse_res
     assert first_chunk.tzinfo is UTC
     assert span.start_time is not None
     assert first_chunk.timestamp() >= span.start_time / 1e9 - 1e-3
+    assert cast(str, attrs["padwan_llm.response.first_chunk_time"]).endswith("Z")
     assert attrs["openai.api.type"] == "chat_completions"
     assert attrs["openai.request.service_tier"] == "flex"
     assert attrs["openai.response.service_tier"] == "flex"
@@ -226,6 +227,39 @@ async def test_stream_chat_span(otel_setup, client, make_sse_event, make_sse_res
     assert (
         _histogram_count(reader, "gen_ai.client.operation.time_per_output_chunk") == 2
     )
+
+
+async def test_stream_chat_tool_calls_only_records_first_chunk(
+    otel_setup, client, make_sse_event, make_sse_resp
+):
+    """A stream that never yields text (tool calls only) still has a first chunk."""
+    exporter, reader = otel_setup
+    chunks = [
+        {
+            "choices": [
+                {
+                    "delta": {
+                        "tool_calls": [
+                            {"index": 0, "function": {"name": "get_weather"}}
+                        ]
+                    }
+                }
+            ]
+        },
+        {"choices": [{"delta": {}, "finish_reason": "tool_calls"}], "usage": USAGE},
+    ]
+    events = [make_sse_event(_json_dumps(c)) for c in chunks]
+    client._session.post.return_value = make_sse_resp(events)
+
+    text = [t async for t in client.stream_chat([{"role": "user", "content": "hey"}])]
+
+    assert text == []
+    (span,) = exporter.get_finished_spans()
+    attrs = dict(span.attributes or {})
+    assert attrs["padwan_llm.response.tool_names"] == ("get_weather",)
+    assert attrs["gen_ai.response.time_to_first_chunk"] > 0
+    datetime.fromisoformat(cast(str, attrs["padwan_llm.response.first_chunk_time"]))
+    assert _histogram_count(reader, "gen_ai.client.operation.time_to_first_chunk") == 1
 
 
 @pytest.mark.parametrize(

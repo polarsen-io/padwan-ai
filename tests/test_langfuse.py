@@ -72,7 +72,7 @@ _TOOLS = [{"type": "function", "name": "search"}]
                 "gen_ai.output.messages": _json_dumps([{"role": "assistant"}]),
                 "gen_ai.request.model": "gpt-test",
                 "gen_ai.conversation.id": "session-1",
-                "padwan_llm.response.first_chunk_time": "2026-09-14T10:00:00+00:00",
+                "padwan_llm.response.first_chunk_time": "2026-09-14T10:00:00.412000Z",
             },
             {
                 "langfuse.observation.type": "generation",
@@ -86,7 +86,7 @@ _TOOLS = [{"type": "function", "name": "search"}]
                 "langfuse.observation.output": _json_dumps([{"role": "assistant"}]),
                 "langfuse.session.id": "session-1",
                 "langfuse.observation.completion_start_time": (
-                    '"2026-09-14T10:00:00+00:00"'
+                    '"2026-09-14T10:00:00.412000Z"'
                 ),
             },
             id="chat_sections_and_session",

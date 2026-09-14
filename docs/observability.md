@@ -121,7 +121,7 @@ Each chat call emits one `CLIENT` span named `chat <model>` (or `chat` when no m
 | `gen_ai.usage.reasoning.output_tokens` | `5` | when the provider reports thought/reasoning tokens separately¹ |
 | `gen_ai.response.finish_reasons` | `["stop"]` | |
 | `gen_ai.response.time_to_first_chunk` | `0.4` | streams only |
-| `padwan_llm.response.first_chunk_time` | `2026-09-14T10:00:00.412+00:00` | streams only: wall-clock instant of the first chunk, ISO 8601 UTC (custom attribute) |
+| `padwan_llm.response.first_chunk_time` | `2026-09-14T10:00:00.412000Z` | streams only: wall-clock instant of the first provider chunk (text, tool call or reasoning), ISO 8601 UTC (custom attribute) |
 | `openai.api.type`, `openai.request.service_tier`, `openai.response.service_tier`, `openai.response.system_fingerprint` | | OpenAI vendor extras, including streamed responses |
 | `padwan_llm.response.tool_names` | `["get_weather"]` | tool calls requested by the model (custom attribute) |
 | `padwan_llm.thinking.duration` | `1.2` | seconds between the first and last `on_thought` chunk of a stream (custom attribute) |
