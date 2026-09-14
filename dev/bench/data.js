@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789418312888,
+  "lastUpdate": 1789418380574,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -840,6 +840,48 @@ window.BENCHMARK_DATA = {
             "value": 157.84,
             "unit": "ms",
             "range": 4.09
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "97bc53b47bd648dc18793902234b1ed9daaa65b3",
+          "message": "feat(langfuse): instrument() passes span_exporter and httpx_client to the client (#70)\n\n* feat(langfuse): instrument() passes span_exporter and httpx_client to the client\n\nBoth are Langfuse client options already; exposing them lets a test run the real integration\non an in-memory span exporter and a mock HTTP transport, and assert on every attribute the\nadapter and the SDK would send, without a socket.\n\n* docs(langfuse): keep the instrument() docstring to one line\n\n* test(langfuse): drop the passthrough test, it restates the forwarding\n\n---------\n\nCo-authored-by: Carlo Abi Chahine <carlo.abichahine@gmail.com>",
+          "timestamp": "2026-09-14T22:38:59+02:00",
+          "tree_id": "40e7a3e5e259d601729fa519ccdcb282c052f5df",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/97bc53b47bd648dc18793902234b1ed9daaa65b3"
+        },
+        "date": 1789418379151,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 229.59,
+            "unit": "ms",
+            "range": 13.22
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 210.89,
+            "unit": "ms",
+            "range": 1.46
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 224.84,
+            "unit": "ms",
+            "range": 2.82
           }
         ]
       }
