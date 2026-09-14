@@ -34,10 +34,13 @@ class Request:
 
     @property
     def tool_names(self) -> list[str]:
+        """Names of the tools offered to the model this round."""
         return [t["name"] for t in self.tools]
 
 
 class _ScriptedStream(ChatStream):
+    """Streams one `Step`: its text as a single chunk, then usage and tool calls."""
+
     def __init__(self, step: Step, round_no: int) -> None:
         self._step = step
         self._round = round_no
@@ -50,6 +53,7 @@ class _ScriptedStream(ChatStream):
 
 
 def _tool_calls(step: Step, round_no: int) -> list[ToolCall] | None:
+    """Build OpenAI-shaped tool calls with deterministic `call_<round>_<index>` ids."""
     calls = [
         ToolCall(
             id=f"call_{round_no}_{i}",
@@ -98,6 +102,7 @@ class ScriptedClient:
         tools: Sequence[ToolDefinition] | None,
         extra_params: Mapping[str, object] | None,
     ) -> tuple[Step, int]:
+        """Record the request and pop the next step, with its 1-based round number."""
         if not self._steps:
             raise AssertionError(
                 f"ScriptedClient: script exhausted after {len(self.requests)} round(s)"
