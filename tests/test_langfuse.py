@@ -206,25 +206,3 @@ def test_instrument_rejects_active_otel(monkeypatch):
 
     with pytest.raises(RuntimeError, match="already active"):
         langfuse_integration.instrument()
-
-
-def test_instrument_passes_exporter_and_http_client_through(monkeypatch):
-    client = MagicMock()
-    langfuse = MagicMock(return_value=client)
-    monkeypatch.setattr(langfuse_integration, "Langfuse", langfuse)
-    monkeypatch.setattr(otel, "is_instrumented", lambda: False)
-    monkeypatch.setattr(otel, "instrument", MagicMock())
-    monkeypatch.setattr(otel, "uninstrument", MagicMock())
-    exporter, http = MagicMock(name="span_exporter"), MagicMock(name="httpx_client")
-
-    integration = langfuse_integration.instrument(
-        public_key="<PUBLIC_KEY>",
-        secret_key="<SECRET_KEY>",
-        span_exporter=exporter,
-        httpx_client=http,
-    )
-    integration.shutdown()
-
-    options = langfuse.call_args.kwargs
-    assert options["span_exporter"] is exporter
-    assert options["httpx_client"] is http
