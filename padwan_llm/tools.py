@@ -35,6 +35,14 @@ class ToolValidator(Protocol):
         """JSON Schema for the model, and validate(raw_args) -> typed kwargs, raising on bad input."""
         ...
 
+    def schema(self, cls: type) -> dict[str, Any]:
+        """JSON Schema of `cls` (a class the library can describe), top-level inlined, no title."""
+        ...
+
+    def convert(self, obj: Any, cls: type) -> Any:
+        """Validate JSON data into an instance of `cls`, coercing where the library allows."""
+        ...
+
     def dump(self, result: Any) -> Any:
         """Tool result -> JSON-able builtins, raising when the library can't serialise it."""
         ...
@@ -47,19 +55,29 @@ class MsgspecValidator:
         import msgspec
 
         struct = msgspec.defstruct(name, fields, kw_only=True)
-        # msgspec puts the struct itself under $defs behind a top-level $ref; inline it
-        raw = msgspec.json.schema(struct)
+
+        def validate(args: dict[str, Any]) -> dict[str, Any]:
+            parsed = self.convert(args, struct)
+            return {f: getattr(parsed, f) for f in struct.__struct_fields__}
+
+        return self.schema(struct), validate
+
+    def schema(self, cls: type) -> dict[str, Any]:
+        import msgspec
+
+        # msgspec puts the class itself under $defs behind a top-level $ref; inline it
+        raw = msgspec.json.schema(cls)
         schema: dict[str, Any] = raw["$defs"].pop(raw["$ref"].rsplit("/", 1)[-1])
         schema.pop("title", None)
         if raw["$defs"]:
             schema["$defs"] = raw["$defs"]
+        return schema
 
-        def validate(args: dict[str, Any]) -> dict[str, Any]:
-            # strict=False: models send "3" for ints, coerce instead of rejecting
-            parsed = msgspec.convert(args, struct, strict=False)
-            return {f: getattr(parsed, f) for f in struct.__struct_fields__}
+    def convert(self, obj: Any, cls: type) -> Any:
+        import msgspec
 
-        return schema, validate
+        # strict=False: models send "3" for ints, coerce instead of rejecting
+        return msgspec.convert(obj, cls, strict=False)
 
     def dump(self, result: Any) -> Any:
         import msgspec
@@ -84,14 +102,24 @@ class PydanticValidator:
             f[0]: (f[1], ... if len(f) == 2 else f[2]) for f in fields
         }
         model = pydantic.create_model(name, **defs)
-        schema = model.model_json_schema()
-        schema.pop("title", None)
 
         def validate(args: dict[str, Any]) -> dict[str, Any]:
-            parsed = model.model_validate(args)
+            parsed = self.convert(args, model)
             return {f: getattr(parsed, f) for f in model.model_fields}
 
-        return schema, validate
+        return self.schema(model), validate
+
+    def schema(self, cls: type) -> dict[str, Any]:
+        from pydantic import TypeAdapter
+
+        schema = TypeAdapter(cls).json_schema()
+        schema.pop("title", None)
+        return schema
+
+    def convert(self, obj: Any, cls: type) -> Any:
+        from pydantic import TypeAdapter
+
+        return TypeAdapter(cls).validate_python(obj)
 
     def dump(self, result: Any) -> Any:
         from pydantic_core import to_jsonable_python
@@ -156,7 +184,7 @@ def _resolve(
         if len(installed) > 1:
             raise ValueError(
                 "both msgspec and pydantic are installed and the annotations name neither; "
-                "pass validator='msgspec' or validator='pydantic' to tool()"
+                "pass validator='msgspec' or validator='pydantic'"
             )
         return _BACKENDS[installed[0]]()
     if isinstance(validator, str):

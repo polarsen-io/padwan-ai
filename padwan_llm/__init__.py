@@ -53,7 +53,7 @@ from .conversation import (
     Message,
     ToolResultMessage,
 )
-from .errors import LLMError, Provider
+from .errors import LLMError, OutputError, Provider
 from .gemini import (
     GEMINI_MODELS,
     GeminiClient,
@@ -132,6 +132,7 @@ __all__ = (
     "OpenAIClient",
     "OpenAIModel",
     "OpenAIRealtimeClient",
+    "OutputError",
     "ProgressEvent",
     "Provider",
     "RealtimeClient",
