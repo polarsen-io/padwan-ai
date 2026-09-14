@@ -237,12 +237,7 @@ def instrument(
     span_exporter: SpanExporter | None = None,
     httpx_client: httpx.Client | None = None,
 ) -> LangfuseIntegration:
-    """Instrument Padwan and export enriched spans through Langfuse.
-
-    ``span_exporter`` and ``httpx_client`` are handed to the Langfuse client as-is: an
-    in-memory span exporter and a mock HTTP transport let a test see every attribute the
-    integration would send, without a socket.
-    """
+    """Instrument Padwan and export enriched spans through Langfuse."""
     if otel.is_instrumented():
         raise RuntimeError(
             "Padwan OpenTelemetry instrumentation is already active; "
