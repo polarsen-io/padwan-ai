@@ -98,8 +98,8 @@ bench-imports *args:
 
 # Serve docs locally with hot reload
 [group('docs')]
-docs:
-    uv run --group docs zensical serve -f zensical.toml
+docs port="8000":
+    uv run --group docs zensical serve -f zensical.toml -a localhost:{{ port }}
 
 # Build docs
 [group('docs')]
