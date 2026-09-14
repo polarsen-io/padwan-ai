@@ -10,6 +10,7 @@ Provider = Literal["openai", "gemini", "mistral", "grok", "anthropic"]
 
 __all__ = (
     "LLMError",
+    "OutputError",
     "Provider",
     "QuotaExceededError",
     "TooManyRequestsError",
@@ -40,3 +41,12 @@ class TooManyRequestsError(Exception):
 @dataclasses.dataclass
 class QuotaExceededError(Exception):
     body: dict
+
+
+class OutputError(Exception):
+    """An `AgentSession` run with `output=` ended without a valid answer."""
+
+    def __init__(self, message: str, *, attempts: int = 0, details: str | None = None):
+        self.attempts = attempts
+        self.details = details
+        super().__init__(message)

@@ -1,4 +1,5 @@
 import inspect
+import json
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from importlib.util import find_spec
 from typing import (
@@ -19,11 +20,30 @@ type _Field = tuple[str, Any] | tuple[str, Any, Any]
 """(name, annotation[, default]); a 2-tuple is a required parameter."""
 
 type _Validate = Callable[[dict[str, Any]], dict[str, Any]]
+type _Convert = Callable[[Any], Any]
 
 _KEYWORD_KINDS = (
     inspect.Parameter.POSITIONAL_OR_KEYWORD,
     inspect.Parameter.KEYWORD_ONLY,
 )
+
+
+def _inline_root(raw: dict[str, Any]) -> dict[str, Any]:
+    """Lift the class behind a top-level `$ref` out of `$defs`, dropping its title.
+
+    A recursive class keeps its definition under `$defs` so the inner `$ref`s stay valid.
+    """
+    if "$ref" not in raw:
+        raw.pop("title", None)
+        return raw
+    name = raw["$ref"].rsplit("/", 1)[-1]
+    defs: dict[str, Any] = raw["$defs"]
+    schema = {k: v for k, v in defs[name].items() if k != "title"}
+    if f'"#/$defs/{name}"' not in json.dumps(defs):
+        del defs[name]
+    if defs:
+        schema["$defs"] = defs
+    return schema
 
 
 class ToolValidator(Protocol):
@@ -33,6 +53,13 @@ class ToolValidator(Protocol):
         self, name: str, fields: Sequence[_Field]
     ) -> tuple[dict[str, Any], _Validate]:
         """JSON Schema for the model, and validate(raw_args) -> typed kwargs, raising on bad input."""
+        ...
+
+    def adapt(self, cls: type) -> tuple[dict[str, Any], _Convert]:
+        """JSON Schema of `cls` (top-level inlined, no title) and convert(json_data) -> instance.
+
+        Called once per class: the returned converter holds whatever the library builds up front.
+        """
         ...
 
     def dump(self, result: Any) -> Any:
@@ -47,19 +74,24 @@ class MsgspecValidator:
         import msgspec
 
         struct = msgspec.defstruct(name, fields, kw_only=True)
-        # msgspec puts the struct itself under $defs behind a top-level $ref; inline it
-        raw = msgspec.json.schema(struct)
-        schema: dict[str, Any] = raw["$defs"].pop(raw["$ref"].rsplit("/", 1)[-1])
-        schema.pop("title", None)
-        if raw["$defs"]:
-            schema["$defs"] = raw["$defs"]
+        schema, convert = self.adapt(struct)
 
         def validate(args: dict[str, Any]) -> dict[str, Any]:
-            # strict=False: models send "3" for ints, coerce instead of rejecting
-            parsed = msgspec.convert(args, struct, strict=False)
+            parsed = convert(args)
             return {f: getattr(parsed, f) for f in struct.__struct_fields__}
 
         return schema, validate
+
+    def adapt(self, cls: type) -> tuple[dict[str, Any], _Convert]:
+        import msgspec
+
+        schema = _inline_root(msgspec.json.schema(cls))
+
+        def convert(obj: Any) -> Any:
+            # strict=False: models send "3" for ints, coerce instead of rejecting
+            return msgspec.convert(obj, cls, strict=False)
+
+        return schema, convert
 
     def dump(self, result: Any) -> Any:
         import msgspec
@@ -84,14 +116,20 @@ class PydanticValidator:
             f[0]: (f[1], ... if len(f) == 2 else f[2]) for f in fields
         }
         model = pydantic.create_model(name, **defs)
-        schema = model.model_json_schema()
-        schema.pop("title", None)
+        schema, convert = self.adapt(model)
 
         def validate(args: dict[str, Any]) -> dict[str, Any]:
-            parsed = model.model_validate(args)
+            parsed = convert(args)
             return {f: getattr(parsed, f) for f in model.model_fields}
 
         return schema, validate
+
+    def adapt(self, cls: type) -> tuple[dict[str, Any], _Convert]:
+        from pydantic import TypeAdapter
+
+        # building the adapter is the expensive part; do it once per class, not per call
+        adapter = TypeAdapter(cls)
+        return _inline_root(adapter.json_schema()), adapter.validate_python
 
     def dump(self, result: Any) -> Any:
         from pydantic_core import to_jsonable_python
@@ -151,12 +189,12 @@ def _resolve(
         ]
         if not installed:
             raise ImportError(
-                "padwan_llm.tools.tool needs a validator: pip install msgspec or pydantic"
+                "validation needs a library: pip install msgspec or pydantic"
             )
         if len(installed) > 1:
             raise ValueError(
                 "both msgspec and pydantic are installed and the annotations name neither; "
-                "pass validator='msgspec' or validator='pydantic' to tool()"
+                "pass validator='msgspec' or validator='pydantic'"
             )
         return _BACKENDS[installed[0]]()
     if isinstance(validator, str):

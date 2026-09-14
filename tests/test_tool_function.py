@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from importlib.util import find_spec
 from typing import Annotated, Any, Literal, cast, get_type_hints
 
+import msgspec
+import pydantic
 import pytest
 
 from padwan_llm.tools import (
@@ -268,3 +270,30 @@ def test_default_validator_follows_the_annotations(
     )
     with raises:
         assert type(_resolve(None, hints)) is expected
+
+
+class _MsgspecNode(msgspec.Struct):
+    children: list["_MsgspecNode"] = []
+
+
+class _PydanticNode(pydantic.BaseModel):
+    children: list["_PydanticNode"] = []
+
+
+@pytest.mark.parametrize(
+    "validator, node",
+    [
+        pytest.param(MsgspecValidator(), _MsgspecNode, id="msgspec"),
+        pytest.param(PydanticValidator(), _PydanticNode, id="pydantic"),
+    ],
+)
+def test_adapt_keeps_a_recursive_class_reachable(
+    validator: ToolValidator, node: type
+) -> None:
+    schema, convert = validator.adapt(node)
+    assert "properties" in schema and "title" not in schema
+    assert (
+        "children" in schema["$defs"][node.__name__]["properties"]
+    )  # inner $ref resolves
+    tree = convert({"children": [{"children": []}]})
+    assert len(tree.children) == 1
