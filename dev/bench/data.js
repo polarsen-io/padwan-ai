@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789161309323,
+  "lastUpdate": 1789403743666,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -630,6 +630,48 @@ window.BENCHMARK_DATA = {
             "value": 232.84,
             "unit": "ms",
             "range": 3.31
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bot@polarsen.io",
+            "name": "Polarsen-bot",
+            "username": "Polarsen-bot"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d7605973bafec0d42defc41620f6b09e87e8a34b",
+          "message": "chore: weekly LLM SDK refresh (#65)\n\n- Bump openai, google-genai, xai-sdk, mcp to latest\n- Regenerate OpenAI/Mistral OpenAPI TypedDicts\n- Include provider model drift report\n\nCo-authored-by: Polarsen-bot <248777799+Polarsen-bot@users.noreply.github.com>",
+          "timestamp": "2026-09-14T18:35:03+02:00",
+          "tree_id": "bec5e8de9b4f11d862e6062269c23923642eecfa",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/d7605973bafec0d42defc41620f6b09e87e8a34b"
+        },
+        "date": 1789403742820,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 215.52,
+            "unit": "ms",
+            "range": 2.76
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 211.3,
+            "unit": "ms",
+            "range": 4.42
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 227.44,
+            "unit": "ms",
+            "range": 4.13
           }
         ]
       }
