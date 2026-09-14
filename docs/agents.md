@@ -66,7 +66,7 @@ On `__aenter__` the session enters every transport in order (via an `AsyncExitSt
 
 ## Tools from typed functions
 
-Writing a JSON Schema by hand for every local tool gets old. With the `pydantic` extra (`pip install "padwan-llm[pydantic]"`), `tool()` builds an `McpTool` from a typed async function: the signature is the schema, the docstring the description, and the arguments the model sends are validated before the function runs.
+Writing a JSON Schema by hand for every local tool gets old. With the `msgspec` extra (`pip install "padwan-llm[msgspec]"`), `tool()` builds an `McpTool` from a typed async function: the signature is the schema, the docstring the description, and the arguments the model sends are validated before the function runs. Constraints go through `Annotated[int, msgspec.Meta(ge=1)]`.
 
 ```python
 from padwan_llm.tools import tool
@@ -78,7 +78,7 @@ async def get_weather(city: str, unit: str = "celsius") -> dict:
 weather_tool = tool(get_weather)   # name "get_weather", `city` required, `unit` optional
 ```
 
-Malformed arguments raise `pydantic.ValidationError` inside the handler, which `AgentSession` reports to the model as a tool error like any other exception. A `pydantic.BaseModel` result (or a list/dict of them) is dumped to plain JSON data.
+Malformed arguments raise `msgspec.ValidationError` inside the handler, which `AgentSession` reports to the model as a tool error like any other exception. The result goes through `msgspec.to_builtins`, so `msgspec.Struct` and dataclass results reach the model as plain JSON data.
 
 ## Configuration
 
