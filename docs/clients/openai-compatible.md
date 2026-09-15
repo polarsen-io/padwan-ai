@@ -53,6 +53,31 @@ per-provider routing (so you can still point `GeminiClient` at a Gemini-protocol
 proxy). In gateway mode the token never falls back to `OPENAI_API_KEY`; if
 `PADWAN_API_KEY` is unset it defaults to `"no-key-required"` for local gateways.
 
+## Unified gateway, per call
+
+A service that holds its own configuration — its gateway URL and token in its
+settings, sometimes more than one gateway — selects the same routing without
+touching the process environment:
+
+```python
+from padwan_llm import LLMClient
+
+client = LLMClient(
+    model="mistral-small-3.2",  # an alias of the aggregator, not a Mistral model
+    base_url="https://aggregator.internal/v1",
+    api_key=settings.gateway_token,
+    gateway=True,
+)
+```
+
+`gateway=True` reads the endpoint as an OpenAI-compatible aggregator and routes
+every model through `OpenAIClient`, whatever its name; without it, a name like
+`mistral-small-3.2` is read as a Mistral model and the client would speak the
+Mistral protocol to an endpoint that only understands the OpenAI one. It takes
+`base_url` when given, `PADWAN_BASE_URL` otherwise, and raises when neither is
+set. `gateway=False` forces native per-provider routing even when
+`PADWAN_BASE_URL` is set. The default, `None`, keeps the behaviour above.
+
 ## Usage
 
 ### Basic Chat

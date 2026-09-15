@@ -14,7 +14,7 @@ __lazy_modules__ = frozenset(
 
 import os
 from collections.abc import Mapping, Sequence
-from typing import Any, Never, NotRequired, TypedDict, overload
+from typing import Any, Literal, Never, NotRequired, TypedDict, overload
 
 from ._base import LLMClientBase, OnThought
 from .anthropic import AnthropicClient, AnthropicModel, is_anthropic_model
@@ -52,6 +52,17 @@ class _ClientKwargs(TypedDict):
 
 @overload
 def LLMClient(
+    model: str,
+    *,
+    gateway: Literal[True],
+    temperature: float = 0.2,
+    timeout: float = 60,
+    api_key: str | None = None,
+    on_thought: OnThought | None = None,
+    base_url: str | None = None,
+) -> OpenAIClient: ...
+@overload
+def LLMClient(
     model: OpenAIModel,
     *,
     temperature: float = 0.2,
@@ -59,6 +70,7 @@ def LLMClient(
     api_key: str | None = None,
     on_thought: OnThought | None = None,
     base_url: str | None = None,
+    gateway: bool | None = None,
 ) -> OpenAIClient: ...
 @overload
 def LLMClient(
@@ -69,6 +81,7 @@ def LLMClient(
     api_key: str | None = None,
     on_thought: OnThought | None = None,
     base_url: str | None = None,
+    gateway: bool | None = None,
 ) -> GeminiClient: ...
 @overload
 def LLMClient(
@@ -79,6 +92,7 @@ def LLMClient(
     api_key: str | None = None,
     on_thought: OnThought | None = None,
     base_url: str | None = None,
+    gateway: bool | None = None,
 ) -> MistralClient: ...
 @overload
 def LLMClient(
@@ -89,6 +103,7 @@ def LLMClient(
     api_key: str | None = None,
     on_thought: OnThought | None = None,
     base_url: str | None = None,
+    gateway: bool | None = None,
 ) -> GrokClient: ...
 @overload
 def LLMClient(
@@ -99,6 +114,7 @@ def LLMClient(
     api_key: str | None = None,
     on_thought: OnThought | None = None,
     base_url: str | None = None,
+    gateway: bool | None = None,
 ) -> AnthropicClient: ...
 @overload
 def LLMClient(
@@ -109,6 +125,7 @@ def LLMClient(
     api_key: str | None = None,
     on_thought: OnThought | None = None,
     base_url: str | None = None,
+    gateway: bool | None = None,
 ) -> LLMClientBase: ...
 
 
@@ -120,6 +137,7 @@ def LLMClient(
     api_key: str | None = None,
     on_thought: OnThought | None = None,
     base_url: str | None = None,
+    gateway: bool | None = None,
 ) -> LLMClientBase:
     """Create an LLM client based on model name.
 
@@ -139,6 +157,13 @@ def LLMClient(
     authenticates with ``PADWAN_API_KEY`` when it is set and no ``api_key``
     is given, so provider keys are never sent to a custom endpoint.
 
+    ``gateway`` decides the same thing per call, for a service that holds its
+    own configuration rather than the process environment: ``True`` reads
+    ``base_url`` (or ``PADWAN_BASE_URL``) as an OpenAI-compatible aggregator and
+    routes every model through ``OpenAIClient``, whatever its name, with the
+    gateway token; ``False`` forces native per-provider routing even when
+    ``PADWAN_BASE_URL`` is set; the default ``None`` keeps the behaviour above.
+
     The ``on_thought`` callback, when provided, receives reasoning/thinking
     chunks from providers that support them (Gemini, Grok, Mistral).
     Providers that don't emit thoughts simply never invoke it.
@@ -151,8 +176,13 @@ def LLMClient(
         on_thought=on_thought,
     )
     gateway_url = os.environ.get(PADWAN_BASE_URL_ENV)
-    if base_url is None and gateway_url:
-        kwargs["base_url"] = gateway_url
+    if gateway is None:
+        gateway = base_url is None and bool(gateway_url)
+    if gateway:
+        endpoint = base_url or gateway_url
+        if endpoint is None:
+            raise ValueError(f"gateway=True needs base_url or {PADWAN_BASE_URL_ENV}")
+        kwargs["base_url"] = endpoint
         # Scope the token to the gateway: never fall through to OPENAI_API_KEY.
         kwargs["api_key"] = (
             api_key or os.environ.get(PADWAN_API_KEY_ENV) or "no-key-required"

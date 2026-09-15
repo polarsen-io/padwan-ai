@@ -300,6 +300,50 @@ def test_explicit_base_url_explicit_key_beats_padwan_token(
     assert client._api_key == "explicit"
 
 
+def test_gateway_argument_routes_a_vendor_named_model_to_openai():
+    """An aggregator alias like `mistral-small-3.2` is not a Mistral model: the endpoint speaks OpenAI."""
+    client = LLMClient(
+        "mistral-small-3.2",
+        base_url="https://aggregator.example.com/v1",
+        api_key="k",
+        gateway=True,
+    )
+    assert isinstance(client, OpenAIClient)
+    assert client.base_url == "https://aggregator.example.com/v1"
+    assert client._api_key == "k"
+
+
+def test_gateway_argument_falls_back_to_the_environment_url(gateway_env):
+    client = LLMClient("mistral-large-latest", gateway=True)
+    assert isinstance(client, OpenAIClient)
+    assert client.base_url == "https://gateway.example.com/v1/"
+    assert client._api_key == "gw-secret"
+
+
+def test_gateway_false_forces_native_routing(gateway_env):
+    client = LLMClient("mistral-large-latest", api_key="k", gateway=False)
+    assert isinstance(client, MistralClient)
+
+
+def test_gateway_argument_never_falls_back_to_a_provider_key(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.delenv("PADWAN_API_KEY", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "real-openai-key")  # must not be used
+    client = LLMClient(
+        "gpt-4o", base_url="https://aggregator.example.com/v1", gateway=True
+    )
+    assert client._api_key == "no-key-required"
+
+
+def test_gateway_true_without_an_endpoint_is_a_programming_error(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.delenv("PADWAN_BASE_URL", raising=False)
+    with pytest.raises(ValueError, match="gateway=True"):
+        LLMClient("gpt-4o", api_key="k", gateway=True)
+
+
 def test_gateway_without_token_uses_no_key_not_openai_env(
     monkeypatch: pytest.MonkeyPatch,
 ):
