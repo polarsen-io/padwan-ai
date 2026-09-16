@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789423180841,
+  "lastUpdate": 1789576370560,
   "repoUrl": "https://github.com/polarsen-io/padwan-llm",
   "entries": {
     "Import Performance": [
@@ -1092,6 +1092,48 @@ window.BENCHMARK_DATA = {
             "value": 229.82,
             "unit": "ms",
             "range": 2.85
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3b1f8a6dd81a8359f4df9dc61a1f416da888a5a5",
+          "message": "fix(otel): instrument raw calls on all OpenAI-compatible clients (#76)\n\n`complete`/`stream` were patched on OpenAIClient, but they are defined on\n_OpenAIBase, so sibling subclasses (MistralClient, and anything LLMClient\nroutes to a custom base_url) emitted no spans for the raw call path.",
+          "timestamp": "2026-09-16T18:32:11+02:00",
+          "tree_id": "5c6ac41c6836c0724188e8f55d25f6f95e9ddf68",
+          "url": "https://github.com/polarsen-io/padwan-llm/commit/3b1f8a6dd81a8359f4df9dc61a1f416da888a5a5"
+        },
+        "date": 1789576369247,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_llm (facade)",
+            "value": 215.55,
+            "unit": "ms",
+            "range": 0.92
+          },
+          {
+            "name": "padwan_llm.openai",
+            "value": 218.14,
+            "unit": "ms",
+            "range": 4.49
+          },
+          {
+            "name": "padwan_llm.otel",
+            "value": 234.18,
+            "unit": "ms",
+            "range": 9.44
           }
         ]
       }
