@@ -31,6 +31,7 @@ from .mcp import _PROTOCOL_VERSION, McpStdio, McpStreamable
 from .mistral import MistralClient
 from .models import ToolCall, ToolCallFunction, ToolDefinition, UsageToken
 from .openai import OpenAIClient
+from .openai.client import _OpenAIBase
 from .openai.types import ChatCompletionMessageCustomToolCall
 
 __all__ = ("instrument", "is_instrumented", "uninstrument")
@@ -316,10 +317,10 @@ def instrument(
         )
     )
 
-    # OpenAI vendor extras live only on raw request and response payloads; a raw
+    # Vendor extras live only on raw request and response payloads; a raw
     # call outside complete_chat/stream_chat gets its own span.
-    plan.append((OpenAIClient, "complete", lambda fn: _wrap_openai_complete(fn, inst)))
-    plan.append((OpenAIClient, "stream", lambda fn: _wrap_openai_stream(fn, inst)))
+    plan.append((_OpenAIBase, "complete", lambda fn: _wrap_openai_complete(fn, inst)))
+    plan.append((_OpenAIBase, "stream", lambda fn: _wrap_openai_stream(fn, inst)))
 
     plan.append(
         (AgentSession, "_dispatch_one", lambda fn: _wrap_execute_tool(fn, inst))
