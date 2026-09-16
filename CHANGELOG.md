@@ -1,3 +1,16 @@
+## 0.10.1 (2026-09-16)
+
+### Fix
+
+- **otel**: instrument raw calls on all OpenAI-compatible clients (#76)
+
+`otel.instrument()` patched `complete`/`stream` on `OpenAIClient`, but both are
+defined on `_OpenAIBase` and `OpenAIClient` does not override them — so the
+patch never reached sibling subclasses such as `MistralClient`. Any client
+built for an OpenAI-compatible endpoint that called the raw `complete()` /
+`stream()` path emitted no spans and no metrics at all. Patching `_OpenAIBase`
+covers every such client; `complete_chat`/`stream_chat` were unaffected.
+
 ## 0.10.0 (2026-09-14)
 
 Agent release: typed answers, tools built from typed functions with a pluggable validator, and a scripted client for testing agents. Plus Langfuse time to first token and OpenTelemetry fixes.
