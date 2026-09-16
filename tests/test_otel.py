@@ -822,6 +822,28 @@ async def test_raw_openai_call_opens_span(
     )
 
 
+async def test_raw_call_instrumented_on_openai_compatible_client(otel_setup, make_resp):
+    """Raw calls are instrumented on every OpenAI-compatible client, not just OpenAIClient."""
+    exporter, _ = otel_setup
+    client = MistralClient(model="mistral-small", api_key="test")
+    client._session = AsyncMock()
+    client._session.post.return_value = make_resp(
+        200,
+        {
+            "choices": [{"message": {"content": "hi"}, "finish_reason": "stop"}],
+            "usage": USAGE,
+        },
+    )
+
+    await client.complete(
+        {"model": "mistral-small", "messages": [{"role": "user", "content": "hey"}]}
+    )
+
+    (span,) = exporter.get_finished_spans()
+    assert span.name == "chat mistral-small"
+    assert dict(span.attributes or {})["gen_ai.request.model"] == "mistral-small"
+
+
 @pytest.mark.parametrize(
     "streaming", [pytest.param(False, id="complete"), pytest.param(True, id="stream")]
 )
