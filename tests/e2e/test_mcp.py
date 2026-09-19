@@ -1,6 +1,6 @@
 import pytest
 
-from padwan_llm.mcp import McpStreamable
+from padwan_ai.mcp import McpStreamable
 
 pytestmark = pytest.mark.e2e
 

@@ -12,16 +12,16 @@ from google.genai.types import (
     ThinkingConfigDict,
 )
 
-from padwan_llm.conversation import Message
-from padwan_llm.errors import LLMError, QuotaExceededError, TooManyRequestsError
-from padwan_llm.gemini.batch import BatchJob, BatchResult
-from padwan_llm.gemini.client import (
+from padwan_ai.conversation import Message
+from padwan_ai.errors import LLMError, QuotaExceededError, TooManyRequestsError
+from padwan_ai.gemini.batch import BatchJob, BatchResult
+from padwan_ai.gemini.client import (
     GeminiChatStream,
     GeminiClient,
     _check_resp,
     _parse_retry_delay,
 )
-from padwan_llm.gemini.models import (
+from padwan_ai.gemini.models import (
     BatchState,
     Content,
     GenerationConfig,

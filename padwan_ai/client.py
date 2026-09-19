@@ -1,14 +1,14 @@
 # Python 3.15 defers providers until dispatch selects one.
 __lazy_modules__ = frozenset(
     {
-        "padwan_llm._base",
-        "padwan_llm.anthropic",
-        "padwan_llm.gemini",
-        "padwan_llm.gemini.realtime",
-        "padwan_llm.grok",
-        "padwan_llm.grok.realtime",
-        "padwan_llm.mistral",
-        "padwan_llm.openai",
+        "padwan_ai._base",
+        "padwan_ai.anthropic",
+        "padwan_ai.gemini",
+        "padwan_ai.gemini.realtime",
+        "padwan_ai.grok",
+        "padwan_ai.grok.realtime",
+        "padwan_ai.mistral",
+        "padwan_ai.openai",
     }
 )
 

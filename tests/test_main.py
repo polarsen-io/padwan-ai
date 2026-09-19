@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from padwan_llm.__main__ import _run, main
+from padwan_ai.__main__ import _run, main
 
 
 def _close_coroutine(coro: Coroutine) -> None:  # type: ignore[type-arg]
@@ -22,7 +22,7 @@ async def test_run(capsys: pytest.CaptureFixture[str]):
     mock_client.__aexit__ = AsyncMock(return_value=False)
     mock_client.stream_chat.return_value = _fake_stream("Hello", " world")
 
-    with patch("padwan_llm.__main__.LLMClient", return_value=mock_client):
+    with patch("padwan_ai.__main__.LLMClient", return_value=mock_client):
         await _run("gpt-4o-mini", "hi")
 
     captured = capsys.readouterr()
@@ -41,9 +41,9 @@ def test_main(
     exit_code: int,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    monkeypatch.setattr("sys.argv", ["padwan-llm", "hello"])
+    monkeypatch.setattr("sys.argv", ["padwan-ai", "hello"])
     with patch(
-        "padwan_llm.__main__.asyncio.run",
+        "padwan_ai.__main__.asyncio.run",
         side_effect=side_effect or _close_coroutine,
     ) as mock_run:
         if exit_code:

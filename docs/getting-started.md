@@ -5,13 +5,13 @@
 === "pip"
 
     ```bash
-    pip install padwan-llm
+    pip install padwan-ai
     ```
 
 === "uv"
 
     ```bash
-    uv add padwan-llm
+    uv add padwan-ai
     ```
 
 ## Basic Usage
@@ -19,8 +19,8 @@
 ### Creating a Client
 
 ```python
-from padwan_llm import LLMClient
-from padwan_llm.conversation import Message
+from padwan_ai import LLMClient
+from padwan_ai.conversation import Message
 
 # Using context manager (recommended)
 async with LLMClient("gpt-4o") as client:
@@ -44,7 +44,7 @@ The provider is auto-detected from the model name: **OpenAI**, **Gemini**, **Mis
 For other providers, use `OpenAIClient` directly:
 
 ```python
-from padwan_llm import OpenAIClient
+from padwan_ai import OpenAIClient
 
 async with OpenAIClient(
     model="llama-3.3-70b-versatile",
@@ -67,11 +67,12 @@ Each provider looks for its API key in environment variables:
 | Mistral  | `MISTRAL_API_KEY`   |
 | Grok     | `GROK_API_KEY`      |
 | Anthropic | `ANTHROPIC_API_KEY` |
+| TypeSafe (JEV) | `TYPESAFE_API_KEY` |
 
 ```python
 # No need to pass api_key if environment variable is set
-from padwan_llm import LLMClient
-from padwan_llm.conversation import Message
+from padwan_ai import LLMClient
+from padwan_ai.conversation import Message
 
 async with LLMClient("gpt-4o") as client:
     response, usage = await client.complete_chat(
@@ -81,10 +82,11 @@ async with LLMClient("gpt-4o") as client:
 
 ## Streaming
 
-All clients support streaming responses:
+Chat clients support streaming responses. For JEV's structured evaluations, use
+the standalone [TypeSafe client](clients/typesafe.md).
 
 ```python
-from padwan_llm import LLMClient, Message
+from padwan_ai import LLMClient, Message
 
 async with LLMClient("gpt-4o") as client:
     stream = client.stream_chat([Message(role="user", content="Tell me a story")])
@@ -100,7 +102,7 @@ async with LLMClient("gpt-4o") as client:
 Maintain conversation history across multiple messages:
 
 ```python
-from padwan_llm import LLMClient, ConversationState
+from padwan_ai import LLMClient, ConversationState
 
 state = ConversationState(system="You are a helpful assistant.")
 state.add_user_message("What is Python?")
@@ -125,7 +127,7 @@ async with LLMClient("gpt-4o") as client:
 When the model needs to call tools, use `AgentSession` — it handles the full loop of dispatching tool calls, feeding results back, and continuing until the model produces a plain text answer:
 
 ```python
-from padwan_llm import AgentSession, LLMClient, McpStdio
+from padwan_ai import AgentSession, LLMClient, McpStdio
 
 async with AgentSession(
     client=LLMClient("gpt-4o"),

@@ -3,18 +3,18 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from padwan_llm.conversation import AssistantToolMessage, Message, ToolResultMessage
-from padwan_llm.gemini.client import GeminiChatStream, GeminiClient
-from padwan_llm.gemini.models import FunctionResponsePart
-from padwan_llm.gemini.tools import GeminiToolMixin
-from padwan_llm.models import (
+from padwan_ai.conversation import AssistantToolMessage, Message, ToolResultMessage
+from padwan_ai.gemini.client import GeminiChatStream, GeminiClient
+from padwan_ai.gemini.models import FunctionResponsePart
+from padwan_ai.gemini.tools import GeminiToolMixin
+from padwan_ai.models import (
     ChatResponse,
     ToolCall,
     ToolCallFunction,
     ToolDefinition,
 )
-from padwan_llm.openai.client import OpenAIChatStream, OpenAIClient
-from padwan_llm.openai.tools import OpenAIToolMixin
+from padwan_ai.openai.client import OpenAIChatStream, OpenAIClient
+from padwan_ai.openai.tools import OpenAIToolMixin
 
 SAMPLE_TOOL: ToolDefinition = {
     "name": "get_weather",

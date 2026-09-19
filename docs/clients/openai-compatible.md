@@ -7,7 +7,7 @@ The named provider clients (`MistralClient`, `GrokClient`) inherit from this cla
 ## Configuration
 
 ```python
-from padwan_llm import OpenAIClient
+from padwan_ai import OpenAIClient
 
 client = OpenAIClient(
     model="llama-3.3-70b-versatile",
@@ -31,7 +31,7 @@ export PADWAN_API_KEY="..."
 ```
 
 ```python
-from padwan_llm import LLMClient
+from padwan_ai import LLMClient
 
 # Every model — including gemini-/mistral-/grok- prefixed names — is routed
 # through OpenAIClient against the gateway, using the single token.
@@ -134,8 +134,8 @@ To create a reusable client for a specific provider, subclass `OpenAIClient`:
 import dataclasses
 import os
 from typing import ClassVar
-from padwan_llm import OpenAIClient
-from padwan_llm.errors import LLMError
+from padwan_ai import OpenAIClient
+from padwan_ai.errors import LLMError
 
 
 @dataclasses.dataclass

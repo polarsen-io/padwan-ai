@@ -21,7 +21,7 @@ Each iteration of the loop is called a **round**. Tool lists are re-read at the 
 ## Quick start
 
 ```python
-from padwan_llm import AgentSession, LLMClient, McpStdio
+from padwan_ai import AgentSession, LLMClient, McpStdio
 
 async with AgentSession(
     client=LLMClient(model="gpt-4o"),
@@ -42,7 +42,7 @@ Two entry points, depending on whether you want the response streamed:
 `mcp_tools` accepts a heterogeneous list of `McpTool` and `McpTransport` (i.e. `McpStreamable` / `McpStdio`) instances. This is the main ergonomic win over managing transports by hand:
 
 ```python
-from padwan_llm import AgentSession, LLMClient, McpStdio, McpStreamable, McpTool
+from padwan_ai import AgentSession, LLMClient, McpStdio, McpStreamable, McpTool
 
 weather_tool = McpTool(
     name="get_weather",
@@ -74,10 +74,10 @@ Writing a JSON Schema by hand for every local tool gets old.
 - the arguments the model sends are validated before the function runs
 
 Validation needs either `msgspec` or `pydantic` installed (neither is a dependency
-of padwan-llm).
+of padwan-ai).
 
 ```python
-from padwan_llm.tools import tool
+from padwan_ai.tools import tool
 
 
 async def get_weather(city: str, unit: str = "celsius") -> dict:
@@ -274,7 +274,7 @@ For a fire-and-forget side-effect, `yield` immediately after the action.
 Conversation state can be saved to any backend via the `ConversationStore` protocol:
 
 ```python
-from padwan_llm import ConversationSnapshot, ConversationStore
+from padwan_ai import ConversationSnapshot, ConversationStore
 
 
 class JsonStore:
@@ -347,11 +347,11 @@ session.total_usage  # accumulated usage across all rounds in this session
 
 ## Testing an agent
 
-`padwan_llm.testing.ScriptedClient` stands in for any client: it answers each round with the next `Step` of a script and records what the model would have seen, so a test asserts on the conversation as well as on the outcome (no provider, key or socket needed).
+`padwan_ai.testing.ScriptedClient` stands in for any client: it answers each round with the next `Step` of a script and records what the model would have seen, so a test asserts on the conversation as well as on the outcome (no provider, key or socket needed).
 
 ```python
-from padwan_llm import AgentSession, McpTool
-from padwan_llm.testing import ScriptedClient, Step
+from padwan_ai import AgentSession, McpTool
+from padwan_ai.testing import ScriptedClient, Step
 
 # round 1: the model calls a tool, round 2: it answers
 client = ScriptedClient(

@@ -10,12 +10,12 @@ Each provider has a curated `Literal` type in its client file:
 
 | Type | File |
 |---|---|
-| `OpenAIModel` | `padwan_llm/openai/client.py` |
-| `GeminiModel` | `padwan_llm/gemini/client.py` |
-| `MistralModel` | `padwan_llm/mistral/client.py` |
-| `MistralEmbeddingModel` | `padwan_llm/mistral/client.py` |
-| `MistralAudioModel` | `padwan_llm/mistral/client.py` |
-| `GrokModel` | `padwan_llm/grok/client.py` |
+| `OpenAIModel` | `padwan_ai/openai/client.py` |
+| `GeminiModel` | `padwan_ai/gemini/client.py` |
+| `MistralModel` | `padwan_ai/mistral/client.py` |
+| `MistralEmbeddingModel` | `padwan_ai/mistral/client.py` |
+| `MistralAudioModel` | `padwan_ai/mistral/client.py` |
+| `GrokModel` | `padwan_ai/grok/client.py` |
 
 **Add** a model ID when it appears under "Available but not tracked" AND:
 - It is a public stable alias that belongs in the target `Literal`

@@ -18,9 +18,9 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from padwan_llm import otel
-from padwan_llm.conversation import Message
-from padwan_llm.models import ToolDefinition
+from padwan_ai import otel
+from padwan_ai.conversation import Message
+from padwan_ai.models import ToolDefinition
 from tests.otel_coverage import OTEL_COVERAGE_KEY, OtelCoverage, check_spans
 
 
@@ -69,7 +69,7 @@ def otel_exporter(
     # a readable per-run instance id; the SDK default is a UUID, which no dashboard can order
     run_id = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     resource = Resource.create(
-        {"service.name": "padwan-llm-e2e", "service.instance.id": run_id}
+        {"service.name": "padwan-ai-e2e", "service.instance.id": run_id}
     )
     exporter = InMemorySpanExporter()
     tracer_provider = TracerProvider(resource=resource)
@@ -82,7 +82,7 @@ def otel_exporter(
     meter_provider = MeterProvider(resource=resource, metric_readers=readers)
     integration = None
     if langfuse:
-        from padwan_llm.langfuse import instrument as langfuse_instrument
+        from padwan_ai.langfuse import instrument as langfuse_instrument
 
         # the adapter wires traces only, so metrics have to reach it through the global provider
         metrics.set_meter_provider(meter_provider)

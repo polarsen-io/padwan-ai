@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/static/logo-hood.png" alt="Padwan LLM" width="120">
+  <img src="docs/static/logo-hood.png" alt="Padwan AI" width="120">
 </p>
 
-<h1 align="center">Padwan LLM</h1>
+<h1 align="center">Padwan AI</h1>
 
 Lightweight, unified async client for OpenAI, Gemini, Mistral, Grok, Anthropic, and any OpenAI-compatible API.
 Single runtime dependency ([niquests](https://github.com/jawah/niquests)), automatic HTTP/2 and HTTP/3 negotiation.
@@ -14,7 +14,7 @@ For the full interactive CLI/TUI, use the separate [`padwan-cli`](https://github
 ## Installation
 
 ```bash
-pip install padwan-llm
+pip install padwan-ai
 ```
 
 ## Library Usage
@@ -22,7 +22,7 @@ pip install padwan-llm
 ### One-shot chat
 
 ```python
-from padwan_llm import LLMClient
+from padwan_ai import LLMClient
 
 async with LLMClient(model="gpt-4o") as client:
     response, usage = await client.complete_chat(
@@ -34,7 +34,7 @@ async with LLMClient(model="gpt-4o") as client:
 ### Streaming with `ConversationState`
 
 ```python
-from padwan_llm import LLMClient, ConversationState
+from padwan_ai import LLMClient, ConversationState
 
 state = ConversationState(system="You are a concise assistant.")
 
@@ -60,7 +60,7 @@ The `mcp_tools` list accepts both individual `McpTool` instances and whole
 `McpTransport` servers — transports are entered as part of the session lifecycle:
 
 ```python
-from padwan_llm import AgentSession, LLMClient, McpStdio
+from padwan_ai import AgentSession, LLMClient, McpStdio
 
 async with AgentSession(
     client=LLMClient(model="gpt-4o"),
@@ -83,7 +83,7 @@ per-tool error handlers, and optional snapshot persistence via a
 Both streamable-HTTP and stdio MCP transports are built in:
 
 ```python
-from padwan_llm import McpStreamable, McpStdio
+from padwan_ai import McpStreamable, McpStdio
 
 # Remote MCP server over HTTP (with optional bearer token)
 async with McpStreamable(url="https://mcp.example.com/mcp", token="sk-...") as mcp:
@@ -103,7 +103,7 @@ Gemini's reasoning models can stream their internal thought tokens separately fr
 the final answer. Wire an `on_thought` callback to receive them:
 
 ```python
-from padwan_llm import GeminiClient
+from padwan_ai import GeminiClient
 
 thoughts: list[str] = []
 async with GeminiClient(
@@ -124,10 +124,10 @@ print("\n---\nReasoning:", "".join(thoughts))
 the live connection: stream microphone audio in, receive model audio and
 transcripts back. OpenAI (`gpt-realtime`), Gemini Live, and Grok Voice are
 supported, dispatched by model name. Requires the `realtime` extra
-(`pip install "padwan-llm[realtime]"`):
+(`pip install "padwan-ai[realtime]"`):
 
 ```python
-from padwan_llm import RealtimeClient
+from padwan_ai import RealtimeClient
 
 async with RealtimeClient(instructions="Answer briefly.", voice="marin") as conn:
     await conn.append_audio(pcm16_chunk)  # mono PCM16 microphone audio
@@ -146,10 +146,10 @@ for manual push-to-talk. See the realtime sections of
 
 Opt-in GenAI spans and metrics for every provider client, following the OTel
 GenAI semantic conventions. Requires the `otel` extra
-(`pip install "padwan-llm[otel]"`):
+(`pip install "padwan-ai[otel]"`):
 
 ```python
-from padwan_llm import otel
+from padwan_ai import otel
 
 otel.instrument()  # uses the global tracer/meter providers
 ```
@@ -158,11 +158,11 @@ For a managed trace backend, the Langfuse adapter configures both sides and maps
 Padwan chat, agent, tool, embedding, and MCP spans to Langfuse observations:
 
 ```bash
-pip install "padwan-llm[langfuse]"
+pip install "padwan-ai[langfuse]"
 ```
 
 ```python
-from padwan_llm.langfuse import instrument
+from padwan_ai.langfuse import instrument
 
 telemetry = instrument()  # uses the standard LANGFUSE_* environment variables
 ```
@@ -186,10 +186,10 @@ ready-made GenAI dashboard
 ```bash
 export OPENAI_API_KEY=...
 
-padwan-llm "Hello!" -m gpt-4o-mini
+padwan-ai "Hello!" -m gpt-4o-mini
 
 # Or without installing:
-uvx padwan-llm "Hello!" -m gpt-4o-mini
+uvx padwan-ai "Hello!" -m gpt-4o-mini
 ```
 
 ## Supported Models
@@ -197,6 +197,9 @@ uvx padwan-llm "Hello!" -m gpt-4o-mini
 Auto-detected providers: **OpenAI**, **Gemini**, **Mistral**, **Grok**, **Anthropic** (`claude-*`).
 
 Any OpenAI-compatible API (Groq, Together AI, Ollama, vLLM, ...) is supported via `OpenAIClient` with a custom `base_url`.
+
+**TypeSafe (JEV)** structured evaluations use the standalone
+[`TypeSafeClient`](docs/clients/typesafe.md), with Noul, Choice, and Score questions.
 
 ## Testing
 
@@ -223,6 +226,7 @@ GEMINI_API_KEY=...
 MISTRAL_API_KEY=...
 GROK_API_KEY=...
 ANTHROPIC_API_KEY=...
+TYPESAFE_API_KEY=...
 ```
 
 ### Unified gateway (one URL + one token)

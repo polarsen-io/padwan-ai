@@ -1,5 +1,5 @@
 [project]
-name = "padwan-llm"
+name = "padwan-ai"
 version = "0.10.1"
 authors = [
     { email = "julien.brayere@polarsen.io" }
@@ -17,7 +17,7 @@ otel = ["opentelemetry-api>=1.44"]
 realtime = ["niquests[ws]>=3.21.0"]
 
 [project.scripts]
-padwan-llm = "padwan_llm.__main__:main"
+padwan-ai = "padwan_ai.__main__:main"
 
 [build-system]
 requires = ["uv_build>=0.9.18,<0.10.0"]
@@ -25,7 +25,7 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-root = ""
-module-name = "padwan_llm"
+module-name = "padwan_ai"
 
 
 [dependency-groups]
@@ -72,13 +72,13 @@ combine-as-imports = true
 
 [tool.pyright]
 # Without include, pyright walks SDK source via imports and OOMs.
-include = ["padwan_llm", "tests"]
+include = ["padwan_ai", "tests"]
 # bin/ holds PEP 723 inline scripts with their own dep envs.
 exclude = ["bin"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --cov=padwan_llm --cov-report=term-missing -m 'not e2e'"
+addopts = "-v --cov=padwan_ai --cov-report=term-missing -m 'not e2e'"
 markers = [
     "e2e: end-to-end tests requiring real API keys",
     "otel_expect_error: test whose spans are expected to end in ERROR status under --otel",
@@ -97,5 +97,5 @@ update_changelog_on_bump = true
 bump_message = "chore(release): release $current_version → $new_version [skip ci]"
 
 [tool.coverage.run]
-source = ["padwan_llm"]
-omit = ["padwan_llm/__init__.py", "padwan_llm/*/types.py"]
+source = ["padwan_ai"]
+omit = ["padwan_ai/__init__.py", "padwan_ai/*/types.py"]

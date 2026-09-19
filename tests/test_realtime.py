@@ -13,22 +13,22 @@ from google.genai.types import (
     LiveServerContentDict,
 )
 
-from padwan_llm import (
+from padwan_ai import (
     GeminiRealtimeClient,
     GeminiRealtimeConnection,
     GrokRealtimeClient,
     OpenAIRealtimeClient,
     RealtimeClient,
 )
-from padwan_llm._json import loads as _json_loads
-from padwan_llm.errors import LLMError
-from padwan_llm.gemini.models import (
+from padwan_ai._json import loads as _json_loads
+from padwan_ai.errors import LLMError
+from padwan_ai.gemini.models import (
     AutomaticActivityDetection,
     LiveGenerationConfig,
     LiveSetup,
 )
-from padwan_llm.gemini.realtime import DEFAULT_LIVE_MODEL, LIVE_ENDPOINT
-from padwan_llm.openai.realtime import (
+from padwan_ai.gemini.realtime import DEFAULT_LIVE_MODEL, LIVE_ENDPOINT
+from padwan_ai.openai.realtime import (
     NO_TURN_DETECTION,
     RealtimeConnection,
     RealtimeServerEvent,

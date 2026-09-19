@@ -1,15 +1,15 @@
 # Observability (OpenTelemetry)
 
-Padwan LLM ships opt-in OpenTelemetry instrumentation following the [GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai). It only depends on `opentelemetry-api`, behind the `otel` extra:
+Padwan AI ships opt-in OpenTelemetry instrumentation following the [GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai). It only depends on `opentelemetry-api`, behind the `otel` extra:
 
 ```bash
-pip install "padwan-llm[otel]"
+pip install "padwan-ai[otel]"
 ```
 
 ## Quick start
 
 ```python
-from padwan_llm import otel
+from padwan_ai import otel
 
 otel.instrument()  # uses the global tracer/meter/logger providers
 ```
@@ -34,7 +34,7 @@ otel.instrument(
 The optional Langfuse adapter configures Padwan instrumentation and the Langfuse trace exporter together:
 
 ```bash
-pip install "padwan-llm[langfuse]"
+pip install "padwan-ai[langfuse]"
 
 export LANGFUSE_PUBLIC_KEY="<PUBLIC_KEY>"
 export LANGFUSE_SECRET_KEY="<SECRET_KEY>"
@@ -44,8 +44,8 @@ export LANGFUSE_BASE_URL="https://cloud.langfuse.com"
 ```python
 import asyncio
 
-from padwan_llm import LLMClient
-from padwan_llm.langfuse import instrument
+from padwan_ai import LLMClient
+from padwan_ai.langfuse import instrument
 
 
 async def main() -> None:
@@ -73,7 +73,7 @@ The adapter enriches the copy of each span sent to Langfuse while leaving its st
 | `gen_ai.input.messages`, system instructions, tool definitions, or tool arguments | observation input |
 | `gen_ai.output.messages` or tool result | observation output |
 | `gen_ai.conversation.id` | session id |
-| `padwan_llm.response.first_chunk_time` | completion start time (time to first token on generations) |
+| `padwan_ai.response.first_chunk_time` | completion start time (time to first token on generations) |
 
 Langfuse reads the standard GenAI model, usage, and cost attributes directly. Inputs and outputs remain absent unless `capture_content=True`.
 
@@ -82,7 +82,7 @@ Enabling content capture may send prompts, responses, tool definitions, tool arg
 ```python
 from langfuse.types import MaskOtelSpansParams, MaskOtelSpansResult, OtelSpanPatch
 
-from padwan_llm.langfuse import instrument
+from padwan_ai.langfuse import instrument
 
 
 def redact_inputs(*, params: MaskOtelSpansParams) -> MaskOtelSpansResult:
@@ -99,7 +99,7 @@ telemetry = instrument(capture_content=True, mask_otel_spans=redact_inputs)
 
 `instrument()` accepts Langfuse credentials and routing (`public_key`, `secret_key`, `base_url`), trace metadata (`environment`, `release`), delivery controls (`sample_rate`, `timeout`, `flush_at`, `flush_interval`), `debug`, an existing `tracer_provider`, and `should_export_span`. For tests, `span_exporter` (e.g. an `InMemorySpanExporter`) and `httpx_client` (e.g. an `httpx.MockTransport`) are handed to the Langfuse client as-is, so a test can assert on every attribute the integration would send without opening a socket. The credential arguments fall back to the standard Langfuse environment variables. A custom span filter is applied after the adapter includes Padwan spans.
 
-The integration exports traces only. Padwan metrics and exception log events still require separately configured OpenTelemetry meter and logger providers. Start the Langfuse integration before using Padwan; if `padwan_llm.otel.instrument()` is already active, the adapter raises instead of silently attaching to a different provider. See the [Langfuse OpenTelemetry integration](https://langfuse.com/integrations/native/opentelemetry) for backend configuration and troubleshooting.
+The integration exports traces only. Padwan metrics and exception log events still require separately configured OpenTelemetry meter and logger providers. Start the Langfuse integration before using Padwan; if `padwan_ai.otel.instrument()` is already active, the adapter raises instead of silently attaching to a different provider. See the [Langfuse OpenTelemetry integration](https://langfuse.com/integrations/native/opentelemetry) for backend configuration and troubleshooting.
 
 ## Chat spans
 
@@ -121,10 +121,10 @@ Each chat call emits one `CLIENT` span named `chat <model>` (or `chat` when no m
 | `gen_ai.usage.reasoning.output_tokens` | `5` | when the provider reports thought/reasoning tokens separately¹ |
 | `gen_ai.response.finish_reasons` | `["stop"]` | |
 | `gen_ai.response.time_to_first_chunk` | `0.4` | streams only |
-| `padwan_llm.response.first_chunk_time` | `2026-09-14T10:00:00.412000Z` | streams only: wall-clock instant of the first chunk, ISO 8601 UTC (custom attribute). OpenAI counts the first raw chunk (text, tool call or reasoning); other providers count the first text chunk |
+| `padwan_ai.response.first_chunk_time` | `2026-09-14T10:00:00.412000Z` | streams only: wall-clock instant of the first chunk, ISO 8601 UTC (custom attribute). OpenAI counts the first raw chunk (text, tool call or reasoning); other providers count the first text chunk |
 | `openai.api.type`, `openai.request.service_tier`, `openai.response.service_tier`, `openai.response.system_fingerprint` | | OpenAI vendor extras, including streamed responses |
-| `padwan_llm.response.tool_names` | `["get_weather"]` | tool calls requested by the model (custom attribute) |
-| `padwan_llm.thinking.duration` | `1.2` | seconds between the first and last `on_thought` chunk of a stream (custom attribute) |
+| `padwan_ai.response.tool_names` | `["get_weather"]` | tool calls requested by the model (custom attribute) |
+| `padwan_ai.thinking.duration` | `1.2` | seconds between the first and last `on_thought` chunk of a stream (custom attribute) |
 | `error.type` | `LLMError`, `CancelledError` | on failure, with `ERROR` status and a recorded exception |
 
 ¹ Token accounting follows each provider's usage report: OpenAI-style APIs count reasoning tokens inside `output_tokens`; Gemini reports thought tokens outside `candidatesTokenCount`, so they are not part of `gen_ai.usage.output_tokens`. Anthropic does not report a separate count. Per the Anthropic-specific conventions, `gen_ai.usage.input_tokens` includes cache read/write tokens (which Anthropic's raw `input_tokens` excludes).
@@ -209,8 +209,8 @@ Detailed status per section of the [GenAI semantic conventions](https://github.c
 | [Exceptions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-exceptions.md) | ✅ | `error.type` + `ERROR` status + recorded exception on spans; `gen_ai.client.operation.exception` log event (WARN) with exception type/message/stacktrace, trace-correlated | — |
 | [Anthropic](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/anthropic.md) | ✅ | Cache-inclusive `input_tokens` accounting; `cache_read` / `cache_write` breakdowns; `provider.name=anthropic` | `gen_ai.request.reasoning.level` — the client never sends an effort parameter |
 | [OpenAI](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/openai.md) | ✅ | `provider.name=openai`; vendor extras `openai.api.type`, `openai.request.service_tier`, `openai.response.service_tier`, `openai.response.system_fingerprint` | The `responses` API type and `fetch_response` operation (client uses chat completions) |
-| [Azure AI Inference](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/azure-ai-inference.md) | — | | Not a padwan-llm provider |
-| [AWS Bedrock](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/aws-bedrock.md) | — | | Not a padwan-llm provider |
+| [Azure AI Inference](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/azure-ai-inference.md) | — | | Not a padwan-ai provider |
+| [AWS Bedrock](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/aws-bedrock.md) | — | | Not a padwan-ai provider |
 | [MCP](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/mcp.md) | ✅ | `initialize`, `tools/list`, `ping`, and `tools/call` CLIENT spans; protocol, session, transport, and server attributes; operation and session metrics | JSON-RPC request ids and context propagation; server-side conventions |
 
 ## Local dev stack

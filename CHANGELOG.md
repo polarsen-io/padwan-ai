@@ -18,8 +18,8 @@ Agent release: typed answers, tools built from typed functions with a pluggable 
 ### Features
 
 - **Typed final answers.** `AgentSession(output=AgentOutput(Verdict))` adds a `submit` tool whose parameters are the answer's JSON Schema; `run()` drives the loop until a call validates and returns the instance. The answer class is a `msgspec.Struct` or a `pydantic.BaseModel`, validated by its own library. An invalid call (or arguments that are not JSON) goes back to the model up to `max_repairs` times, then `OutputError`; a text answer or the round limit raise `OutputError` too. `run()` is typed: `AgentSession[Verdict]` returns a `Verdict`. (#73)
-- **Tools from typed functions.** `padwan_llm.tools.tool(fn)` builds an `McpTool` from a typed async function: the signature is the schema, the docstring the description, and the arguments are validated and coerced before the function runs. `validator=` picks msgspec or pydantic, or any `ToolValidator`; with none given, the annotations decide. Neither library is a dependency. (#67)
-- **Scripted client for tests.** `padwan_llm.testing.ScriptedClient` replays a script of `Step`s (text and/or tool calls) in place of a provider, records every round's request, and raises when the script runs out. (#59)
+- **Tools from typed functions.** `padwan_ai.tools.tool(fn)` builds an `McpTool` from a typed async function: the signature is the schema, the docstring the description, and the arguments are validated and coerced before the function runs. `validator=` picks msgspec or pydantic, or any `ToolValidator`; with none given, the annotations decide. Neither library is a dependency. (#67)
+- **Scripted client for tests.** `padwan_ai.testing.ScriptedClient` replays a script of `Step`s (text and/or tool calls) in place of a provider, records every round's request, and raises when the script runs out. (#59)
 - **Langfuse time to first token.** Streamed chat spans record the first chunk time, mapped to Langfuse's `completion_start_time`. `langfuse.instrument()` also accepts `span_exporter` and `httpx_client`, so a test can capture every attribute without a socket. (#69, #70)
 
 ### Fixes
@@ -27,14 +27,14 @@ Agent release: typed answers, tools built from typed functions with a pluggable 
 - **Raw OpenAI `complete()` / `stream()` calls are traced** when no chat span is open, with usage, finish reasons, tool names and time to first chunk. (#55)
 - **Caller context restored between stream chunks**, so unrelated work no longer inherits the chat span and cross-task iteration no longer raises. (#58)
 - **Audio formats inferred from file extensions**, so `.m4a` / `.aac` files are accepted regardless of the host's MIME mappings. (#57)
-- **`padwan_llm.langfuse` imports on Python 3.13**; `httpx` stays a type-only import and a missing optional dependency is still reported as Langfuse. (#71, #72)
+- **`padwan_ai.langfuse` imports on Python 3.13**; `httpx` stays a type-only import and a missing optional dependency is still reported as Langfuse. (#71, #72)
 
 ### Dev
 
 - Unparsable tool-call arguments are returned to the model as an error for every tool instead of running the handler on `{}`. (#73)
 - Weekly LLM SDK refreshes; the perf workflow skips benchmark comments on fork PRs. (#54, #56, #65, #68)
 
-**Full Changelog**: https://github.com/polarsen-io/padwan-llm/compare/0.9.4...0.10.0
+**Full Changelog**: https://github.com/polarsen-io/padwan-ai/compare/0.9.4...0.10.0
 
 ## 0.9.4 (2026-08-25)
 
@@ -62,7 +62,7 @@ Patch release: streaming no longer leaks pooled connections when a stream ends o
 
 - **Half-read SSE streams starved the connection pool** — a stream that ended on the `[DONE]` sentinel (or was abandoned by its consumer, e.g. a client abort) left its response half-read, keeping the pooled connection leased until garbage collection; a sequence of streams on one client exhausted the pool and the next `stream()` call hung forever. The duplicated per-provider SSE loops are now a single `LLMClientBase._iter_sse` helper that closes the SSE extension in a `finally`, wrapped in `contextlib.aclosing` so an abandoned stream releases its connection deterministically (#46).
 
-**Full Changelog**: https://github.com/polarsen-io/padwan-llm/compare/0.9.0...0.9.1
+**Full Changelog**: https://github.com/polarsen-io/padwan-ai/compare/0.9.0...0.9.1
 
 ## 0.9.0 (2026-08-23)
 
@@ -70,20 +70,20 @@ Observability release: opt-in OpenTelemetry GenAI instrumentation with a Langfus
 
 ### Features
 
-- **OpenTelemetry GenAI instrumentation** — opt-in `padwan_llm.otel.instrument()` wraps every provider client following the GenAI semantic conventions: chat completions and streams, batch operations, embeddings, realtime sessions, agent turns and tool execution, and MCP tool calls. Emits spans plus the `gen_ai.client.operation.duration` / `gen_ai.client.token.usage` histograms, capturing reasoning tokens, thinking time, tool and conversation attributes. Content capture (prompts, responses, tool arguments/results) is off by default (`capture_content=True` to opt in). Runtime dependency is `opentelemetry-api` only, behind the `otel` extra; patching is transactional with rollback and `uninstrument()` restores the original methods (#42).
-- **Langfuse adapter** — `padwan_llm.langfuse.instrument()` configures Padwan instrumentation and the Langfuse exporter together, mapping spans to Langfuse observation types (generation, embedding, agent, tool) with input/output, session-id, and cost attributes; respects `mask_otel_spans` redaction before deriving inputs/outputs. Behind the `langfuse` extra (#42).
-- **Anthropic Messages API compat layer** — `padwan_llm.anthropic.compat.messages_to_openai` translates Messages API requests (system blocks, tool use, tool choice, images) to OpenAI chat-completion requests, and `padwan_llm.anthropic.events` converts responses, SSE streams, and errors back to Anthropic shapes — the building blocks for serving the Messages API over any OpenAI-compatible backend (#42).
+- **OpenTelemetry GenAI instrumentation** — opt-in `padwan_ai.otel.instrument()` wraps every provider client following the GenAI semantic conventions: chat completions and streams, batch operations, embeddings, realtime sessions, agent turns and tool execution, and MCP tool calls. Emits spans plus the `gen_ai.client.operation.duration` / `gen_ai.client.token.usage` histograms, capturing reasoning tokens, thinking time, tool and conversation attributes. Content capture (prompts, responses, tool arguments/results) is off by default (`capture_content=True` to opt in). Runtime dependency is `opentelemetry-api` only, behind the `otel` extra; patching is transactional with rollback and `uninstrument()` restores the original methods (#42).
+- **Langfuse adapter** — `padwan_ai.langfuse.instrument()` configures Padwan instrumentation and the Langfuse exporter together, mapping spans to Langfuse observation types (generation, embedding, agent, tool) with input/output, session-id, and cost attributes; respects `mask_otel_spans` redaction before deriving inputs/outputs. Behind the `langfuse` extra (#42).
+- **Anthropic Messages API compat layer** — `padwan_ai.anthropic.compat.messages_to_openai` translates Messages API requests (system blocks, tool use, tool choice, images) to OpenAI chat-completion requests, and `padwan_ai.anthropic.events` converts responses, SSE streams, and errors back to Anthropic shapes — the building blocks for serving the Messages API over any OpenAI-compatible backend (#42).
 - **Audio input content parts** — `ContentAudioPart` (OpenAI `input_audio` shape) with an `audio_part` builder; `content_parts` routes `audio/*` files automatically. OpenAI and Grok receive parts verbatim, Gemini converts to `inlineData`, Mistral rewrites to its base64 chunk. `supports_audio(model, fmt=None)` is format-aware per provider, and audio-capable providers expose `AUDIO_FORMATS` (#43).
 
 ### Performance
 
-- Provider modules load lazily on Python 3.15 (`__lazy_modules__`), cutting `import padwan_llm` time; a new CI workflow benchmarks import times and fails on regressions (#42).
+- Provider modules load lazily on Python 3.15 (`__lazy_modules__`), cutting `import padwan_ai` time; a new CI workflow benchmarks import times and fails on regressions (#42).
 
 ### Dev
 
 - Local observability stack: a single docker-compose bundling Langfuse and the Grafana OTel-LGTM all-in-one, with a pre-provisioned GenAI dashboard and a `docs/observability.md` guide (#42).
 
-**Full Changelog**: https://github.com/polarsen-io/padwan-llm/compare/0.8.0...0.9.0
+**Full Changelog**: https://github.com/polarsen-io/padwan-ai/compare/0.8.0...0.9.0
 
 ## 0.8.0 (2026-08-19)
 
@@ -117,7 +117,7 @@ Two big additions to the unified client — a native Anthropic chat provider and
 - Require `mcp>=2.0.0`; migrate tests to `mcp.server.mcpserver.MCPServer` (#32).
 - SDK floors bumped by the weekly refreshes: openai 3.x, google-genai 2.18, ruff 0.16, pyright 1.1.411.
 
-**Full Changelog**: https://github.com/polarsen-io/padwan-llm/compare/0.7.1...0.8.0
+**Full Changelog**: https://github.com/polarsen-io/padwan-ai/compare/0.7.1...0.8.0
 
 ## 0.7.1 (2026-06-01)
 
@@ -135,7 +135,7 @@ Maintenance release: a Mistral model-ID correction, regenerated provider types, 
 - Emit stdlib TypedDicts via `--no-use-closed-typed-dict` during type regeneration (#14).
 - Fetch the automation branch before pushing to avoid stale-ref push failures (#12).
 
-**Full Changelog**: https://github.com/polarsen-io/padwan-llm/compare/0.7.0...0.7.1
+**Full Changelog**: https://github.com/polarsen-io/padwan-ai/compare/0.7.0...0.7.1
 
 ## 0.7.0 (2026-05-15)
 
@@ -152,7 +152,7 @@ Maintenance release: a Mistral model-ID correction, regenerated provider types, 
 
 - Bump SDK floors: `openai>=2.36.0`, `google-genai>=2.1.0`, `xai-sdk>=1.12.2`, `mcp>=1.27.1`
 - Move `google-genai`, `mcp`, `openai`, `xai-sdk` into a dedicated `[dependency-groups.llms]` (enumerable by the drift workflow)
-- Scope pyright to `padwan_llm` and `tests` to avoid OOM on transitive SDK sources
+- Scope pyright to `padwan_ai` and `tests` to avoid OOM on transitive SDK sources
 
 ## 0.6.0 (2026-05-02)
 

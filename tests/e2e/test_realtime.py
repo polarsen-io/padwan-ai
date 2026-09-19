@@ -4,9 +4,9 @@ import wave
 
 import pytest
 
-from padwan_llm import RealtimeClient
-from padwan_llm.gemini.realtime import GeminiRealtimeConnection
-from padwan_llm.openai.realtime import RealtimeConnection, RealtimeServerEvent
+from padwan_ai import RealtimeClient
+from padwan_ai.gemini.realtime import GeminiRealtimeConnection
+from padwan_ai.openai.realtime import RealtimeConnection, RealtimeServerEvent
 
 from .conftest import AUDIO_FIXTURE, skip_no_gemini, skip_no_grok, skip_no_openai
 

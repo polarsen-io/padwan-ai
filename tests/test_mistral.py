@@ -1,7 +1,7 @@
 import pytest
 
-from padwan_llm.errors import LLMError
-from padwan_llm.mistral.client import MistralClient
+from padwan_ai.errors import LLMError
+from padwan_ai.mistral.client import MistralClient
 
 
 def test_prepare_messages_converts_audio_parts():

@@ -2,15 +2,15 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
-from padwan_llm.anthropic.events import (
+from padwan_ai.anthropic.events import (
     error_to_anthropic,
     response_to_anthropic,
     stream_to_anthropic,
 )
-from padwan_llm.errors import LLMError, QuotaExceededError, TooManyRequestsError
+from padwan_ai.errors import LLMError, QuotaExceededError, TooManyRequestsError
 
 if TYPE_CHECKING:
-    from padwan_llm.openai.types import CreateChatCompletionResponse
+    from padwan_ai.openai.types import CreateChatCompletionResponse
 
 USAGE = {
     "prompt_tokens": 100,

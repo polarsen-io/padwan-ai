@@ -4,8 +4,8 @@ from contextlib import nullcontext
 
 import pytest
 
-from padwan_llm.audio import supports_audio
-from padwan_llm.content import (
+from padwan_ai.audio import supports_audio
+from padwan_ai.content import (
     ContentImagePart,
     audio_part,
     content_parts,
@@ -13,9 +13,9 @@ from padwan_llm.content import (
     text_file_part,
     text_part,
 )
-from padwan_llm.conversation import ConversationState
-from padwan_llm.gemini.client import _content_to_gemini_parts
-from padwan_llm.vision import supports_vision
+from padwan_ai.conversation import ConversationState
+from padwan_ai.gemini.client import _content_to_gemini_parts
+from padwan_ai.vision import supports_vision
 
 
 def test_text_part():

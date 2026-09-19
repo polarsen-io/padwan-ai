@@ -15,7 +15,7 @@ try:
     from opentelemetry.trace import SpanKind, StatusCode
 except ImportError as e:
     raise ImportError(
-        "padwan_llm.otel requires OpenTelemetry: pip install 'padwan-llm[otel]'"
+        "padwan_ai.otel requires OpenTelemetry: pip install 'padwan-ai[otel]'"
     ) from e
 
 from . import __version__
@@ -177,7 +177,7 @@ def _restore(patches: Sequence[_Patch]) -> None:
 
 # chat span of the in-flight complete_chat, for provider-specific enrichment
 _active_chat_span: ContextVar[trace.Span | None] = ContextVar(
-    "padwan_llm_otel_chat_span", default=None
+    "padwan_ai_otel_chat_span", default=None
 )
 
 
@@ -197,10 +197,10 @@ class _ActiveTool:
 
 
 _active_agent_counters: ContextVar[_AgentCounters | None] = ContextVar(
-    "padwan_llm_otel_agent_counters", default=None
+    "padwan_ai_otel_agent_counters", default=None
 )
 _active_tool: ContextVar[_ActiveTool | None] = ContextVar(
-    "padwan_llm_otel_tool", default=None
+    "padwan_ai_otel_tool", default=None
 )
 
 
@@ -230,14 +230,14 @@ def instrument(
     """Emit opt-in OTel GenAI telemetry for all provider clients."""
     if _patches:
         raise RuntimeError(
-            "padwan_llm OpenTelemetry instrumentation is already active; "
+            "padwan_ai OpenTelemetry instrumentation is already active; "
             "call uninstrument() first"
         )
-    tracer = trace.get_tracer("padwan_llm", __version__, tracer_provider)
-    meter = metrics.get_meter("padwan_llm", __version__, meter_provider)
+    tracer = trace.get_tracer("padwan_ai", __version__, tracer_provider)
+    meter = metrics.get_meter("padwan_ai", __version__, meter_provider)
     inst = _Instruments(
         tracer=tracer,
-        logger=get_logger("padwan_llm", __version__, logger_provider),
+        logger=get_logger("padwan_ai", __version__, logger_provider),
         duration=meter.create_histogram(
             "gen_ai.client.operation.duration",
             unit="s",
@@ -607,14 +607,14 @@ def _record_end(
     if finish_reasons:
         span.set_attribute("gen_ai.response.finish_reasons", finish_reasons)
     if tool_names:
-        span.set_attribute("padwan_llm.response.tool_names", tool_names)
+        span.set_attribute("padwan_ai.response.tool_names", tool_names)
     if (
         thinking is not None
         and thinking.first is not None
         and thinking.last is not None
     ):
         span.set_attribute(
-            "padwan_llm.thinking.duration", thinking.last - thinking.first
+            "padwan_ai.thinking.duration", thinking.last - thinking.first
         )
     span.end()
 
@@ -633,7 +633,7 @@ def _record_first_chunk(
         return
     span.set_attribute("gen_ai.response.time_to_first_chunk", elapsed)
     span.set_attribute(
-        "padwan_llm.response.first_chunk_time",
+        "padwan_ai.response.first_chunk_time",
         datetime.now(UTC).isoformat().replace("+00:00", "Z"),
     )
     inst.time_to_first_chunk.record(elapsed, attrs)

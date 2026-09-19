@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # DESCRIPTION
-#   Benchmark import times for padwan_llm (facade, single provider, otel).
+#   Benchmark import times for padwan_ai (facade, single provider, otel).
 #
 # USAGE
 #   ./bin/bench-imports.sh              # Pretty-print results
@@ -42,8 +42,8 @@ fi
 PY=$(uv run --frozen python -c 'import sys; print(sys.executable)')
 
 if [[ $MODE == profile ]]; then
-    echo "Top cumulative import times for 'import padwan_llm' (µs):"
-    "$PY" -X importtime -c "import padwan_llm" 2>&1 \
+    echo "Top cumulative import times for 'import padwan_ai' (µs):"
+    "$PY" -X importtime -c "import padwan_ai" 2>&1 \
         | grep "^import time:" \
         | sort -t'|' -k2 -rn \
         | head -20
@@ -55,9 +55,9 @@ trap 'rm -f "$RESULTS"' EXIT
 
 hyperfine --warmup "$WARMUP" --min-runs "$RUNS" \
     --export-json "$RESULTS" \
-    -n "padwan_llm (facade)" "$PY -c 'import padwan_llm'" \
-    -n "padwan_llm.openai" "$PY -c 'from padwan_llm.openai import OpenAIClient'" \
-    -n "padwan_llm.otel" "$PY -c 'import padwan_llm.otel'" \
+    -n "padwan_ai (facade)" "$PY -c 'import padwan_ai'" \
+    -n "padwan_ai.openai" "$PY -c 'from padwan_ai.openai import OpenAIClient'" \
+    -n "padwan_ai.otel" "$PY -c 'import padwan_ai.otel'" \
     >/dev/null 2>&1
 
 if [[ $MODE == json ]]; then

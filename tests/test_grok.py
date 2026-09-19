@@ -13,8 +13,8 @@ from xai_sdk.proto.v6.batch_pb2 import (
 )
 from xai_sdk.proto.v6.chat_pb2 import GetCompletionsRequest
 
-from padwan_llm.grok.batch import GrokBatchJob, GrokBatchResult
-from padwan_llm.grok.types import (
+from padwan_ai.grok.batch import GrokBatchJob, GrokBatchResult
+from padwan_ai.grok.types import (
     BatchResponse,
     BatchResultItem,
     BatchState,

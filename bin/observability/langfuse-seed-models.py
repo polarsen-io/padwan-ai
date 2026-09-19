@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# DESCRIPTION: Seed the local Langfuse with prices for the models padwan-llm uses,
+# DESCRIPTION: Seed the local Langfuse with prices for the models padwan-ai uses,
 #              so generation costs stop reading 0 (self-hosted ships a near-empty registry).
 # USAGE: LANGFUSE_BASE_URL=... LANGFUSE_PUBLIC_KEY=... LANGFUSE_SECRET_KEY=... ./langfuse-seed-models.py
 import base64

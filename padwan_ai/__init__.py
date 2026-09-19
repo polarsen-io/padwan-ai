@@ -1,22 +1,23 @@
 # Python 3.15 defers these imports; older runtimes ignore the declaration.
 __lazy_modules__ = frozenset(
     {
-        "padwan_llm._base",
-        "padwan_llm._deprecation",
-        "padwan_llm.agent",
-        "padwan_llm.anthropic",
-        "padwan_llm.audio",
-        "padwan_llm.client",
-        "padwan_llm.content",
-        "padwan_llm.conversation",
-        "padwan_llm.errors",
-        "padwan_llm.gemini",
-        "padwan_llm.grok",
-        "padwan_llm.mcp",
-        "padwan_llm.mistral",
-        "padwan_llm.models",
-        "padwan_llm.openai",
-        "padwan_llm.vision",
+        "padwan_ai._base",
+        "padwan_ai._deprecation",
+        "padwan_ai.agent",
+        "padwan_ai.anthropic",
+        "padwan_ai.audio",
+        "padwan_ai.client",
+        "padwan_ai.content",
+        "padwan_ai.conversation",
+        "padwan_ai.errors",
+        "padwan_ai.gemini",
+        "padwan_ai.grok",
+        "padwan_ai.mcp",
+        "padwan_ai.mistral",
+        "padwan_ai.models",
+        "padwan_ai.openai",
+        "padwan_ai.typesafe",
+        "padwan_ai.vision",
     }
 )
 
@@ -89,6 +90,20 @@ from .openai import (
     RealtimeServerEvent,
     is_openai_model,
 )
+from .typesafe import (
+    TYPESAFE_MODELS,
+    ChoiceAnswer,
+    ChoiceQuestion,
+    NoulAnswer,
+    NoulCriteria,
+    NoulQuestion,
+    ScoreAnswer,
+    ScoreQuestion,
+    SystemOneResponse,
+    TypeSafeClient,
+    TypeSafeModel,
+    TypeSafeUsage,
+)
 from .vision import supports_vision
 
 __all__ = (
@@ -98,6 +113,7 @@ __all__ = (
     "MISTRAL_MODELS",
     "OPENAI_CHAT_MODELS",
     "OPENAI_MODELS",
+    "TYPESAFE_MODELS",
     "AgentOutput",
     "AgentSession",
     "AnthropicClient",
@@ -107,6 +123,8 @@ __all__ = (
     "ChatMessage",
     "ChatResponse",
     "ChatStream",
+    "ChoiceAnswer",
+    "ChoiceQuestion",
     "ContentAudioPart",
     "ContentImagePart",
     "ContentPart",
@@ -139,6 +157,9 @@ __all__ = (
     "OpenAIClient",
     "OpenAIModel",
     "OpenAIRealtimeClient",
+    "NoulAnswer",
+    "NoulCriteria",
+    "NoulQuestion",
     "OutputError",
     "ProgressEvent",
     "Provider",
@@ -146,11 +167,17 @@ __all__ = (
     "RealtimeClientBase",
     "RealtimeConnection",
     "RealtimeServerEvent",
+    "ScoreAnswer",
+    "ScoreQuestion",
+    "SystemOneResponse",
     "ToolCall",
     "ToolCallContext",
     "ToolCallFunction",
     "ToolDefinition",
     "ToolResultMessage",
+    "TypeSafeClient",
+    "TypeSafeModel",
+    "TypeSafeUsage",
     "UsageToken",
     "__version__",
     "audio_part",
@@ -167,4 +194,4 @@ __all__ = (
     "text_part",
 )
 
-__version__: str = _pkg_version("padwan-llm")
+__version__: str = _pkg_version("padwan-ai")

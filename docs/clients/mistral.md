@@ -5,7 +5,7 @@ The Mistral client provides access to Mistral AI models. It inherits from [`Open
 ## Configuration
 
 ```python
-from padwan_llm.mistral import MistralClient
+from padwan_ai.mistral import MistralClient
 
 client = MistralClient(
     api_key="...",  # or set MISTRAL_API_KEY env var
@@ -18,7 +18,7 @@ client = MistralClient(
 ### Basic Chat
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with MistralClient() as client:
     response, usage = await client.complete_chat(
@@ -30,7 +30,7 @@ async with MistralClient() as client:
 ### Streaming
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with MistralClient() as client:
     stream = client.stream_chat([Message(role="user", content="Tell me a story")])
@@ -41,7 +41,7 @@ async with MistralClient() as client:
 ### With System Prompt
 
 ```python
-from padwan_llm import ConversationState
+from padwan_ai import ConversationState
 
 state = ConversationState(system="You are a helpful assistant.")
 state.add_user_message("Hello!")

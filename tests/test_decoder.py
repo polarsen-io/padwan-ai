@@ -4,11 +4,11 @@ from dataclasses import dataclass
 import niquests
 import pytest
 
-from padwan_llm import OpenAIClient
-from padwan_llm.anthropic.client import _check_resp as anthropic_check_resp
-from padwan_llm.errors import LLMError, TooManyRequestsError
-from padwan_llm.gemini.client import _check_resp as gemini_check_resp
-from padwan_llm.openai.client import _check_resp as openai_check_resp
+from padwan_ai import OpenAIClient
+from padwan_ai.anthropic.client import _check_resp as anthropic_check_resp
+from padwan_ai.errors import LLMError, TooManyRequestsError
+from padwan_ai.gemini.client import _check_resp as gemini_check_resp
+from padwan_ai.openai.client import _check_resp as openai_check_resp
 
 
 @dataclass

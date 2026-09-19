@@ -9,7 +9,7 @@ User messages can carry a list of content parts (text, images, and audio) instea
 ```python
 from pathlib import Path
 
-from padwan_llm import content_parts
+from padwan_ai import content_parts
 
 parts = content_parts(
     "What is in this screenshot?",  # str -> text part
@@ -24,7 +24,7 @@ Strings are always text (never treated as paths), so message text that mentions 
 The explicit builders remain for full control:
 
 ```python
-from padwan_llm import audio_part, image_part, text_file_part, text_part
+from padwan_ai import audio_part, image_part, text_file_part, text_part
 
 parts = [
     text_part("What is in this screenshot?"),
@@ -39,7 +39,7 @@ parts = [
 ## Sending images
 
 ```python
-from padwan_llm import ConversationState, LLMClient, image_part, text_part
+from padwan_ai import ConversationState, LLMClient, image_part, text_part
 
 state = ConversationState()
 state.add_user_message(
@@ -58,14 +58,14 @@ async with LLMClient("gpt-4o") as client:
 `supports_vision` is a best-effort, curated check of whether a model accepts image input:
 
 ```python
-from padwan_llm import supports_vision
+from padwan_ai import supports_vision
 
 supports_vision("gpt-4o")  # True
 supports_vision("mistral-large-latest")  # False - text-only
 supports_vision("some-local-model")  # True - unknown models are attempted
 ```
 
-Each provider package exposes its own `supports_vision` (e.g. `padwan_llm.mistral.supports_vision`); the top-level function dispatches to them in the same order as `LLMClient` routing. Unknown models default to `True` so the request is attempted and the provider surfaces the real error instead of the check guessing wrong.
+Each provider package exposes its own `supports_vision` (e.g. `padwan_ai.mistral.supports_vision`); the top-level function dispatches to them in the same order as `LLMClient` routing. Unknown models default to `True` so the request is attempted and the provider surfaces the real error instead of the check guessing wrong.
 
 | Provider | Image input |
 |----------|-------------|
@@ -80,7 +80,7 @@ Each provider package exposes its own `supports_vision` (e.g. `padwan_llm.mistra
 `supports_audio` is the audio counterpart of `supports_vision`, with the same dispatch and unknown-model behaviour; pass `fmt=` to also check a specific format:
 
 ```python
-from padwan_llm import supports_audio
+from padwan_ai import supports_audio
 
 supports_audio("gpt-audio")  # True
 supports_audio("gpt-audio", "flac")  # False - OpenAI takes wav/mp3 only
@@ -96,7 +96,7 @@ supports_audio("grok-4")  # False - no Grok chat model takes audio
 | Grok | No current chat model | - |
 | Anthropic | The Messages API has no audio input | - |
 
-Each audio-capable provider package also exposes its accepted formats as `AUDIO_FORMATS` (e.g. `padwan_llm.gemini.AUDIO_FORMATS`).
+Each audio-capable provider package also exposes its accepted formats as `AUDIO_FORMATS` (e.g. `padwan_ai.gemini.AUDIO_FORMATS`).
 
 ## Limitations
 

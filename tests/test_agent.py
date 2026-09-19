@@ -7,7 +7,7 @@ from typing import Any, cast
 
 import pytest
 
-from padwan_llm import (
+from padwan_ai import (
     AgentOutput,
     AgentSession,
     ChatMessage,
@@ -21,7 +21,7 @@ from padwan_llm import (
     ToolDefinition,
     UsageToken,
 )
-from padwan_llm.agent import ToolErrorHandler, _extract_text
+from padwan_ai.agent import ToolErrorHandler, _extract_text
 
 # Fakes
 

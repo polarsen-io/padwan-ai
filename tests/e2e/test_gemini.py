@@ -1,7 +1,7 @@
 import pytest
 
-from padwan_llm import GeminiClient
-from padwan_llm.gemini.batch import BatchRequest
+from padwan_ai import GeminiClient
+from padwan_ai.gemini.batch import BatchRequest
 
 from .conftest import skip_no_gemini
 

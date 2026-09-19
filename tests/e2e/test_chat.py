@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from padwan_llm import LLMClient, content_parts
-from padwan_llm.conversation import AssistantToolMessage, Message, ToolResultMessage
+from padwan_ai import LLMClient, content_parts
+from padwan_ai.conversation import AssistantToolMessage, Message, ToolResultMessage
 
 from .conftest import (
     AUDIO_FIXTURE,

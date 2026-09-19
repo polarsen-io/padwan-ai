@@ -5,7 +5,7 @@ The OpenAI client provides access to GPT models through the OpenAI API. It also 
 ## Configuration
 
 ```python
-from padwan_llm.openai import OpenAIClient
+from padwan_ai.openai import OpenAIClient
 
 client = OpenAIClient(
     api_key="sk-...",  # or set OPENAI_API_KEY env var
@@ -18,7 +18,7 @@ client = OpenAIClient(
 ### Basic Chat
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with OpenAIClient() as client:
     response, usage = await client.complete_chat(
@@ -30,7 +30,7 @@ async with OpenAIClient() as client:
 ### Streaming
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with OpenAIClient() as client:
     stream = client.stream_chat([Message(role="user", content="Tell me a story")])
@@ -41,7 +41,7 @@ async with OpenAIClient() as client:
 ### With System Prompt
 
 ```python
-from padwan_llm import ConversationState
+from padwan_ai import ConversationState
 
 state = ConversationState(system="You are a helpful assistant.")
 state.add_user_message("Hello!")
@@ -70,7 +70,7 @@ OpenAI supports batch processing via a file-based API. Requests are serialized t
 ### Creating a batch
 
 ```python
-from padwan_llm.openai import OpenAIClient, BatchRequest
+from padwan_ai.openai import OpenAIClient, BatchRequest
 
 async with OpenAIClient() as client:
     requests = [
@@ -92,7 +92,7 @@ async with OpenAIClient() as client:
 ### Polling for results
 
 ```python
-from padwan_llm.openai import BatchResult
+from padwan_ai.openai import BatchResult
 
 job = await client.get_batch(job.id)
 if job.succeeded:
@@ -121,13 +121,13 @@ job = await client.cancel_batch("batch_abc123")
 `RealtimeClient` opens speech-to-speech sessions with the GA `gpt-realtime` model over a WebSocket. Wire shapes follow the [OpenAI Realtime guide](https://platform.openai.com/docs/guides/realtime). Requires the `realtime` extra (niquests WebSocket support):
 
 ```bash
-uv add "padwan-llm[realtime]"
+uv add "padwan-ai[realtime]"
 ```
 
 Audio in both directions is mono little-endian PCM16 at 24 kHz (`REALTIME_SAMPLE_RATE`), the `gpt-realtime` native rate.
 
 ```python
-from padwan_llm import RealtimeClient
+from padwan_ai import RealtimeClient
 
 client = RealtimeClient(
     api_key="sk-...",  # or set OPENAI_API_KEY
@@ -145,8 +145,8 @@ client = RealtimeClient(
 By default the server decides when you have stopped talking. Stream microphone audio in with `append_audio` and consume events by async-iterating the connection:
 
 ```python
-from padwan_llm import RealtimeClient
-from padwan_llm.openai import RealtimeServerEvent
+from padwan_ai import RealtimeClient
+from padwan_ai.openai import RealtimeServerEvent
 
 async with RealtimeClient(instructions="Answer briefly.", voice="marin") as conn:
     await conn.append_audio(pcm16_chunk)  # mono PCM16 @ 24 kHz
@@ -162,8 +162,8 @@ async with RealtimeClient(instructions="Answer briefly.", voice="marin") as conn
 Pass `NO_TURN_DETECTION` to disable server VAD, then drive each turn yourself:
 
 ```python
-from padwan_llm import RealtimeClient
-from padwan_llm.openai import NO_TURN_DETECTION
+from padwan_ai import RealtimeClient
+from padwan_ai.openai import NO_TURN_DETECTION
 
 async with RealtimeClient(turn_detection=NO_TURN_DETECTION) as conn:
     await conn.append_audio(recorded_pcm16)

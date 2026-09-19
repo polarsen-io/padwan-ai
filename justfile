@@ -69,23 +69,23 @@ e2e-langfuse env=".env" *args: langfuse-up
 # Type check
 [group('dev')]
 check:
-    uv run pyright padwan_llm/
+    uv run pyright padwan_ai/
 
 # Lint
 [group('dev')]
 lint:
-    uv run ruff check padwan_llm/ tests/
+    uv run ruff check padwan_ai/ tests/
 
 # Format
 [group('dev')]
 fmt:
-    uv run ruff format padwan_llm/ tests/
+    uv run ruff format padwan_ai/ tests/
 
 # Fix lint issues where possible
 [group('dev')]
 fix:
-    uv run ruff check --fix padwan_llm/ tests/
-    uv run ruff format padwan_llm/ tests/
+    uv run ruff check --fix padwan_ai/ tests/
+    uv run ruff format padwan_ai/ tests/
 
 # Lint + type check + test
 [group('dev')]

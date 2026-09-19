@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 
-from padwan_llm import AgentSession, LLMClient, McpTool
+from padwan_ai import AgentSession, LLMClient, McpTool
 
 from .conftest import (
     skip_no_gemini,
