@@ -17,13 +17,13 @@ from anthropic.types import (
 )
 from anthropic.types.message_create_params import MessageCreateParamsStreaming
 
-from padwan_llm.anthropic.client import (
+from padwan_ai.anthropic.client import (
     AnthropicClient,
     _check_resp,
     _usage_from_anthropic,
     is_anthropic_model,
 )
-from padwan_llm.anthropic.models import (
+from padwan_ai.anthropic.models import (
     AnthropicContentBlock,
     AnthropicMessage,
     AnthropicTool,
@@ -31,9 +31,9 @@ from padwan_llm.anthropic.models import (
     MessagesBody,
     MessagesResponse,
 )
-from padwan_llm.client import LLMClient
-from padwan_llm.errors import LLMError, TooManyRequestsError
-from padwan_llm.models import ToolDefinition
+from padwan_ai.client import LLMClient
+from padwan_ai.errors import LLMError, TooManyRequestsError
+from padwan_ai.models import ToolDefinition
 
 WEATHER_TOOL: ToolDefinition = {
     "name": "get_weather",

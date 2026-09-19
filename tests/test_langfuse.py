@@ -12,13 +12,13 @@ from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
 from opentelemetry.util.types import AttributeValue
 
-import padwan_llm.langfuse as langfuse_integration
-from padwan_llm import otel
-from padwan_llm._json import dumps as _json_dumps
+import padwan_ai.langfuse as langfuse_integration
+from padwan_ai import otel
+from padwan_ai._json import dumps as _json_dumps
 
 
 def _span_params(
-    attributes: dict[str, AttributeValue], *, scope: str = "padwan_llm"
+    attributes: dict[str, AttributeValue], *, scope: str = "padwan_ai"
 ) -> tuple[OtelSpanIdentifier, MaskOtelSpansParams]:
     identifier = OtelSpanIdentifier(trace_id="0" * 32, span_id="1" * 16)
     span = OtelSpanData(
@@ -72,7 +72,7 @@ _TOOLS = [{"type": "function", "name": "search"}]
                 "gen_ai.output.messages": _json_dumps([{"role": "assistant"}]),
                 "gen_ai.request.model": "gpt-test",
                 "gen_ai.conversation.id": "session-1",
-                "padwan_llm.response.first_chunk_time": "2026-09-14T10:00:00.412000Z",
+                "padwan_ai.response.first_chunk_time": "2026-09-14T10:00:00.412000Z",
             },
             {
                 "langfuse.observation.type": "generation",
@@ -162,7 +162,7 @@ def test_span_adapter_ignores_other_instrumentation_scopes():
 )
 def test_span_filter(user_filter, expected: bool):
     span = MagicMock(spec=ReadableSpan)
-    span.instrumentation_scope = InstrumentationScope("padwan_llm")
+    span.instrumentation_scope = InstrumentationScope("padwan_ai")
     span.attributes = {"mcp.method.name": "initialize"}
 
     assert langfuse_integration._SpanFilter(user_filter)(span) is expected

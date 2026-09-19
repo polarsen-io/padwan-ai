@@ -4,16 +4,16 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from padwan_llm.errors import LLMError, QuotaExceededError, TooManyRequestsError
-from padwan_llm.openai.batch import BatchJob, BatchResult
-from padwan_llm.openai.client import (
+from padwan_ai.errors import LLMError, QuotaExceededError, TooManyRequestsError
+from padwan_ai.openai.batch import BatchJob, BatchResult
+from padwan_ai.openai.client import (
     OpenAIChatStream,
     OpenAIClient,
     _check_resp,
     _extract_text_payload,
     _extract_thought_payload,
 )
-from padwan_llm.openai.types import CreateChatCompletionStreamResponse
+from padwan_ai.openai.types import CreateChatCompletionStreamResponse
 
 
 @pytest.mark.parametrize(

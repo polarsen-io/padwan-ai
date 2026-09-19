@@ -28,7 +28,7 @@ from ._json import dumps as _json_dumps, loads as _json_loads
 from .logs import log
 from .models import ToolDefinition
 
-__version__ = _pkg_version("padwan-llm")
+__version__ = _pkg_version("padwan-ai")
 
 __all__ = (
     "McpStdio",
@@ -260,7 +260,7 @@ class McpStreamable:
     """Called on HTTP 401 to obtain a fresh token. Receives the transport
     instance; must return a bearer token string or raise to abort.
     When ``None`` (default), 401 raises ``RuntimeError``."""
-    client_name: str = "padwan-llm"
+    client_name: str = "padwan-ai"
     client_version: str = __version__
     name_prefix: str | None = None
     """Optional namespace for this transport's tools. When set, every
@@ -585,7 +585,7 @@ class McpStdio:
     env: dict[str, str] | None = None
     cwd: str | None = None
     on_progress: Callable[[ProgressEvent], Any] | None = None
-    client_name: str = "padwan-llm"
+    client_name: str = "padwan-ai"
     client_version: str = __version__
     name_prefix: str | None = None
     """Optional namespace for this transport's tools (see

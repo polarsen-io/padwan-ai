@@ -1,10 +1,10 @@
-# Padwan LLM
+# Padwan AI
 
 Unified client for OpenAI, Gemini, Mistral, Grok, and Anthropic APIs. Supports also OpenAI-compatible endpoints.
 
 ## Why
 
-Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock you into a single provider's SDK. Padwan LLM takes a different approach:
+Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock you into a single provider's SDK. Padwan AI takes a different approach:
 
 - **Single runtime dependency** — only [niquests](https://github.com/jawah/niquests), no pydantic, no httpx. Zero overhead beyond the HTTP layer.
 - **TypedDict-only** — all request/response types are plain `TypedDict`s, no validation framework required. No runtime cost, full editor support.
@@ -40,11 +40,11 @@ Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock 
 
 ```bash
 export OPENAI_API_KEY="sk-..."
-uv run padwan-llm "Hello!" -m gpt-4o-mini
+uv run padwan-ai "Hello!" -m gpt-4o-mini
 ```
 
 ```python
-from padwan_llm import LLMClient
+from padwan_ai import LLMClient
 
 async with LLMClient(model="gpt-4o") as client:
     response, usage = await client.complete_chat(
@@ -56,13 +56,13 @@ async with LLMClient(model="gpt-4o") as client:
 ## Installation
 
 ```bash
-pip install padwan-llm
+pip install padwan-ai
 ```
 
 Or with uv:
 
 ```bash
-uv add padwan-llm
+uv add padwan-ai
 ```
 
 ## Agentic loop
@@ -72,7 +72,7 @@ and repeats until the model produces a plain text answer.
 It accepts individual `McpTool` instances and whole `McpTransport` servers in the same list, transports are entered as part of the session lifecycle:
 
 ```python
-from padwan_llm import AgentSession, LLMClient, McpStdio
+from padwan_ai import AgentSession, LLMClient, McpStdio
 
 async with AgentSession(
     client=LLMClient(model="gpt-4o"),
@@ -89,7 +89,7 @@ See the [Agents page](agents.md) for approval hooks, parallel execution, and sna
 Connect to MCP tool servers over streamable HTTP or stdio:
 
 ```python
-from padwan_llm import McpStreamable, McpStdio
+from padwan_ai import McpStreamable, McpStdio
 
 async with McpStreamable(url="https://mcp.example.com/mcp", token="sk-...") as mcp:
     result = await mcp.tools[0].handler({"query": "test"})

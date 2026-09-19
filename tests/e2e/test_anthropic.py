@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from padwan_llm import AnthropicClient
+from padwan_ai import AnthropicClient
 
 from .conftest import PROMPT, TOOL_PROMPT, WEATHER_TOOL, skip_no_anthropic
 

@@ -1,9 +1,9 @@
 # Python 3.15 defers provider components until first use.
 __lazy_modules__ = frozenset(
     {
-        "padwan_llm.mistral.audio",
-        "padwan_llm.mistral.client",
-        "padwan_llm.mistral.vision",
+        "padwan_ai.mistral.audio",
+        "padwan_ai.mistral.client",
+        "padwan_ai.mistral.vision",
     }
 )
 

@@ -4,11 +4,11 @@
 # dependencies = [
 #     "openai>=2.36.0",
 #     "piou>=0.34.1",
-#     "padwan-llm",
+#     "padwan-ai",
 # ]
 #
 # [tool.uv.sources]
-# padwan-llm = { path = "../../", editable = false }
+# padwan-ai = { path = "../../", editable = false }
 # ///
 """Detect drift between provider model lists and the project's model Literals.
 
@@ -32,18 +32,18 @@ from typing import Any
 import niquests
 from openai.types import ChatModel
 
-from padwan_llm.anthropic.client import ANTHROPIC_MODELS, ANTHROPIC_VERSION
-from padwan_llm.gemini.client import GEMINI_MODELS
-from padwan_llm.gemini.realtime import DEFAULT_LIVE_MODEL, GeminiLiveModel
-from padwan_llm.grok.client import GROK_MODELS
-from padwan_llm.mistral.client import (
+from padwan_ai.anthropic.client import ANTHROPIC_MODELS, ANTHROPIC_VERSION
+from padwan_ai.gemini.client import GEMINI_MODELS
+from padwan_ai.gemini.realtime import DEFAULT_LIVE_MODEL, GeminiLiveModel
+from padwan_ai.grok.client import GROK_MODELS
+from padwan_ai.mistral.client import (
     MISTRAL_MODELS,
     MistralAudioModel,
     MistralEmbeddingModel,
 )
-from padwan_llm.openai.client import _OPENAI_PREFIXES, OPENAI_MODELS
-from padwan_llm.openai.realtime import _VOICES, DEFAULT_REALTIME_MODEL
-from padwan_llm.typesafe import TYPESAFE_MODELS
+from padwan_ai.openai.client import _OPENAI_PREFIXES, OPENAI_MODELS
+from padwan_ai.openai.realtime import _VOICES, DEFAULT_REALTIME_MODEL
+from padwan_ai.typesafe import TYPESAFE_MODELS
 
 # Trailing date or dated-preview stamps used by upstream to expose pinned model
 # versions. The project prefers stable aliases such as "*-latest" where possible.
@@ -153,7 +153,7 @@ def _json_get(
 ) -> Any:
     request_headers = {
         "Accept": "application/json",
-        "User-Agent": "padwan-llm-model-drift/1.0",
+        "User-Agent": "padwan-ai-model-drift/1.0",
     }
     if headers:
         request_headers.update(headers)
@@ -548,7 +548,7 @@ def _render_openai(lines: list[str], sdk_diff: Diff, live: RemoteModels) -> None
     lines.append("## OpenAI")
     lines.append("")
     lines.append("Source: `openai.types.ChatModel` from the installed OpenAI SDK.")
-    lines.append("Target: `padwan_llm/openai/client.py::OpenAIModel`.")
+    lines.append("Target: `padwan_ai/openai/client.py::OpenAIModel`.")
     lines.append("")
     if sdk_diff.has_drift:
         _render_diff(
@@ -644,7 +644,7 @@ def _render_openai_realtime(
         "`openai.types.realtime` session types."
     )
     lines.append(
-        "Target: `padwan_llm/openai/realtime.py::DEFAULT_REALTIME_MODEL, _VOICES`."
+        "Target: `padwan_ai/openai/realtime.py::DEFAULT_REALTIME_MODEL, _VOICES`."
     )
     lines.append("")
     if DEFAULT_REALTIME_MODEL in sdk_models:
@@ -710,7 +710,7 @@ def _render(
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_MISTRAL_DEPRECATIONS = _REPO_ROOT / "padwan_llm" / "mistral" / "_deprecations.py"
+_MISTRAL_DEPRECATIONS = _REPO_ROOT / "padwan_ai" / "mistral" / "_deprecations.py"
 
 
 def _write_deprecations(
@@ -755,7 +755,7 @@ def check(out: Path | None = None) -> None:
         "Mistral",
         "GET https://api.mistral.ai/v1/models",
         (
-            "padwan_llm/mistral/client.py::MistralModel, "
+            "padwan_ai/mistral/client.py::MistralModel, "
             "MistralEmbeddingModel, MistralAudioModel"
         ),
         "https://docs.mistral.ai/getting-started/models/models_overview/",
@@ -771,7 +771,7 @@ def check(out: Path | None = None) -> None:
         _live_check(
             "Gemini",
             "GET https://generativelanguage.googleapis.com/v1beta/models",
-            "padwan_llm/gemini/client.py::GeminiModel",
+            "padwan_ai/gemini/client.py::GeminiModel",
             "https://ai.google.dev/gemini-api/docs/models",
             _gemini_live_models(),
             GEMINI_MODELS,
@@ -784,7 +784,7 @@ def check(out: Path | None = None) -> None:
         _live_check(
             "Gemini Live (realtime)",
             "GET https://generativelanguage.googleapis.com/v1beta/models",
-            "padwan_llm/gemini/realtime.py::GeminiLiveModel, DEFAULT_LIVE_MODEL",
+            "padwan_ai/gemini/realtime.py::GeminiLiveModel, DEFAULT_LIVE_MODEL",
             "https://ai.google.dev/gemini-api/docs/live",
             _gemini_realtime_models(),
             set(typing.get_args(GeminiLiveModel)) | {DEFAULT_LIVE_MODEL},
@@ -801,7 +801,7 @@ def check(out: Path | None = None) -> None:
         _live_check(
             "Grok",
             "GET https://api.x.ai/v1/language-models",
-            "padwan_llm/grok/client.py::GrokModel",
+            "padwan_ai/grok/client.py::GrokModel",
             "https://docs.x.ai/docs/models",
             _grok_live_models(),
             {model for model in GROK_MODELS if _is_grok_public_model(model)},
@@ -813,7 +813,7 @@ def check(out: Path | None = None) -> None:
         _live_check(
             "Anthropic",
             "GET https://api.anthropic.com/v1/models",
-            "padwan_llm/anthropic/client.py::AnthropicModel",
+            "padwan_ai/anthropic/client.py::AnthropicModel",
             "https://platform.claude.com/docs/en/about-claude/models/overview",
             _anthropic_live_models(),
             ANTHROPIC_MODELS,
@@ -827,7 +827,7 @@ def check(out: Path | None = None) -> None:
         _live_check(
             "TypeSafe (JEV)",
             "GET https://api.typesafe.ai/v1/models",
-            "padwan_llm/typesafe/client.py::TypeSafeModel",
+            "padwan_ai/typesafe/client.py::TypeSafeModel",
             "https://docs.typesafe.ai/models",
             _typesafe_live_models(),
             TYPESAFE_MODELS,

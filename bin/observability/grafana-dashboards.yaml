@@ -1,7 +1,7 @@
 # Grafana file provisioning for the dashboards/ directory (mounted read-only)
 apiVersion: 1
 providers:
-  - name: padwan-llm
+  - name: padwan-ai
     type: file
     updateIntervalSeconds: 10
     allowUiUpdates: false

@@ -256,7 +256,7 @@ async def stream_to_anthropic(
 
 
 def error_to_anthropic(exc: BaseException) -> tuple[int, dict[str, Any]]:
-    """Map a padwan-llm error to an Anthropic error status and body.
+    """Map a padwan-ai error to an Anthropic error status and body.
 
     Returns (HTTP status, body) in the `{"type": "error", "error": {...}}`
     shape Anthropic clients expect, so their retry logic keeps working.

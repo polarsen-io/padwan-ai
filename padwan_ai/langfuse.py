@@ -19,7 +19,7 @@ try:
     from opentelemetry.util.types import AttributeValue
 except ImportError as e:
     raise ImportError(
-        "padwan_llm.langfuse requires Langfuse: pip install 'padwan-llm[langfuse]'"
+        "padwan_ai.langfuse requires Langfuse: pip install 'padwan-ai[langfuse]'"
     ) from e
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ from ._json import dumps as _json_dumps, loads as _json_loads
 
 __all__ = ("LangfuseIntegration", "instrument")
 
-_PADWAN_SCOPE = "padwan_llm"
+_PADWAN_SCOPE = "padwan_ai"
 _OBSERVATION_TYPES = {
     "chat": "generation",
     "embeddings": "embedding",
@@ -84,7 +84,7 @@ def _output_attribute(attributes: Mapping[str, AttributeValue]) -> str | None:
 
 def _completion_start_time(attributes: Mapping[str, AttributeValue]) -> str | None:
     """Serialize the first streamed chunk instant the way the Langfuse SDK does."""
-    value = _string_attribute(attributes, "padwan_llm.response.first_chunk_time")
+    value = _string_attribute(attributes, "padwan_ai.response.first_chunk_time")
     return _json_dumps(value) if value is not None else None
 
 

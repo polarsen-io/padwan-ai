@@ -5,7 +5,7 @@ The Gemini client provides access to Google's Gemini models.
 ## Configuration
 
 ```python
-from padwan_llm.gemini import GeminiClient
+from padwan_ai.gemini import GeminiClient
 
 client = GeminiClient(
     api_key="...",  # or set GEMINI_API_KEY env var
@@ -18,7 +18,7 @@ client = GeminiClient(
 ### Basic Chat
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with GeminiClient() as client:
     response, usage = await client.complete_chat(
@@ -30,7 +30,7 @@ async with GeminiClient() as client:
 ### Streaming
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with GeminiClient() as client:
     stream = client.stream_chat([Message(role="user", content="Tell me a story")])
@@ -46,7 +46,7 @@ Gemini's reasoning models (e.g. `gemini-2.5-flash`, `gemini-2.5-pro`) can emit i
 - `on_thought: Callable[[str], None] | None` (defined on `LLMClientBase`, so any provider can adopt it) — called with each thought text chunk as it arrives. Thought chunks are **not** yielded as part of the normal text stream; this callback is the only way to see them.
 
 ```python
-from padwan_llm import GeminiClient
+from padwan_ai import GeminiClient
 
 thoughts: list[str] = []
 
@@ -73,7 +73,7 @@ Gemini supports batch processing for large-scale requests via methods on `Gemini
 ### Creating a batch
 
 ```python
-from padwan_llm.gemini import GeminiClient, BatchRequest
+from padwan_ai.gemini import GeminiClient, BatchRequest
 
 async with GeminiClient() as client:
     requests = [
@@ -95,7 +95,7 @@ async with GeminiClient() as client:
 ### Polling for results
 
 ```python
-from padwan_llm.gemini import BatchResult
+from padwan_ai.gemini import BatchResult
 
 job = await client.get_batch(job.name)
 if job.succeeded:
@@ -124,7 +124,7 @@ await client.cancel_batch("batches/123456")
 `RealtimeClient` with a Gemini model opens a speech-to-speech [Live API](https://ai.google.dev/api/live) session over a WebSocket. Audio is mono little-endian PCM16 — 16 kHz in (`LIVE_INPUT_SAMPLE_RATE`), 24 kHz out (`LIVE_OUTPUT_SAMPLE_RATE`). Requires the `realtime` extra.
 
 ```python
-from padwan_llm import RealtimeClient
+from padwan_ai import RealtimeClient
 
 async with RealtimeClient(
     "gemini-3.1-flash-live-preview",

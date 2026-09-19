@@ -2,8 +2,8 @@ import asyncio
 
 import pytest
 
-from padwan_llm import GrokClient
-from padwan_llm.grok import GrokBatchRequest
+from padwan_ai import GrokClient
+from padwan_ai.grok import GrokBatchRequest
 
 from .conftest import skip_no_grok
 

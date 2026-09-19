@@ -2,10 +2,10 @@ import warnings
 
 import pytest
 
-from padwan_llm import ModelDeprecationWarning
-from padwan_llm._deprecation import _warned, warn_if_deprecated
-from padwan_llm.mistral._deprecations import DEPRECATED
-from padwan_llm.mistral.client import MistralClient
+from padwan_ai import ModelDeprecationWarning
+from padwan_ai._deprecation import _warned, warn_if_deprecated
+from padwan_ai.mistral._deprecations import DEPRECATED
+from padwan_ai.mistral.client import MistralClient
 
 _DEPRECATIONS = {"mistral-moderation-latest": "2026-06-30T12:00:00Z"}
 

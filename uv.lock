@@ -2068,7 +2068,7 @@ wheels = [
 ]
 
 [[package]]
-name = "padwan-llm"
+name = "padwan-ai"
 version = "0.10.1"
 source = { editable = "." }
 dependencies = [

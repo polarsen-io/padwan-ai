@@ -56,7 +56,7 @@ echo "==> Regenerating OpenAPI TypedDicts"
 ./bin/gen-mistral-types.sh
 
 # Normalize generated files with the project's ruff (datamodel-codegen bundles its own)
-uv run ruff format padwan_llm/openai/types.py padwan_llm/mistral/types.py
+uv run ruff format padwan_ai/openai/types.py padwan_ai/mistral/types.py
 
 # Guard against the generators leaving the tree unformatted
 echo "==> Running ruff"
@@ -64,7 +64,7 @@ uv run ruff check .
 uv run ruff format --check .
 
 # Diff the SDK's ChatModel Literal against our OpenAIModel.
-# This step also regenerates padwan_llm/mistral/_deprecations.py from live data.
+# This step also regenerates padwan_ai/mistral/_deprecations.py from live data.
 echo "==> Running drift report"
 if [[ -n "$out" ]]; then
   ./bin/drift/check_model_drift.py --out "$out"
@@ -73,4 +73,4 @@ else
 fi
 
 # Normalize the freshly regenerated deprecation map.
-uv run ruff format padwan_llm/mistral/_deprecations.py
+uv run ruff format padwan_ai/mistral/_deprecations.py

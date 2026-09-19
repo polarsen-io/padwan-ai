@@ -5,7 +5,7 @@ The Grok client provides access to xAI's Grok models. It inherits from [`OpenAIC
 ## Configuration
 
 ```python
-from padwan_llm.grok import GrokClient
+from padwan_ai.grok import GrokClient
 
 client = GrokClient(
     api_key="...",  # or set GROK_API_KEY env var
@@ -18,7 +18,7 @@ client = GrokClient(
 ### Basic Chat
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with GrokClient() as client:
     response, usage = await client.complete_chat(
@@ -30,7 +30,7 @@ async with GrokClient() as client:
 ### Streaming
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with GrokClient() as client:
     stream = client.stream_chat([Message(role="user", content="Tell me a story")])
@@ -41,7 +41,7 @@ async with GrokClient() as client:
 ### With System Prompt
 
 ```python
-from padwan_llm import ConversationState
+from padwan_ai import ConversationState
 
 state = ConversationState(system="You are a helpful assistant.")
 state.add_user_message("Hello!")
@@ -60,7 +60,7 @@ Requests are submitted directly via JSON and results are fetched per-batch.
 ### Create a batch
 
 ```python
-from padwan_llm.grok import GrokClient, GrokBatchRequest
+from padwan_ai.grok import GrokClient, GrokBatchRequest
 
 requests = [
     GrokBatchRequest(
@@ -122,7 +122,7 @@ usage = stream.usage
 `RealtimeClient` with a Grok voice model opens a speech-to-speech [Voice Agent](https://docs.x.ai/developers/model-capabilities/audio/voice-agent) session. The wire protocol is OpenAI Realtime-compatible, so the connection is the same `RealtimeConnection` as OpenAI's; only the endpoint, model, and voices differ. Known voices include `eve` (default), `ara`, and `leo`; Grok transcribes natively, so no transcription model is configured.
 
 ```python
-from padwan_llm import RealtimeClient
+from padwan_ai import RealtimeClient
 
 async with RealtimeClient("grok-voice-latest", instructions="Answer briefly.") as conn:
     await conn.append_audio(pcm16_chunk)  # mono PCM16 @ 24 kHz

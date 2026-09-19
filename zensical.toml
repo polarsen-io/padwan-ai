@@ -1,11 +1,11 @@
 [project]
 
-site_name = "Padwan LLM"
+site_name = "Padwan AI"
 site_description = "Unified async client for OpenAI, Gemini, Mistral, and Grok APIs"
-site_url = "https://polarsen-io.github.io/padwan-llm"
+site_url = "https://polarsen-io.github.io/padwan-ai"
 
-repo_url = "https://github.com/polarsen-io/padwan-llm"
-repo_name = "polarsen-io/padwan-llm"
+repo_url = "https://github.com/polarsen-io/padwan-ai"
+repo_name = "polarsen-io/padwan-ai"
 
 extra_css = ["stylesheets/extra.css"]
 extra_javascript = ["javascripts/mermaid.mjs"]

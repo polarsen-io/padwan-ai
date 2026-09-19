@@ -1,7 +1,5 @@
 # Python 3.15 defers provider components until first use.
-__lazy_modules__ = frozenset(
-    {"padwan_llm.typesafe.client", "padwan_llm.typesafe.models"}
-)
+__lazy_modules__ = frozenset({"padwan_ai.typesafe.client", "padwan_ai.typesafe.models"})
 
 from .client import TYPESAFE_ENDPOINT, TYPESAFE_MODELS, TypeSafeClient, TypeSafeModel
 from .models import (

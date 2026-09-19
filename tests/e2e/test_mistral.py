@@ -1,6 +1,6 @@
 import pytest
 
-from padwan_llm import MistralClient
+from padwan_ai import MistralClient
 
 from .conftest import AUDIO_FIXTURE, skip_no_mistral
 

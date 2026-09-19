@@ -1,7 +1,7 @@
 import pytest
 
-from padwan_llm import OpenAIClient
-from padwan_llm.openai import BatchRequest
+from padwan_ai import OpenAIClient
+from padwan_ai.openai import BatchRequest
 
 from .conftest import skip_no_openai
 

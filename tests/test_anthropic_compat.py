@@ -3,8 +3,8 @@ from typing import Any, cast
 
 import pytest
 
-from padwan_llm.anthropic.compat import messages_to_openai
-from padwan_llm.anthropic.models import AnthropicCompatBody
+from padwan_ai.anthropic.compat import messages_to_openai
+from padwan_ai.anthropic.models import AnthropicCompatBody
 
 BASE64_PNG = "iVBORw0KGgo="
 

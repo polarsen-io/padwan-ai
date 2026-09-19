@@ -8,7 +8,7 @@ import msgspec
 import pydantic
 import pytest
 
-from padwan_llm.tools import (
+from padwan_ai.tools import (
     MsgspecValidator,
     PydanticValidator,
     ToolValidator,
@@ -194,7 +194,7 @@ def test_default_validator_is_the_only_installed_one(
     monkeypatch: pytest.MonkeyPatch, installed: set[str], expected: Any, raises: Any
 ) -> None:
     monkeypatch.setattr(
-        "padwan_llm.tools.find_spec",
+        "padwan_ai.tools.find_spec",
         lambda name: object() if name in installed else None,
     )
     with raises:

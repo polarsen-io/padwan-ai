@@ -1,11 +1,11 @@
 # Python 3.15 defers provider components until first use.
 __lazy_modules__ = frozenset(
     {
-        "padwan_llm.gemini.audio",
-        "padwan_llm.gemini.batch",
-        "padwan_llm.gemini.client",
-        "padwan_llm.gemini.realtime",
-        "padwan_llm.gemini.vision",
+        "padwan_ai.gemini.audio",
+        "padwan_ai.gemini.batch",
+        "padwan_ai.gemini.client",
+        "padwan_ai.gemini.realtime",
+        "padwan_ai.gemini.vision",
     }
 )
 

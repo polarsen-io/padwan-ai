@@ -1,7 +1,7 @@
 import pytest
 
-from padwan_llm import AgentSession, ChatStream, McpTool, Message
-from padwan_llm.testing import ScriptedClient, Step
+from padwan_ai import AgentSession, ChatStream, McpTool, Message
+from padwan_ai.testing import ScriptedClient, Step
 
 
 async def _drain(stream: ChatStream) -> str:

@@ -9,7 +9,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-OUTPUT_FILE="padwan_llm/openai/types.py"
+OUTPUT_FILE="padwan_ai/openai/types.py"
 SPEC_URL="https://raw.githubusercontent.com/openai/openai-openapi/main/openapi.yaml"
 
 echo "Spec URL: $SPEC_URL"

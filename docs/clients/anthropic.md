@@ -7,7 +7,7 @@ standalone client (not OpenAI-compatible).
 ## Configuration
 
 ```python
-from padwan_llm.anthropic import AnthropicClient
+from padwan_ai.anthropic import AnthropicClient
 
 client = AnthropicClient(
     api_key="...",  # or set ANTHROPIC_API_KEY env var
@@ -26,7 +26,7 @@ client = AnthropicClient(
 ### Basic Chat
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with AnthropicClient() as client:
     response, usage = await client.complete_chat(
@@ -38,7 +38,7 @@ async with AnthropicClient() as client:
 ### Streaming
 
 ```python
-from padwan_llm.conversation import Message
+from padwan_ai.conversation import Message
 
 async with AnthropicClient() as client:
     stream = client.stream_chat([Message(role="user", content="Tell me a story")])
@@ -51,7 +51,7 @@ async with AnthropicClient() as client:
 System messages are translated to the Messages API's top-level `system` field.
 
 ```python
-from padwan_llm import ConversationState
+from padwan_ai import ConversationState
 
 state = ConversationState(system="You are a helpful assistant.")
 state.add_user_message("Hello!")
@@ -68,7 +68,7 @@ async with AnthropicClient() as client:
 `ToolResultMessage`s.
 
 ```python
-from padwan_llm.models import ToolDefinition
+from padwan_ai.models import ToolDefinition
 
 WEATHER_TOOL: ToolDefinition = {
     "name": "get_weather",

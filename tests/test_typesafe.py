@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from urllib3.util.retry import Retry
 
-from padwan_llm import TYPESAFE_MODELS, TypeSafeClient
-from padwan_llm.errors import LLMError, TooManyRequestsError
-from padwan_llm.typesafe.client import _check_resp
+from padwan_ai import TYPESAFE_MODELS, TypeSafeClient
+from padwan_ai.errors import LLMError, TooManyRequestsError
+from padwan_ai.typesafe.client import _check_resp
 
 RESPONSE = {
     "model": "jev-1.13.0",
@@ -140,7 +140,7 @@ async def test_context_lifecycle() -> None:
     session.headers = {}
     session.close = AsyncMock()
     with patch(
-        "padwan_llm.typesafe.client.niquests.AsyncSession", return_value=session
+        "padwan_ai.typesafe.client.niquests.AsyncSession", return_value=session
     ) as factory:
         client = TypeSafeClient(api_key="secret")
         async with client as opened:

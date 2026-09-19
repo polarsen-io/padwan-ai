@@ -2,8 +2,8 @@ from typing import cast
 
 import pytest
 
-from padwan_llm import TypeSafeClient
-from padwan_llm.typesafe import (
+from padwan_ai import TypeSafeClient
+from padwan_ai.typesafe import (
     ChoiceAnswer,
     JSONContent,
     NoulAnswer,

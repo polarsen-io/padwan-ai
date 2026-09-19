@@ -2,18 +2,18 @@ from contextlib import nullcontext
 
 import pytest
 
-from padwan_llm.client import LLMClient
-from padwan_llm.conversation import (
+from padwan_ai.client import LLMClient
+from padwan_ai.conversation import (
     ConversationState,
     Message,
     ToolResultMessage,
 )
-from padwan_llm.errors import LLMError
-from padwan_llm.gemini.client import GeminiClient, is_gemini_model
-from padwan_llm.grok.client import GrokClient, is_grok_model
-from padwan_llm.mistral.client import MistralClient, is_mistral_model
-from padwan_llm.models import ChatResponse, ToolCall, ToolCallFunction, UsageToken
-from padwan_llm.openai.client import OpenAIClient, is_openai_model
+from padwan_ai.errors import LLMError
+from padwan_ai.gemini.client import GeminiClient, is_gemini_model
+from padwan_ai.grok.client import GrokClient, is_grok_model
+from padwan_ai.mistral.client import MistralClient, is_mistral_model
+from padwan_ai.models import ChatResponse, ToolCall, ToolCallFunction, UsageToken
+from padwan_ai.openai.client import OpenAIClient, is_openai_model
 
 # ConversationState
 

@@ -17,9 +17,9 @@ KNOWN_PROVIDERS = frozenset({"openai", "gcp.gemini", "mistral_ai", "x_ai", "anth
 # operations built from _request_attrs(): they always carry provider, model and endpoint
 CLIENT_OPS = frozenset({"chat", "embeddings", "realtime"})
 
-# attribute namespaces padwan_llm owns; anything else on a span (Langfuse span marks,
+# attribute namespaces padwan_ai owns; anything else on a span (Langfuse span marks,
 # resource attributes) belongs to a third party and is not ours to document
-_NAMESPACES = "gen_ai|mcp|server|network|rpc|openai|padwan_llm|error"
+_NAMESPACES = "gen_ai|mcp|server|network|rpc|openai|padwan_ai|error"
 _ATTRIBUTE = re.compile(rf"`((?:{_NAMESPACES})\.[a-z0-9_.]+)`")
 _OWNED = re.compile(rf"^(?:{_NAMESPACES})\.")
 

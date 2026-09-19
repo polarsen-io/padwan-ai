@@ -19,8 +19,8 @@ Exhausted rate limits raise `TooManyRequestsError`; other provider errors raise
 ## Evaluate several questions
 
 ```python
-from padwan_llm import TypeSafeClient
-from padwan_llm.typesafe import ChoiceQuestion, NoulQuestion, ScoreQuestion
+from padwan_ai import TypeSafeClient
+from padwan_ai.typesafe import ChoiceQuestion, NoulQuestion, ScoreQuestion
 
 async with TypeSafeClient() as client:
     response = await client.system_one(

@@ -23,13 +23,13 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import StatusCode, get_current_span
 
-from padwan_llm import McpStreamable, McpTool, otel
-from padwan_llm._base import RealtimeClientBase
-from padwan_llm._json import dumps as _json_dumps, loads as _json_loads
-from padwan_llm.errors import LLMError, Provider
-from padwan_llm.gemini import GeminiClient
-from padwan_llm.mistral import MistralClient
-from padwan_llm.openai import OpenAIClient
+from padwan_ai import McpStreamable, McpTool, otel
+from padwan_ai._base import RealtimeClientBase
+from padwan_ai._json import dumps as _json_dumps, loads as _json_loads
+from padwan_ai.errors import LLMError, Provider
+from padwan_ai.gemini import GeminiClient
+from padwan_ai.mistral import MistralClient
+from padwan_ai.openai import OpenAIClient
 from tests.test_agent import FakeChatStream, make_session, make_tool_call
 
 USAGE = {"total_tokens": 30, "prompt_tokens": 10, "completion_tokens": 20}
@@ -141,7 +141,7 @@ def _histogram_sum(reader: InMemoryMetricReader, name: str) -> int | float:
                 ]
             },
             {
-                "padwan_llm.response.tool_names": ("get_weather",),
+                "padwan_ai.response.tool_names": ("get_weather",),
                 "gen_ai.response.finish_reasons": ("tool_calls",),
             },
             id="tool_names",
@@ -210,12 +210,12 @@ async def test_stream_chat_span(otel_setup, client, make_sse_event, make_sse_res
     assert attrs["gen_ai.response.finish_reasons"] == ("stop",)
     assert attrs["gen_ai.response.time_to_first_chunk"] > 0
     first_chunk = datetime.fromisoformat(
-        cast(str, attrs["padwan_llm.response.first_chunk_time"])
+        cast(str, attrs["padwan_ai.response.first_chunk_time"])
     )
     assert first_chunk.tzinfo is UTC
     assert span.start_time is not None
     assert first_chunk.timestamp() >= span.start_time / 1e9 - 1e-3
-    assert cast(str, attrs["padwan_llm.response.first_chunk_time"]).endswith("Z")
+    assert cast(str, attrs["padwan_ai.response.first_chunk_time"]).endswith("Z")
     assert attrs["openai.api.type"] == "chat_completions"
     assert attrs["openai.request.service_tier"] == "flex"
     assert attrs["openai.response.service_tier"] == "flex"
@@ -256,9 +256,9 @@ async def test_stream_chat_tool_calls_only_records_first_chunk(
     assert text == []
     (span,) = exporter.get_finished_spans()
     attrs = dict(span.attributes or {})
-    assert attrs["padwan_llm.response.tool_names"] == ("get_weather",)
+    assert attrs["padwan_ai.response.tool_names"] == ("get_weather",)
     assert attrs["gen_ai.response.time_to_first_chunk"] > 0
-    datetime.fromisoformat(cast(str, attrs["padwan_llm.response.first_chunk_time"]))
+    datetime.fromisoformat(cast(str, attrs["padwan_ai.response.first_chunk_time"]))
     (point,) = _histogram_points(reader, "gen_ai.client.operation.time_to_first_chunk")
     assert point.count == 1
     assert dict(point.attributes or {})["gen_ai.request.stream"] is True
@@ -519,7 +519,7 @@ async def test_stream_records_thinking_duration(
     (span,) = exporter.get_finished_spans()
     attrs = dict(span.attributes or {})
     assert attrs["gen_ai.usage.reasoning.output_tokens"] == 10
-    assert attrs["padwan_llm.thinking.duration"] >= 0
+    assert attrs["padwan_ai.thinking.duration"] >= 0
 
 
 async def test_agent_tool_execution_emits_span(otel_setup):
@@ -812,11 +812,11 @@ async def test_raw_openai_call_opens_span(
     assert attrs["gen_ai.usage.input_tokens"] == 10
     assert attrs["gen_ai.usage.output_tokens"] == 20
     assert attrs["gen_ai.response.finish_reasons"] == expected_reasons
-    assert attrs["padwan_llm.response.tool_names"] == expected_tools
+    assert attrs["padwan_ai.response.tool_names"] == expected_tools
     assert attrs["openai.request.service_tier"] == "flex"
     assert attrs["openai.response.service_tier"] == "flex"
     assert attrs.get("gen_ai.request.stream", False) is streaming
-    assert ("padwan_llm.response.first_chunk_time" in attrs) is streaming
+    assert ("padwan_ai.response.first_chunk_time" in attrs) is streaming
     assert {"gen_ai.client.operation.duration", "gen_ai.client.token.usage"} <= (
         _metric_names(reader)
     )
@@ -1090,7 +1090,7 @@ async def test_raw_choices_preserve_function_and_custom_tools(
 
     (span,) = exporter.get_finished_spans()
     attrs = dict(span.attributes or {})
-    assert attrs["padwan_llm.response.tool_names"] == ("weather", "python")
+    assert attrs["padwan_ai.response.tool_names"] == ("weather", "python")
     assert attrs["gen_ai.response.finish_reasons"] == ("tool_calls", "length")
     assert attrs["gen_ai.usage.input_tokens"] == 10
     assert attrs["gen_ai.usage.output_tokens"] == 20

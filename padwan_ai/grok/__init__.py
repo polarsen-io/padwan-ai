@@ -1,11 +1,11 @@
 # Python 3.15 defers provider components until first use.
 __lazy_modules__ = frozenset(
     {
-        "padwan_llm.grok.audio",
-        "padwan_llm.grok.batch",
-        "padwan_llm.grok.client",
-        "padwan_llm.grok.realtime",
-        "padwan_llm.grok.vision",
+        "padwan_ai.grok.audio",
+        "padwan_ai.grok.batch",
+        "padwan_ai.grok.client",
+        "padwan_ai.grok.realtime",
+        "padwan_ai.grok.vision",
     }
 )
 

@@ -1,9 +1,9 @@
 {
-  "uid": "padwan-llm-genai",
-  "title": "Padwan LLM \u2014 GenAI telemetry",
-  "description": "OTel GenAI semconv metrics and traces emitted by padwan_llm.otel during e2e runs",
+  "uid": "padwan-ai-genai",
+  "title": "Padwan AI \u2014 GenAI telemetry",
+  "description": "OTel GenAI semconv metrics and traces emitted by padwan_ai.otel during e2e runs",
   "tags": [
-    "padwan-llm",
+    "padwan-ai",
     "genai",
     "otel"
   ],
@@ -46,8 +46,8 @@
         "query": "label_values(gen_ai_client_operation_duration_seconds_count, service_name)",
         "refresh": 2,
         "current": {
-          "text": "padwan-llm-e2e",
-          "value": "padwan-llm-e2e"
+          "text": "padwan-ai-e2e",
+          "value": "padwan-ai-e2e"
         },
         "includeAll": false
       },

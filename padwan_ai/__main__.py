@@ -61,7 +61,7 @@ async def _run(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="padwan-llm",
+        prog="padwan-ai",
         description="One-shot LLM query",
     )
     parser.add_argument("prompt", help="Prompt to send")

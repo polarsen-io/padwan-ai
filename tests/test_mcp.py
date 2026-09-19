@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from mcp.server.mcpserver import MCPServer
 
-from padwan_llm.mcp import (
+from padwan_ai.mcp import (
     McpStdio,
     McpStreamable,
     McpTool,
@@ -646,7 +646,7 @@ class TestMcpStreamable:
         client = McpStreamable(url="https://example.com/mcp")
         client._http = mock_http
         client._retry_ms = 0
-        with caplog.at_level("WARNING", logger="padwan_llm"):
+        with caplog.at_level("WARNING", logger="padwan_ai"):
             async with client:
                 await asyncio.sleep(0.05)
         # The keep-alive must NOT have triggered event.json() at all,
@@ -1092,7 +1092,7 @@ class TestMcpStdio:
             original_names = {t.name for t in tools_ref}
 
             # Swap in a fake result to force a difference we can observe.
-            from padwan_llm.mcp import _build_tools
+            from padwan_ai.mcp import _build_tools
 
             async def fake_refresh() -> None:
                 client._tools[:] = _build_tools(

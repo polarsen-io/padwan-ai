@@ -1,11 +1,11 @@
 # Model Context Protocol (MCP)
 
-Padwan LLM ships two MCP client transports — `McpStreamable` (HTTP) and `McpStdio` (subprocess) — both implementing the [MCP 2025-11-25 spec](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports). They expose the same `tools` interface, but their internal concurrency models differ in important ways.
+Padwan AI ships two MCP client transports — `McpStreamable` (HTTP) and `McpStdio` (subprocess) — both implementing the [MCP 2025-11-25 spec](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports). They expose the same `tools` interface, but their internal concurrency models differ in important ways.
 
 ## Quick start
 
 ```python
-from padwan_llm import McpStreamable, McpStdio
+from padwan_ai import McpStreamable, McpStdio
 
 # Streamable HTTP — remote MCP server (with optional bearer token)
 async with McpStreamable(url="https://mcp.example.com/mcp", token="sk-...") as mcp:
