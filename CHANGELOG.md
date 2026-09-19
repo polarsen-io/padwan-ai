@@ -1,3 +1,24 @@
+## 0.11.0 (2026-09-19)
+
+Rename release: the project is now **padwan-ai**. Plus a native TypeSafe (JEV) client.
+
+### Breaking
+
+- **Package renamed `padwan-llm` -> `padwan-ai`.** Install `padwan-ai` and replace `import padwan_llm` with `import padwan_ai`; the console script is now `padwan-ai`. Nothing else in the API changed. The final `padwan-llm` release (0.11.0) only depends on `padwan-ai` and raises an `ImportError` pointing at the new name, so `pip uninstall padwan-llm` after upgrading. (#79)
+- **Telemetry names follow the rename.** Logger and OpenTelemetry instrumentation scope are `padwan_ai`, span attributes are `padwan_ai.response.tool_names`, `padwan_ai.thinking.duration` and `padwan_ai.response.first_chunk_time`, and the MCP `clientInfo.name` default is `padwan-ai`. Update dashboards and log filters keyed on the old names. Metric names are unchanged (`gen_ai.*`). (#79)
+- Repository and docs moved to https://github.com/polarsen-io/padwan-ai and https://polarsen-io.github.io/padwan-ai. The Grafana dashboard uid is `padwan-ai-genai`.
+
+### Features
+
+- **TypeSafe (JEV) client.** `TypeSafeClient.system_one()` evaluates text or structured state against named Noul, Choice and Score questions through the System One API, with typed request and response dictionaries, niquests retries on connection errors, timeouts, 408/429 and 5xx, and `TooManyRequestsError` / `LLMError(provider="typesafe")` on failure. `TypeSafeModel` and `TYPESAFE_MODELS` track the `jev-latest` and `jev-preview` aliases; the API key comes from `TYPESAFE_API_KEY`. Payload validation is left to the API. (#78, #79)
+
+### Dev
+
+- The weekly model-drift workflow also tracks TypeSafe models. (#78, #79)
+- Live TypeSafe e2e tests and a TypeSafe docs page. (#78, #79)
+
+**Full Changelog**: https://github.com/polarsen-io/padwan-ai/compare/0.10.1...0.11.0
+
 ## 0.10.1 (2026-09-16)
 
 ### Fix
