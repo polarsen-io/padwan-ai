@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789853017309,
+  "lastUpdate": 1789853327283,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -2354,6 +2354,48 @@ window.BENCHMARK_DATA = {
             "value": 191.54,
             "unit": "ms",
             "range": 2.02
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "29e7947401650114539a92b0f9c54dbc0184e9ba",
+          "message": "chore: rename project to padwan-ai (#79)\n\n* feat: add native JEV support and weekly model tracking\n\n* refactor(typesafe): let the API validate payloads, reuse env_api_key\n\nDrop the client-side question/JSON normalizers and per-field response\nchecks; the server 422s bad input and _error_message already surfaces\nthe detail. Remove the redundant SystemOneRequest and JSONValue types,\nthe tests that covered them, and the duplicated e2e/drift docs section.\n\n* chore: rename project to padwan-ai\n\nBREAKING: import path `padwan_llm` -> `padwan_ai`, PyPI dist `padwan-llm` -> `padwan-ai`,\nconsole script `padwan-llm` -> `padwan-ai`. No compat shim is kept.\n\nAlso renamed: logger and OTel instrumentation scope (`padwan_ai`), span attribute\nnamespace (`padwan_ai.*`), MCP clientInfo.name default (`padwan-ai`), Grafana dashboard\nuid (`padwan-ai-genai`), Langfuse dev project id, docs site and repo URLs.\n\n* chore: add padwan-llm tombstone package depending on padwan-ai",
+          "timestamp": "2026-09-19T23:23:01+02:00",
+          "tree_id": "ab2d94d9f8a7c4ba920bb81098d7482104c5764a",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/29e7947401650114539a92b0f9c54dbc0184e9ba"
+        },
+        "date": 1789853326080,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_ai (facade)",
+            "value": 54.93,
+            "unit": "ms",
+            "range": 0.84
+          },
+          {
+            "name": "padwan_ai.openai",
+            "value": 206.48,
+            "unit": "ms",
+            "range": 3.6
+          },
+          {
+            "name": "padwan_ai.otel",
+            "value": 257.09,
+            "unit": "ms",
+            "range": 8.21
           }
         ]
       }
