@@ -56,22 +56,3 @@ and probabilities. Score legend and probability keys remain strings (`"0"`,
 aliases. A pinned model ID is also accepted through the constructor or the
 per-request `model=` argument. Responses identify the model that answered;
 aliases can move between releases.
-
-## E2E tests and weekly model updates
-
-Run the live tests with a local environment file:
-
-```bash
-uv run pytest tests/e2e/test_typesafe.py -m e2e --env-file .env
-```
-
-The tests skip when `TYPESAFE_API_KEY` is missing. They check result structure
-and ranges without depending on exact probabilistic answers.
-
-The Monday model-drift workflow queries `GET /v1/models` and compares advertised
-names with `TYPESAFE_MODELS`. Configure the repository's `TYPESAFE_API_KEY`
-GitHub Actions secret to enable the live check. Missing credentials and failed
-requests are reported explicitly. The existing weekly PR rules remain in place.
-
-The model-list endpoint currently returns aliases. A pinned version can still
-work without appearing in that list; an absent name is not automatically removed.

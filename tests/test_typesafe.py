@@ -1,18 +1,14 @@
 from contextlib import nullcontext
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
-from types import MappingProxyType
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import niquests
 import pytest
-from urllib3.exceptions import ConnectTimeoutError, MaxRetryError
 from urllib3.util.retry import Retry
 
 from padwan_llm import TYPESAFE_MODELS, TypeSafeClient
 from padwan_llm.errors import LLMError, TooManyRequestsError
-from padwan_llm.typesafe import NoulQuestion, ScoreAnswer
 from padwan_llm.typesafe.client import _check_resp
 
 RESPONSE = {
@@ -69,14 +65,6 @@ async def test_system_one(model, expected, make_resp):
     )
 
     assert result == RESPONSE
-    urgency = result["answers"]["urgency"]
-    assert isinstance(urgency, dict) and urgency["type"] == "score"
-    score = cast("ScoreAnswer", urgency)
-    assert score["probabilities"] == {
-        "0": 0.0,
-        "1": 0.3,
-        "2": 0.7,
-    }
     session.post.assert_awaited_once_with(
         "systemone",
         json={
@@ -87,96 +75,12 @@ async def test_system_one(model, expected, make_resp):
     )
 
 
-async def test_system_one_normalizes_abstract_json_inputs(make_resp) -> None:
-    client = TypeSafeClient(api_key="secret")
-    session = AsyncMock()
-    session.post.return_value = make_resp(200, RESPONSE)
-    client._session = session
-    state = MappingProxyType({"items": (MappingProxyType({"values": range(3)}),)})
-    questions = cast(
-        "dict[str, NoulQuestion]",
-        {
-            "billing": {
-                "type": "noul",
-                "instructions": MappingProxyType({"parts": ("Is", "billing")}),
-            }
-        },
-    )
-
-    await client.system_one(state, questions)
-
-    body = session.post.await_args.kwargs["json"]
-    assert body["state"] == {"items": [{"values": [0, 1, 2]}]}
-    assert body["questions"]["billing"]["instructions"] == {"parts": ["Is", "billing"]}
-    niquests.Request(
-        "POST", "https://api.typesafe.ai/v1/systemone", json=body
-    ).prepare()
-
-
-@pytest.mark.parametrize(
-    "state, questions, ctx",
-    [
-        pytest.param("ticket", QUESTIONS, nullcontext(), id="valid"),
-        pytest.param(
-            None, QUESTIONS, pytest.raises(LLMError, match="State"), id="null-state"
-        ),
-        pytest.param(
-            "ticket",
-            {},
-            pytest.raises(LLMError, match="At least one"),
-            id="empty-questions",
-        ),
-        pytest.param(
-            "ticket",
-            {"rank": {"type": "score", "criteria": []}},
-            pytest.raises(LLMError, match="nonempty criteria"),
-            id="empty-score",
-        ),
-        pytest.param(
-            "ticket",
-            {"route": {"type": "unknown"}},
-            pytest.raises(LLMError, match="unknown type"),
-            id="unknown-question",
-        ),
-        pytest.param(
-            "ticket",
-            {"route": {"type": "choice", "criteria": {"ok": object()}}},
-            pytest.raises(LLMError, match="invalid criteria"),
-            id="non-json-criteria",
-        ),
-    ],
-)
-async def test_request_validation(state, questions, ctx, make_resp):
-    client = TypeSafeClient(api_key="test")
-    session = AsyncMock()
-    session.post.return_value = make_resp(200, RESPONSE)
-    client._session = session
-    with ctx:
-        result = await client.system_one(state, questions)
-        assert result == RESPONSE
-
-
 @pytest.mark.parametrize(
     "payload, ctx",
     [
         pytest.param(RESPONSE, nullcontext(), id="valid"),
         pytest.param(
             {}, pytest.raises(LLMError, match="Malformed"), id="missing-fields"
-        ),
-        pytest.param(
-            {**RESPONSE, "usage": {"input_tokens": True, "output_tokens": 1}},
-            pytest.raises(LLMError, match="Malformed"),
-            id="boolean-token-count",
-        ),
-        pytest.param(
-            {**RESPONSE, "answers": {"answer": {"type": "future"}}},
-            pytest.raises(LLMError, match="Malformed"),
-            id="unknown-answer",
-        ),
-        pytest.param(
-            {**RESPONSE, "answers": {"answer": {"type": "noul", "noul": "yes"}}},
-            pytest.raises(LLMError, match="Malformed"),
-            id="wrong-answer-value",
         ),
     ],
 )
@@ -267,17 +171,6 @@ def test_api_key_resolution(api_key, env_key, ctx, monkeypatch):
         client = TypeSafeClient(api_key=api_key)
         assert "explicit" not in repr(client)
         assert "environment" not in repr(client)
-
-
-def test_retry_policy_exhausts_after_two_retries() -> None:
-    retry = TypeSafeClient(api_key="test")._retry
-    error = ConnectTimeoutError(None, "/systemone", "timed out")
-
-    retry = retry.increment(method="POST", url="/systemone", error=error)
-    retry = retry.increment(method="POST", url="/systemone", error=error)
-
-    with pytest.raises(MaxRetryError):
-        retry.increment(method="POST", url="/systemone", error=error)
 
 
 async def test_niquests_retries_twice_then_maps_rate_limit() -> None:

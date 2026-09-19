@@ -1,15 +1,8 @@
 from collections.abc import Mapping, Sequence
-from typing import Literal, NotRequired, TypedDict
+from typing import Any, Literal, NotRequired, TypedDict
 
-type JSONValue = (
-    str
-    | int
-    | float
-    | bool
-    | Sequence[JSONValue | None]
-    | Mapping[str, JSONValue | None]
-)
-type JSONContent = str | Mapping[str, JSONValue | None] | Sequence[JSONValue | None]
+# Wire boundary: the API validates the shape.
+type JSONContent = str | Mapping[str, Any] | Sequence[Any]
 
 
 class NoulCriteria(TypedDict, total=False):
@@ -72,25 +65,17 @@ class SystemOneResponse(TypedDict):
     usage: TypeSafeUsage
 
 
-class SystemOneRequest(TypedDict):
-    state: JSONContent
-    model: str
-    questions: Mapping[str, Question]
-
-
 __all__ = (
     "Answer",
     "ChoiceAnswer",
     "ChoiceQuestion",
     "JSONContent",
-    "JSONValue",
     "NoulAnswer",
     "NoulCriteria",
     "NoulQuestion",
     "Question",
     "ScoreAnswer",
     "ScoreQuestion",
-    "SystemOneRequest",
     "SystemOneResponse",
     "TypeSafeUsage",
 )
