@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789933200386,
+  "lastUpdate": 1789938160546,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -1608,6 +1608,66 @@ window.BENCHMARK_DATA = {
             "value": 215.5,
             "unit": "ms",
             "range": 4.16
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1001bfb482ba018838854c98bc6e96299ec0bb02",
+          "message": "fix: populate PyPI package metadata and ship py.typed (#88)\n\n* fix: populate PyPI package metadata\n\nThe PyPI page rendered blank: no summary, README, license or links. Adds\ndescription, readme, license expression and project URLs, and absolutizes\nthe two relative README links so they resolve on PyPI.\n\n* fix: ship py.typed marker\n\nThe package declares the Typing :: Typed classifier but had no marker, so\ndownstream type checkers ignored its inline annotations (PEP 561).",
+          "timestamp": "2026-09-20T23:01:55+02:00",
+          "tree_id": "bd7ec10b9e218347e174e2a42d5b5e47ba0534c1",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/1001bfb482ba018838854c98bc6e96299ec0bb02"
+        },
+        "date": 1789938160006,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 204.59,
+            "unit": "ms",
+            "range": 3.18
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 204.58,
+            "unit": "ms",
+            "range": 1.98
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 218.2,
+            "unit": "ms",
+            "range": 1.44
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 51.75,
+            "unit": "ms",
+            "range": 0.47
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 183.8,
+            "unit": "ms",
+            "range": 1.43
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 218.56,
+            "unit": "ms",
+            "range": 1.54
           }
         ]
       }
