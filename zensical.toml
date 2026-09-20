@@ -1,7 +1,7 @@
 [project]
 
 site_name = "Padwan AI"
-site_description = "Unified async client for OpenAI, Gemini, Mistral, and Grok APIs"
+site_description = "Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, TypeSafe (JEV), and any OpenAI-compatible API"
 site_url = "https://polarsen-io.github.io/padwan-ai"
 
 repo_url = "https://github.com/polarsen-io/padwan-ai"

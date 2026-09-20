@@ -1,3 +1,15 @@
+## 0.11.1 (2026-09-20)
+
+Docs and packaging release.
+
+### Changes
+
+- **README rewritten as a short landing page**: install, three examples (chat, streaming, agent with a typed tool and an MCP server), provider table, one link per feature area, badges for PyPI version, Python versions and CI. Everything removed already lives in the docs site. (#82)
+- **Trove classifiers** in package metadata (MIT, Python 3.13 to 3.15, typed), so PyPI and the Python-versions badge report supported versions. (#82)
+- **Release workflow can be re-dispatched** for an existing tag (`gh workflow run release.yml -f version=X.Y.Z`): tagging is skipped when the tag exists and the GitHub Release notes are reused, so a failed PyPI publish no longer requires re-cutting the release. (#81)
+
+**Full Changelog**: https://github.com/polarsen-io/padwan-ai/compare/0.11.0...0.11.1
+
 ## 0.11.0 (2026-09-19)
 
 Rename release: the project is now **padwan-ai**. Plus a native TypeSafe (JEV) client.
