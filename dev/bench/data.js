@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789890978296,
+  "lastUpdate": 1789892541680,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -1302,6 +1302,48 @@ window.BENCHMARK_DATA = {
             "value": 240.28,
             "unit": "ms",
             "range": 6.37
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "310eb63113e6984abe022a805d7a0143d5e375c3",
+          "message": "docs: revamp README into a short landing page (#82)\n\n* docs: revamp README into a short landing page\n\n* docs(readme): add PyPI version, Python and CI badges\n\n* build: add trove classifiers so the PyPI Python-versions badge renders",
+          "timestamp": "2026-09-20T10:21:47+02:00",
+          "tree_id": "4b0a2b95485d5b5b25e2448308815bc251014df6",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/310eb63113e6984abe022a805d7a0143d5e375c3"
+        },
+        "date": 1789892540753,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_ai (facade)",
+            "value": 195.37,
+            "unit": "ms",
+            "range": 3.89
+          },
+          {
+            "name": "padwan_ai.openai",
+            "value": 190.69,
+            "unit": "ms",
+            "range": 2.14
+          },
+          {
+            "name": "padwan_ai.otel",
+            "value": 204.28,
+            "unit": "ms",
+            "range": 1.92
           }
         ]
       }
