@@ -5,7 +5,7 @@
 <h1 align="center">Padwan AI</h1>
 
 <p align="center">
-  Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, and any OpenAI-compatible API.<br>
+  Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, TypeSafe (JEV), and any OpenAI-compatible API.<br>
   One runtime dependency (<a href="https://github.com/jawah/niquests">niquests</a>), TypedDict everywhere, HTTP/2 and HTTP/3 out of the box.
 </p>
 
