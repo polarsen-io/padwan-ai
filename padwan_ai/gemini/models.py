@@ -114,6 +114,33 @@ class BatchRequestPayload(TypedDict, total=False):
     systemInstruction: NotRequired[SystemInstruction]
 
 
+# Embeddings
+
+
+class EmbedContentRequest(TypedDict):
+    """One entry of a `batchEmbedContents` call."""
+
+    model: str
+    content: Content
+    taskType: NotRequired[str]
+    title: NotRequired[str]
+    outputDimensionality: NotRequired[int]
+
+
+class BatchEmbedContentsBody(TypedDict):
+    requests: list[EmbedContentRequest]
+
+
+class ContentEmbedding(TypedDict):
+    values: list[float]
+
+
+class EmbedContentsResponse(TypedDict):
+    """Response from `POST /models/{model}:batchEmbedContents`; vectors follow input order."""
+
+    embeddings: list[ContentEmbedding]
+
+
 # Content parts
 
 

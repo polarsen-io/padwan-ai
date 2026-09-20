@@ -26,8 +26,11 @@ from ..models import (
 )
 from .batch import BatchJob, BatchRequest
 from .models import (
+    BatchEmbedContentsBody,
     BatchJobResponse,
     CompletionBody,
+    EmbedContentRequest,
+    EmbedContentsResponse,
     GeminiPart,
     GenerationConfig,
     ListBatchesResponse,
@@ -115,6 +118,7 @@ __all__ = (
     "GEMINI_ENDPOINT",
     "GEMINI_MODELS",
     "GeminiClient",
+    "GeminiEmbeddingModel",
     "GeminiModel",
     "is_gemini_model",
 )
@@ -178,6 +182,12 @@ def is_gemini_model(model_name: str | None) -> bool:
         return False
     return model_name.startswith("gemini")
 
+
+GeminiEmbeddingModel = Literal[
+    "gemini-embedding-2",
+    "gemini-embedding-2-preview",
+    "gemini-embedding-001",
+]
 
 GEMINI_MODELS: set[str] = set(get_args(GeminiModel))
 
@@ -271,6 +281,42 @@ class GeminiClient(_GeminiAuth, LLMClientBase[Retry], GeminiToolMixin):
             token["reasoning"] = thoughts
 
         return data, token
+
+    async def fetch_embeddings(
+        self,
+        input: str | list[str],
+        model: str | None = None,
+        *,
+        dimensions: int | None = None,
+        extra_params: dict[str, typing.Any] | None = None,
+    ) -> EmbedContentsResponse:
+        """Embed one text or a batch; ``model`` falls back to the client's default model.
+
+        Vectors come back in input order (no index field; documented by the
+        API). ``dimensions`` maps to ``outputDimensionality``; ``extra_params``
+        (e.g. ``taskType``) is merged into every per-text request.
+        """
+        _model = model or self.model
+        if not _model:
+            raise LLMError(self.provider, "No model specified")
+        texts = [input] if isinstance(input, str) else input
+        requests: list[EmbedContentRequest] = []
+        for text in texts:
+            req: EmbedContentRequest = {
+                "model": f"models/{_model}",
+                "content": {"role": "user", "parts": [{"text": text}]},
+            }
+            if dimensions is not None:
+                req["outputDimensionality"] = dimensions
+            if extra_params:
+                req.update(cast(typing.Any, extra_params))
+            requests.append(req)
+        body: BatchEmbedContentsBody = {"requests": requests}
+        resp = await self.session.post(
+            f"/models/{_model}:batchEmbedContents", json=body
+        )
+        data: EmbedContentsResponse = _check_resp(resp)
+        return data
 
     async def create_batch(
         self,

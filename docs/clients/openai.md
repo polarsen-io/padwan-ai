@@ -63,6 +63,16 @@ async for chunk in stream:
 usage = stream.usage
 ```
 
+## Embeddings
+
+```python
+async with OpenAIClient(model="text-embedding-3-small") as client:
+    resp = await client.fetch_embeddings(["text 1", "text 2"], dimensions=512)
+    vecs = vectors(resp)  # one list[float] per input, matched by index
+```
+
+`padwan_ai.vectors(resp, provider)` returns the vectors in input order for any provider's payload; `provider` defaults to the OpenAI shape, pass `"gemini"` for Gemini. `fetch_embeddings` is available on every OpenAI-compatible client (Mistral, Grok, custom `base_url` endpoints). Pass `model=` to reuse a chat client; provider-only body fields go through `extra_params`.
+
 ## Batch Processing
 
 OpenAI supports batch processing via a file-based API. Requests are serialized to JSONL, uploaded, and results are retrieved as a file once the batch completes.

@@ -30,6 +30,7 @@ from padwan_ai.errors import LLMError, Provider
 from padwan_ai.gemini import GeminiClient
 from padwan_ai.mistral import MistralClient
 from padwan_ai.openai import OpenAIClient
+from padwan_ai.voyage import VoyageClient
 from tests.test_agent import FakeChatStream, make_session, make_tool_call
 
 USAGE = {"total_tokens": 30, "prompt_tokens": 10, "completion_tokens": 20}
@@ -575,26 +576,46 @@ async def test_agent_tool_execution_emits_span(otel_setup):
     assert _histogram_sum(reader, "gen_ai.invoke_agent.tool_calls") == 1
 
 
-async def test_embeddings_span(otel_setup, make_resp):
+@pytest.mark.parametrize(
+    "client, kwargs, payload, expected_model",
+    [
+        pytest.param(
+            MistralClient(model="mistral-embed", api_key="test"),
+            {},
+            {"data": [{"embedding": [0.1], "index": 0}]},
+            "mistral-embed",
+            id="openai-compatible-default-model",
+        ),
+        pytest.param(
+            VoyageClient(api_key="test"),
+            {"model": "voyage-4-lite"},
+            {"data": [{"embedding": [0.1], "index": 0}]},
+            "voyage-4-lite",
+            id="voyage-explicit-model",
+        ),
+        pytest.param(
+            GeminiClient(model="gemini-embedding-001", api_key="test"),
+            {},
+            {"embeddings": [{"values": [0.1]}]},
+            "gemini-embedding-001",
+            id="gemini",
+        ),
+    ],
+)
+async def test_embeddings_span(
+    otel_setup, make_resp, client, kwargs, payload, expected_model
+):
     exporter, reader = otel_setup
-    mistral = MistralClient(api_key="test")
-    mistral._session = AsyncMock()
-    payload = {
-        "id": "emb_1",
-        "object": "list",
-        "model": "mistral-embed",
-        "data": [{"embedding": [0.1, 0.2], "index": 0}],
-        "usage": {"prompt_tokens": 4, "completion_tokens": 0, "total_tokens": 4},
-    }
-    mistral._session.post.return_value = make_resp(200, payload)
+    client._session = AsyncMock()
+    client._session.post.return_value = make_resp(200, payload)
 
-    await mistral.fetch_embeddings("hello")
+    await client.fetch_embeddings("hello", **kwargs)
 
     (span,) = exporter.get_finished_spans()
-    assert span.name == "embeddings mistral-embed"
+    assert span.name == f"embeddings {expected_model}"
     attrs = dict(span.attributes or {})
     assert attrs["gen_ai.operation.name"] == "embeddings"
-    assert attrs["gen_ai.request.model"] == "mistral-embed"
+    assert attrs["gen_ai.request.model"] == expected_model
     assert "gen_ai.client.operation.duration" in _metric_names(reader)
 
 

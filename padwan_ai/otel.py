@@ -46,6 +46,7 @@ _PROVIDER_NAMES: dict[Provider, str] = {
     "mistral": "mistral_ai",
     "grok": "x_ai",
     "anthropic": "anthropic",
+    "voyage": "voyage",  # no semconv well-known value
 }
 
 # semconv advised bucket boundaries; the SDK default ladder starts at 5s and
@@ -309,13 +310,14 @@ def instrument(
                 (cls, name, lambda fn, name=name: _wrap_operation(fn, inst, name))
             )
 
-    plan.append(
-        (
-            MistralClient,
-            "fetch_embeddings",
-            lambda fn: _wrap_operation(fn, inst, "embeddings", model_param="model"),
+    for owner in (_OpenAIBase, GeminiClient):
+        plan.append(
+            (
+                owner,
+                "fetch_embeddings",
+                lambda fn: _wrap_operation(fn, inst, "embeddings", model_param="model"),
+            )
         )
-    )
 
     # Vendor extras live only on raw request and response payloads; a raw
     # call outside complete_chat/stream_chat gets its own span.
@@ -1309,11 +1311,14 @@ def _wrap_operation(
     @functools.wraps(original)
     async def wrapper(self: LLMClientBase, *args: Any, **kwargs: Any) -> Any:
         attrs = _request_attrs(self, op=op)
-        attrs.pop("gen_ai.request.model", None)
         if sig is not None and model_param is not None:
             bound = sig.bind(self, *args, **kwargs)
             bound.apply_defaults()
-            attrs["gen_ai.request.model"] = bound.arguments[model_param]
+            # None means the method falls back to the client's default model
+            if (requested := bound.arguments[model_param]) is not None:
+                attrs["gen_ai.request.model"] = requested
+        else:
+            attrs.pop("gen_ai.request.model", None)
         model = attrs.get("gen_ai.request.model")
         span = inst.tracer.start_span(
             f"{op} {model}" if model else op, kind=SpanKind.CLIENT, attributes=attrs

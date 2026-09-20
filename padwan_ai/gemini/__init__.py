@@ -15,6 +15,7 @@ from .client import (
     GEMINI_ENDPOINT,
     GEMINI_MODELS,
     GeminiClient,
+    GeminiEmbeddingModel,
     GeminiModel,
     is_gemini_model,
 )
@@ -32,6 +33,7 @@ from .vision import supports_vision
 __all__ = (
     "AUDIO_FORMATS",
     "GeminiClient",
+    "GeminiEmbeddingModel",
     "GeminiModel",
     "GEMINI_MODELS",
     "GEMINI_ENDPOINT",

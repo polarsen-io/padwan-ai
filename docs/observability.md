@@ -108,7 +108,7 @@ Each chat call emits one `CLIENT` span named `chat <model>` (or `chat` when no m
 | Attribute | Example | Notes |
 |-----------|---------|-------|
 | `gen_ai.operation.name` | `chat` | |
-| `gen_ai.provider.name` | `openai`, `gcp.gemini`, `mistral_ai`, `x_ai`, `anthropic` | semconv well-known values; OpenAI-compatible endpoints report `openai`, distinguished by `server.address` |
+| `gen_ai.provider.name` | `openai`, `gcp.gemini`, `mistral_ai`, `x_ai`, `anthropic`, `voyage` | semconv well-known values (`voyage` has none); OpenAI-compatible endpoints report `openai`, distinguished by `server.address` |
 | `gen_ai.request.model` | `gpt-4o` | omitted when no model is set |
 | `gen_ai.request.temperature` | `0.7` | only when actually sent on the wire |
 | `gen_ai.request.stream` | `true` | streams only |
@@ -157,7 +157,7 @@ Agent invocations also record dedicated duration, inference-call count, and tool
 
 ## Embeddings, batch, realtime, and MCP
 
-- **Embeddings**: `MistralClient.fetch_embeddings` emits an `embeddings <model>` span (`gen_ai.operation.name=embeddings`).
+- **Embeddings**: every `fetch_embeddings` (OpenAI-compatible clients, Gemini, Voyage) emits an `embeddings <model>` span (`gen_ai.operation.name=embeddings`); the model is the one passed to the call, else the client's default.
 - **Batch**: batch operations (`create_batch`, `get_batch`, `list_batches`, `cancel_batch`, and the OpenAI/Grok file helpers) emit a span named after the operation. No model attribute is set — batch requests carry their own per-request models.
 - **Realtime**: a `realtime <model>` span covers the whole `RealtimeClient` session, from connect to close, with connect failures recorded as errors.
 - **MCP**: initialization, tool-list refresh, ping, and direct tool calls emit CLIENT spans, named after `mcp.method.name` (tool calls use `tools/call <name>`). An MCP call dispatched through an agent enriches the existing `execute_tool` span instead of creating a duplicate span.

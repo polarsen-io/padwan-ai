@@ -66,3 +66,10 @@ async def test_batch_lifecycle() -> None:
         assert len(jobs) >= 0  # may be empty if cleaned up
 
         await client.cancel_batch(job.name)
+
+
+async def test_embeddings() -> None:
+    async with GeminiClient(model="gemini-embedding-001") as client:
+        resp = await client.fetch_embeddings(["Hello", "World"], dimensions=256)
+        assert len(resp["embeddings"]) == 2
+        assert len(resp["embeddings"][0]["values"]) == 256

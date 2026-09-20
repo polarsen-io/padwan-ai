@@ -94,14 +94,17 @@ For an interactive chat TUI use [`padwan-cli`](https://github.com/polarsen-io/pa
 
 ## Providers
 
-| Provider | Chat + streaming | Batch | Realtime voice |
-|----------|:-:|:-:|:-:|
-| OpenAI | ✅ | ✅ | ✅ |
-| Gemini | ✅ | ✅ | ✅ |
-| Anthropic | ✅ | ❌ | ❌ |
-| Mistral | ✅ | ❌ | ❌ |
-| Grok | ✅ | ✅ | ✅ |
-| OpenAI-compatible (`base_url=`) | ✅ | depends on the server | |
+| Provider | Chat + streaming | Batch | Realtime voice | Embeddings |
+|----------|:-:|:-:|:-:|:-:|
+| OpenAI | ✅ | ✅ | ✅ | ✅ |
+| Gemini | ✅ | ✅ | ✅ | ✅ |
+| Anthropic | ✅ | ❌ | ➖ | ➖ |
+| Mistral | ✅ | ❌ | ❌ | ✅ |
+| Grok | ✅ | ✅ | ✅ | ➖ |
+| Voyage AI | ➖ | ➖ | ➖ | ✅ |
+| OpenAI-compatible (`base_url=`) | ✅ | depends on the server | | depends on the server |
+
+❌ = the provider offers it, not implemented yet. ➖ = the provider has no such API.
 
 Thinking tokens stream separately through an `on_thought` callback on every client that exposes them. Per-provider details, multimodal input (images, audio, files) and embeddings: [docs/clients](docs/clients/), [docs/multimodal.md](docs/multimodal.md).
 
