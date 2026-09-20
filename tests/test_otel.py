@@ -577,33 +577,43 @@ async def test_agent_tool_execution_emits_span(otel_setup):
 
 
 @pytest.mark.parametrize(
-    "client, kwargs, payload, expected_model",
+    "client, kwargs, payload, expected",
     [
         pytest.param(
             MistralClient(model="mistral-embed", api_key="test"),
-            {},
-            {"data": [{"embedding": [0.1], "index": 0}]},
-            "mistral-embed",
-            id="openai-compatible-default-model",
+            {"dimensions": 256, "extra_params": {"encoding_format": "base64"}},
+            {
+                "model": "mistral-embed-2",
+                "data": [{"embedding": [0.1], "index": 0}],
+                "usage": {"prompt_tokens": 4, "total_tokens": 4},
+            },
+            {
+                "gen_ai.request.model": "mistral-embed",
+                "gen_ai.embeddings.dimension.count": 256,
+                "gen_ai.request.encoding_formats": ("base64",),
+                "gen_ai.response.model": "mistral-embed-2",
+                "gen_ai.usage.input_tokens": 4,
+            },
+            id="openai-compatible-default-model-all-attrs",
         ),
         pytest.param(
             VoyageClient(api_key="test"),
             {"model": "voyage-4-lite"},
-            {"data": [{"embedding": [0.1], "index": 0}]},
-            "voyage-4-lite",
-            id="voyage-explicit-model",
+            {"data": [{"embedding": [0.1], "index": 0}], "usage": {"total_tokens": 3}},
+            {"gen_ai.request.model": "voyage-4-lite", "gen_ai.usage.input_tokens": 3},
+            id="voyage-explicit-model-total-tokens",
         ),
         pytest.param(
             GeminiClient(model="gemini-embedding-001", api_key="test"),
             {},
             {"embeddings": [{"values": [0.1]}]},
-            "gemini-embedding-001",
-            id="gemini",
+            {"gen_ai.request.model": "gemini-embedding-001"},
+            id="gemini-no-usage",
         ),
     ],
 )
 async def test_embeddings_span(
-    otel_setup, make_resp, client, kwargs, payload, expected_model
+    otel_setup, make_resp, client, kwargs, payload, expected
 ):
     exporter, reader = otel_setup
     client._session = AsyncMock()
@@ -612,11 +622,21 @@ async def test_embeddings_span(
     await client.fetch_embeddings("hello", **kwargs)
 
     (span,) = exporter.get_finished_spans()
-    assert span.name == f"embeddings {expected_model}"
     attrs = dict(span.attributes or {})
+    assert span.name == f"embeddings {expected['gen_ai.request.model']}"
     assert attrs["gen_ai.operation.name"] == "embeddings"
-    assert attrs["gen_ai.request.model"] == expected_model
+    assert {k: attrs.get(k) for k in expected} == expected
+    optional = {
+        "gen_ai.embeddings.dimension.count",
+        "gen_ai.request.encoding_formats",
+        "gen_ai.response.model",
+        "gen_ai.usage.input_tokens",
+    }
+    assert not (optional - set(expected)) & set(attrs)
     assert "gen_ai.client.operation.duration" in _metric_names(reader)
+    assert ("gen_ai.client.token.usage" in _metric_names(reader)) is (
+        "gen_ai.usage.input_tokens" in expected
+    )
 
 
 async def test_batch_operation_span(otel_setup, client, make_resp):

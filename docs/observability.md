@@ -157,13 +157,17 @@ Agent invocations also record dedicated duration, inference-call count, and tool
 
 ## Embeddings, batch, realtime, and MCP
 
-- **Embeddings**: every `fetch_embeddings` (OpenAI-compatible clients, Gemini, Voyage) emits an `embeddings <model>` span (`gen_ai.operation.name=embeddings`); the model is the one passed to the call, else the client's default.
+- **Embeddings**: every `fetch_embeddings` (OpenAI-compatible clients, Gemini, Voyage) emits an `embeddings <model>` span (`gen_ai.operation.name=embeddings`); the model is the one passed to the call, else the client's default. The span carries the semconv embeddings attributes below; input tokens also feed `gen_ai.client.token.usage`.
 - **Batch**: batch operations (`create_batch`, `get_batch`, `list_batches`, `cancel_batch`, and the OpenAI/Grok file helpers) emit a span named after the operation. No model attribute is set — batch requests carry their own per-request models.
 - **Realtime**: a `realtime <model>` span covers the whole `RealtimeClient` session, from connect to close, with connect failures recorded as errors.
 - **MCP**: initialization, tool-list refresh, ping, and direct tool calls emit CLIENT spans, named after `mcp.method.name` (tool calls use `tools/call <name>`). An MCP call dispatched through an agent enriches the existing `execute_tool` span instead of creating a duplicate span.
 
 | Attribute | Example | Notes |
 |-----------|---------|-------|
+| `gen_ai.embeddings.dimension.count` | `256` | when `dimensions=` is passed |
+| `gen_ai.request.encoding_formats` | `["base64"]` | when `extra_params` carries `encoding_format` |
+| `gen_ai.response.model` | `text-embedding-3-small` | OpenAI-shaped responses only |
+| `gen_ai.usage.input_tokens` | `4` | OpenAI-shaped responses only (`prompt_tokens`, else `total_tokens`); Gemini's batch endpoint reports no usage |
 | `mcp.method.name` | `tools/call` | |
 | `mcp.protocol.version` | `2025-06-18` | |
 | `mcp.session.id` | `1f5b…` | HTTP transports, once the server assigns one |
