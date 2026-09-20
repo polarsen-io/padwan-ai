@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/padwan-ai/"><img src="https://img.shields.io/pypi/v/padwan-ai" alt="PyPI version"></a>
-  <a href="pyproject.toml"><img src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpolarsen-io%2Fpadwan-ai%2Fmaster%2Fpyproject.toml&query=%24.project.requires-python&label=python&color=3776ab" alt="Python versions"></a>
+  <a href="https://pypi.org/project/padwan-ai/"><img src="https://img.shields.io/pypi/pyversions/padwan-ai" alt="Python versions"></a>
   <a href="https://github.com/polarsen-io/padwan-ai/actions/workflows/ci.yml"><img src="https://github.com/polarsen-io/padwan-ai/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
 </p>
 
