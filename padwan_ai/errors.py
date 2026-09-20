@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING, Literal
 if TYPE_CHECKING:
     import niquests
 
-Provider = Literal["openai", "gemini", "mistral", "grok", "anthropic", "typesafe"]
+Provider = Literal[
+    "openai", "gemini", "mistral", "grok", "anthropic", "typesafe", "voyage"
+]
 
 __all__ = (
     "LLMError",

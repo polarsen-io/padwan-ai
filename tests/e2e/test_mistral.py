@@ -43,16 +43,15 @@ async def test_complete_chat_thought_callback() -> None:
 
 
 async def test_embeddings() -> None:
-    async with MistralClient() as client:
+    async with MistralClient(model="mistral-embed") as client:
         resp = await client.fetch_embeddings("Hello, world!")
-        assert resp["data"]
-        assert len(resp["data"][0].get("embedding", [])) > 0
+        assert len(resp["data"][0]["embedding"]) > 0
         assert resp["usage"]["total_tokens"] > 0
 
 
 async def test_embeddings_batch() -> None:
     async with MistralClient() as client:
-        resp = await client.fetch_embeddings(["Hello", "World"])
+        resp = await client.fetch_embeddings(["Hello", "World"], model="mistral-embed")
         assert len(resp["data"]) == 2
 
 

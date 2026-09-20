@@ -12,19 +12,13 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  PYTHON_VERSIONS: "3.13 3.15"
+
 jobs:
   benchmark:
-    name: Import time benchmark (Python ${{ matrix.python-version }})
+    name: Import time benchmark
     runs-on: ubuntu-latest
-    strategy:
-      # serialize: both jobs push results to gh-pages
-      max-parallel: 1
-      matrix:
-        include:
-          - python-version: "3.13"
-            bench-name: Import Performance
-          - python-version: "3.15"
-            bench-name: Import Performance (3.15)
 
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -33,21 +27,24 @@ jobs:
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: true
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: uv sync --all-extras --all-groups --frozen
 
       - name: Install hyperfine
         run: sudo apt-get install -y hyperfine
 
+      # One JSON for every version, so the action posts a single table
       - name: Run benchmarks
-        run: ./bin/bench-imports.sh --json > benchmark-results.json
+        run: |
+          for v in $PYTHON_VERSIONS; do
+            export UV_PYTHON="$v"
+            uv sync --all-extras --all-groups --frozen
+            ./bin/bench-imports.sh --json --label "$v" > "bench-$v.json"
+          done
+          jq -s 'add | sort_by(.name)' bench-*.json > benchmark-results.json
 
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@d48d326b4ca9ba73ca0cd0d59f108f9e02a381c7 # v1.20.4
         with:
-          name: ${{ matrix.bench-name }}
+          name: Import Performance
           tool: customSmallerIsBetter
           output-file-path: benchmark-results.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -55,7 +52,7 @@ jobs:
           comment-on-alert: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           comment-always: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
           summary-always: true
-          # Fail if 20% slower than previous
+          # Fail if 20% slower than previous; values are runner-speed normalised
           alert-threshold: "120%"
           fail-on-alert: true
           # Store results in gh-pages branch (only on master)

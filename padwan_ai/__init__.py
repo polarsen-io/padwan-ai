@@ -8,6 +8,7 @@ __lazy_modules__ = frozenset(
         "padwan_ai.audio",
         "padwan_ai.client",
         "padwan_ai.content",
+        "padwan_ai.embeddings",
         "padwan_ai.conversation",
         "padwan_ai.errors",
         "padwan_ai.gemini",
@@ -18,6 +19,7 @@ __lazy_modules__ = frozenset(
         "padwan_ai.openai",
         "padwan_ai.typesafe",
         "padwan_ai.vision",
+        "padwan_ai.voyage",
     }
 )
 
@@ -60,10 +62,12 @@ from .conversation import (
     Message,
     ToolResultMessage,
 )
+from .embeddings import vectors
 from .errors import LLMError, OutputError, Provider
 from .gemini import (
     GEMINI_MODELS,
     GeminiClient,
+    GeminiEmbeddingModel,
     GeminiModel,
     GeminiRealtimeClient,
     GeminiRealtimeConnection,
@@ -84,6 +88,7 @@ from .openai import (
     OPENAI_CHAT_MODELS,
     OPENAI_MODELS,
     OpenAIClient,
+    OpenAIEmbeddingModel,
     OpenAIModel,
     OpenAIRealtimeClient,
     RealtimeConnection,
@@ -105,12 +110,14 @@ from .typesafe import (
     TypeSafeUsage,
 )
 from .vision import supports_vision
+from .voyage import VOYAGE_MODELS, VoyageClient, VoyageModel, is_voyage_model
 
 __all__ = (
     "ANTHROPIC_MODELS",
     "GEMINI_MODELS",
     "GROK_MODELS",
     "MISTRAL_MODELS",
+    "VOYAGE_MODELS",
     "OPENAI_CHAT_MODELS",
     "OPENAI_MODELS",
     "TYPESAFE_MODELS",
@@ -134,6 +141,7 @@ __all__ = (
     "ConversationStore",
     "FinishReason",
     "GeminiClient",
+    "GeminiEmbeddingModel",
     "GeminiModel",
     "GeminiRealtimeClient",
     "GeminiRealtimeConnection",
@@ -155,6 +163,7 @@ __all__ = (
     "OnMcpConnect",
     "OnThought",
     "OpenAIClient",
+    "OpenAIEmbeddingModel",
     "OpenAIModel",
     "OpenAIRealtimeClient",
     "NoulAnswer",
@@ -179,6 +188,8 @@ __all__ = (
     "TypeSafeModel",
     "TypeSafeUsage",
     "UsageToken",
+    "VoyageClient",
+    "VoyageModel",
     "__version__",
     "audio_part",
     "content_parts",
@@ -188,10 +199,12 @@ __all__ = (
     "is_grok_model",
     "is_mistral_model",
     "is_openai_model",
+    "is_voyage_model",
     "supports_audio",
     "supports_vision",
     "text_file_part",
     "text_part",
+    "vectors",
 )
 
 __version__: str = _pkg_version("padwan-ai")

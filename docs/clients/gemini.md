@@ -66,6 +66,20 @@ print("\n\nReasoning:", "".join(thoughts))
 
 Without `includeThoughts=True`, the model may still think internally (consuming the budget) but won't emit the thoughts — the callback will never fire. Without a non-zero `thinkingBudget`, the model won't think at all.
 
+## Embeddings
+
+```python
+async with GeminiClient(model="gemini-embedding-001") as client:
+    resp = await client.fetch_embeddings(
+        ["text 1", "text 2"],
+        dimensions=768,
+        extra_params={"taskType": "RETRIEVAL_DOCUMENT"},
+    )
+    vecs = vectors(resp, "gemini")  # one list[float] per input, in input order
+```
+
+Uses `batchEmbedContents`; the response holds one `values` vector per input, in order.
+
 ## Batch Processing
 
 Gemini supports batch processing for large-scale requests via methods on `GeminiClient`.

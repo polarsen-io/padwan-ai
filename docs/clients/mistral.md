@@ -86,13 +86,15 @@ for segment in result.get("segments", []):
 
 ## Embeddings
 
-Generate text embeddings using the `mistral-embed` model.
+Generate text embeddings with `mistral-embed` or `codestral-embed`. The model is the client's default unless passed explicitly.
 
 ```python
-async with MistralClient() as client:
+async with MistralClient(model="mistral-embed") as client:
     resp = await client.fetch_embeddings("Hello, world!")
-    # Or batch multiple texts
-    resp = await client.fetch_embeddings(["text 1", "text 2"])
-    # resp is an EmbeddingResponse; extract vectors from resp["data"]
+    # Or batch multiple texts, optionally with a reduced vector size
+    resp = await client.fetch_embeddings(["text 1", "text 2"], dimensions=512)
+    # resp is the raw OpenAI-shaped payload; extract vectors from resp["data"]
     vectors = [item["embedding"] for item in resp["data"]]
 ```
+
+Mistral-only fields (e.g. `output_dtype`) go through `extra_params={"output_dtype": "int8"}`.

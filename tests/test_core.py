@@ -14,6 +14,7 @@ from padwan_ai.grok.client import GrokClient, is_grok_model
 from padwan_ai.mistral.client import MistralClient, is_mistral_model
 from padwan_ai.models import ChatResponse, ToolCall, ToolCallFunction, UsageToken
 from padwan_ai.openai.client import OpenAIClient, is_openai_model
+from padwan_ai.voyage.client import VoyageClient, is_voyage_model
 
 # ConversationState
 
@@ -168,6 +169,9 @@ def test_llm_error(cause: Exception | None):
         pytest.param(is_openai_model, "gpt-4.1", True, id="openai-gpt4.1"),
         pytest.param(is_openai_model, "gpt-5.6-terra", True, id="openai-gpt5.6"),
         pytest.param(is_openai_model, "codex-mini-latest", True, id="openai-codex"),
+        pytest.param(
+            is_openai_model, "text-embedding-3-small", True, id="openai-embedding"
+        ),
         pytest.param(is_openai_model, "unknown", False, id="openai-miss"),
         pytest.param(is_gemini_model, "gemini-custom", True, id="gemini-prefix"),
         pytest.param(is_gemini_model, "gpt-4o", False, id="gemini-miss"),
@@ -190,6 +194,8 @@ def test_llm_error(cause: Exception | None):
         pytest.param(is_grok_model, "grok-build-latest", True, id="grok-build"),
         pytest.param(is_grok_model, "grok-code-fast-1", True, id="grok-code"),
         pytest.param(is_grok_model, None, False, id="grok-none"),
+        pytest.param(is_voyage_model, "voyage-code-4", True, id="voyage-prefix"),
+        pytest.param(is_voyage_model, "gpt-4o", False, id="voyage-miss"),
     ],
 )
 def test_is_model(func, model, expected: bool):
@@ -212,6 +218,7 @@ def test_is_model(func, model, expected: bool):
         pytest.param("gpt-5.6-sol", OpenAIClient, nullcontext(), id="openai-gpt5.6"),
         pytest.param("grok-3", GrokClient, nullcontext(), id="grok"),
         pytest.param("grok-build-latest", GrokClient, nullcontext(), id="grok-build"),
+        pytest.param("voyage-4", VoyageClient, nullcontext(), id="voyage"),
         pytest.param("unknown-xyz", OpenAIClient, nullcontext(), id="unknown-fallback"),
     ],
 )

@@ -13,7 +13,7 @@ from ._deprecations import DEPRECATED
 
 if TYPE_CHECKING:
     from ..conversation import ChatMessage
-    from .types import EmbeddingRequest, EmbeddingResponse, TranscriptionResponse
+    from .types import TranscriptionResponse
 
 MistralModel = Literal[
     "mistral-large-latest",
@@ -111,6 +111,7 @@ class MistralClient(_OpenAIBase):
     _deprecations: ClassVar[Mapping[str, str]] = DEPRECATED
     model: str | None = "mistral-large-latest"
     base_url: str = MISTRAL_ENDPOINT
+    _embedding_dimensions_key: ClassVar[str] = "output_dimension"
 
     def _prepare_messages(
         self, messages: Sequence[ChatMessage]
@@ -130,25 +131,6 @@ class MistralClient(_OpenAIBase):
             ]
             prepared.append(cast("ChatMessage", {**msg, "content": converted}))
         return prepared
-
-    async def fetch_embeddings(
-        self,
-        input: str | list[str],
-        model: str = "mistral-embed",
-    ) -> EmbeddingResponse:
-        """Fetch embeddings from Mistral.
-
-        Args:
-            input: Text or list of texts to embed.
-            model: Embedding model to use.
-
-        Returns:
-            List of embedding vectors (one per input text).
-        """
-        body: EmbeddingRequest = {"model": model, "input": input}
-        resp = await self.session.post("/embeddings", json=body)
-        data: EmbeddingResponse = _check_resp(resp)
-        return data
 
     async def transcribe(
         self,

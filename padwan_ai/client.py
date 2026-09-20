@@ -9,6 +9,7 @@ __lazy_modules__ = frozenset(
         "padwan_ai.grok.realtime",
         "padwan_ai.mistral",
         "padwan_ai.openai",
+        "padwan_ai.voyage",
     }
 )
 
@@ -31,6 +32,7 @@ from .openai import (
     OpenAIRealtimeClient,
     is_openai_model,
 )
+from .voyage import VoyageClient, VoyageModel, is_voyage_model
 
 __all__ = ("LLMClient", "RealtimeClient")
 
@@ -100,6 +102,16 @@ def LLMClient(
     on_thought: OnThought | None = None,
     base_url: str | None = None,
 ) -> AnthropicClient: ...
+@overload
+def LLMClient(
+    model: VoyageModel,
+    *,
+    temperature: float = 0.2,
+    timeout: float = 60,
+    api_key: str | None = None,
+    on_thought: OnThought | None = None,
+    base_url: str | None = None,
+) -> VoyageClient: ...
 @overload
 def LLMClient(
     model: str,
@@ -174,6 +186,8 @@ def LLMClient(
         return GrokClient(**kwargs)
     if is_anthropic_model(model):
         return AnthropicClient(**kwargs)
+    if is_voyage_model(model):
+        return VoyageClient(**kwargs)
     if kwargs["api_key"] is None:
         kwargs["api_key"] = "no-key-required"
     return OpenAIClient(**kwargs)

@@ -16,6 +16,7 @@ from .client import (
     OPENAI_ENDPOINT,
     OPENAI_MODELS,
     OpenAIClient,
+    OpenAIEmbeddingModel,
     OpenAIModel,
     is_openai_model,
 )
@@ -44,6 +45,7 @@ __all__ = (
     "BatchRequest",
     "BatchResult",
     "OpenAIClient",
+    "OpenAIEmbeddingModel",
     "OpenAIModel",
     "OpenAIRealtimeClient",
     "RealtimeConnection",

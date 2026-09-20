@@ -1,7 +1,7 @@
 import functools
 import inspect
 import time
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from contextlib import aclosing
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -46,6 +46,7 @@ _PROVIDER_NAMES: dict[Provider, str] = {
     "mistral": "mistral_ai",
     "grok": "x_ai",
     "anthropic": "anthropic",
+    "voyage": "voyage",  # no semconv well-known value
 }
 
 # semconv advised bucket boundaries; the SDK default ladder starts at 5s and
@@ -309,13 +310,8 @@ def instrument(
                 (cls, name, lambda fn, name=name: _wrap_operation(fn, inst, name))
             )
 
-    plan.append(
-        (
-            MistralClient,
-            "fetch_embeddings",
-            lambda fn: _wrap_operation(fn, inst, "embeddings", model_param="model"),
-        )
-    )
+    for owner in (_OpenAIBase, GeminiClient):
+        plan.append((owner, "fetch_embeddings", lambda fn: _wrap_embeddings(fn, inst)))
 
     # Vendor extras live only on raw request and response payloads; a raw
     # call outside complete_chat/stream_chat gets its own span.
@@ -1296,34 +1292,76 @@ def _wrap_mcp_exit(original: Any, inst: _Instruments) -> Any:
     return wrapper
 
 
-def _wrap_operation(
-    original: Any, inst: _Instruments, op: str, model_param: str | None = None
-) -> Any:
+def _wrap_operation(original: Any, inst: _Instruments, op: str) -> Any:
     """Wrap a plain async client method in a CLIENT span named after `op`.
 
-    Batch operations are not tied to the client's default model, so the model
-    attribute is only set when `model_param` names the method's model argument.
+    Batch operations are not tied to the client's default model, so no model
+    attribute is set.
     """
-    sig = inspect.signature(original) if model_param else None
 
     @functools.wraps(original)
     async def wrapper(self: LLMClientBase, *args: Any, **kwargs: Any) -> Any:
         attrs = _request_attrs(self, op=op)
         attrs.pop("gen_ai.request.model", None)
-        if sig is not None and model_param is not None:
-            bound = sig.bind(self, *args, **kwargs)
-            bound.apply_defaults()
-            attrs["gen_ai.request.model"] = bound.arguments[model_param]
-        model = attrs.get("gen_ai.request.model")
-        span = inst.tracer.start_span(
-            f"{op} {model}" if model else op, kind=SpanKind.CLIENT, attributes=attrs
-        )
+        span = inst.tracer.start_span(op, kind=SpanKind.CLIENT, attributes=attrs)
         start = time.perf_counter()
         try:
             result = await original(self, *args, **kwargs)
         except BaseException as e:
             _record_end(inst, span, attrs, start, error=e)
             raise
+        _record_end(inst, span, attrs, start)
+        return result
+
+    return wrapper
+
+
+def _embedding_dimension_count(payload: Mapping[str, Any]) -> int | None:
+    """Length of the first returned vector, whichever payload shape the provider uses."""
+    items = payload.get("data") or payload.get("embeddings") or []
+    first = items[0] if items else {}
+    vector = first.get("embedding") or first.get("values")
+    return len(vector) if isinstance(vector, list) else None
+
+
+def _wrap_embeddings(original: Any, inst: _Instruments) -> Any:
+    """Wrap `fetch_embeddings` in an `embeddings <model>` span with the semconv embeddings attributes."""
+    sig = inspect.signature(original)
+
+    @functools.wraps(original)
+    async def wrapper(self: LLMClientBase, *args: Any, **kwargs: Any) -> Any:
+        bound = sig.bind(self, *args, **kwargs)
+        bound.apply_defaults()
+        attrs = _request_attrs(self, op="embeddings")
+        # None means the method falls back to the client's default model
+        if (requested := bound.arguments["model"]) is not None:
+            attrs["gen_ai.request.model"] = requested
+        model = attrs.get("gen_ai.request.model")
+        span = inst.tracer.start_span(
+            f"embeddings {model}" if model else "embeddings",
+            kind=SpanKind.CLIENT,
+            attributes=attrs,
+        )
+        # request details stay off `attrs`, which also feeds the metrics
+        extra = bound.arguments["extra_params"] or {}
+        if encoding := extra.get("encoding_format"):
+            span.set_attribute("gen_ai.request.encoding_formats", [encoding])
+        start = time.perf_counter()
+        try:
+            result = await original(self, *args, **kwargs)
+        except BaseException as e:
+            _record_end(inst, span, attrs, start, error=e)
+            raise
+        if (count := _embedding_dimension_count(result)) is not None:
+            span.set_attribute("gen_ai.embeddings.dimension.count", count)
+        # OpenAI-shaped payloads carry model and usage; Gemini's batch endpoint has neither
+        if isinstance(response_model := result.get("model"), str):
+            span.set_attribute("gen_ai.response.model", response_model)
+        usage = result.get("usage") or {}
+        tokens = usage.get("prompt_tokens", usage.get("total_tokens"))
+        if isinstance(tokens, int):
+            span.set_attribute("gen_ai.usage.input_tokens", tokens)
+            inst.tokens.record(tokens, {**attrs, "gen_ai.token.type": "input"})
         _record_end(inst, span, attrs, start)
         return result
 

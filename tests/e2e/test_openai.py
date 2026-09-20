@@ -29,3 +29,11 @@ async def test_batch_lifecycle() -> None:
 
         cancelled = await client.cancel_batch(job.id)
         assert cancelled.id == job.id
+
+
+async def test_embeddings() -> None:
+    async with OpenAIClient(model="text-embedding-3-small") as client:
+        resp = await client.fetch_embeddings(["Hello", "World"], dimensions=256)
+        assert len(resp["data"]) == 2
+        assert len(resp["data"][0]["embedding"]) == 256
+        assert resp["usage"]["total_tokens"] > 0

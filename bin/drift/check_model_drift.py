@@ -30,10 +30,10 @@ from pathlib import Path
 from typing import Any
 
 import niquests
-from openai.types import ChatModel
+from openai.types import ChatModel, EmbeddingModel
 
 from padwan_ai.anthropic.client import ANTHROPIC_MODELS, ANTHROPIC_VERSION
-from padwan_ai.gemini.client import GEMINI_MODELS
+from padwan_ai.gemini.client import GEMINI_MODELS, GeminiEmbeddingModel
 from padwan_ai.gemini.realtime import DEFAULT_LIVE_MODEL, GeminiLiveModel
 from padwan_ai.grok.client import GROK_MODELS
 from padwan_ai.mistral.client import (
@@ -41,7 +41,11 @@ from padwan_ai.mistral.client import (
     MistralAudioModel,
     MistralEmbeddingModel,
 )
-from padwan_ai.openai.client import _OPENAI_PREFIXES, OPENAI_MODELS
+from padwan_ai.openai.client import (
+    _OPENAI_PREFIXES,
+    OPENAI_MODELS,
+    OpenAIEmbeddingModel,
+)
 from padwan_ai.openai.realtime import _VOICES, DEFAULT_REALTIME_MODEL
 from padwan_ai.typesafe import TYPESAFE_MODELS
 
@@ -54,9 +58,8 @@ _VERSION_SEGMENT = re.compile(r"-\d{4,6}(?:-|$)")
 _INTERNAL_SEGMENT = re.compile(r"-[a-z]\d")
 
 # Capability families and deprecated lines not tracked in OpenAIModel.
-# TODO: drop entries here as their capability Literal lands (e.g. OpenAIEmbeddingModel).
+# TODO: drop entries here as their capability Literal lands (e.g. OpenAIAudioModel).
 _OPENAI_BLACKLIST = (
-    "embedding",
     "whisper",
     "tts",
     "dall-e",
@@ -77,9 +80,8 @@ _OPENAI_BLACKLIST = (
     "turbo-preview",
 )
 
-# TODO: drop entries here as their capability Literal lands (e.g. GeminiEmbeddingModel, GeminiImageModel).
+# TODO: drop entries here as their capability Literal lands (e.g. GeminiImageModel).
 _GEMINI_BLACKLIST = (
-    "embedding",
     "aqa",
     "imagen",
     "veo",
@@ -286,9 +288,9 @@ def _openai_realtime_sdk() -> tuple[set[str], set[str]]:
 
 
 def _openai_sdk_aliases() -> set[str]:
-    """Return stable aliases from the SDK's ChatModel after capability filtering."""
+    """Return stable aliases from the SDK's ChatModel and EmbeddingModel after capability filtering."""
     keep: set[str] = set()
-    for mid in typing.get_args(ChatModel):
+    for mid in (*typing.get_args(ChatModel), *typing.get_args(EmbeddingModel)):
         if isinstance(mid, str) and _is_openai_chat_alias(mid):
             keep.add(mid)
     return keep
@@ -365,6 +367,17 @@ def _gemini_models(
 
 def _gemini_live_models() -> RemoteModels:
     return _gemini_models("generateContent", _is_gemini_text_model)
+
+
+def _is_gemini_embedding_model(model_id: str) -> bool:
+    # -001 is the GA embedding id, not a version stamp, so the text filter does not apply
+    return model_id.startswith("gemini-embedding-") and not _DATE_SUFFIX.search(
+        model_id
+    )
+
+
+def _gemini_embedding_models() -> RemoteModels:
+    return _gemini_models("embedContent", _is_gemini_embedding_model)
 
 
 def _gemini_realtime_models() -> RemoteModels:
@@ -547,8 +560,13 @@ def _render_diff(
 def _render_openai(lines: list[str], sdk_diff: Diff, live: RemoteModels) -> None:
     lines.append("## OpenAI")
     lines.append("")
-    lines.append("Source: `openai.types.ChatModel` from the installed OpenAI SDK.")
-    lines.append("Target: `padwan_ai/openai/client.py::OpenAIModel`.")
+    lines.append(
+        "Source: `openai.types.ChatModel` and `openai.types.EmbeddingModel` "
+        "from the installed OpenAI SDK."
+    )
+    lines.append(
+        "Target: `padwan_ai/openai/client.py::OpenAIModel, OpenAIEmbeddingModel`."
+    )
     lines.append("")
     if sdk_diff.has_drift:
         _render_diff(
@@ -740,8 +758,9 @@ def _write_deprecations(
 
 
 def check(out: Path | None = None) -> None:
+    openai_known = OPENAI_MODELS | set(typing.get_args(OpenAIEmbeddingModel))
     openai_sdk = _openai_sdk_aliases()
-    openai_sdk_diff = _diff(openai_sdk, OPENAI_MODELS)
+    openai_sdk_diff = _diff(openai_sdk, openai_known)
     openai_live = _openai_live_aliases()
     realtime_models, realtime_voices = _openai_realtime_sdk()
     realtime_voice_diff = _diff(realtime_voices, set(_VOICES))
@@ -779,6 +798,21 @@ def check(out: Path | None = None) -> None:
                 "Only models supporting `generateContent` are considered. "
                 "Embedding, image-generation, video, TTS, robotics, old, and "
                 "versioned names are filtered.",
+            ),
+        ),
+        _live_check(
+            "Gemini Embeddings",
+            "GET https://generativelanguage.googleapis.com/v1beta/models",
+            "padwan_ai/gemini/client.py::GeminiEmbeddingModel",
+            "https://ai.google.dev/gemini-api/docs/embeddings",
+            _gemini_embedding_models(),
+            set(typing.get_args(GeminiEmbeddingModel)),
+            notes=(
+                "Only `gemini-embedding-*` models supporting `embedContent` are "
+                "considered; dated names are filtered.",
+                "Voyage AI models cannot be checked: the API has no model "
+                "listing; `padwan_ai/voyage/client.py::VoyageModel` is curated "
+                "from https://docs.voyageai.com/docs/embeddings.",
             ),
         ),
         _live_check(

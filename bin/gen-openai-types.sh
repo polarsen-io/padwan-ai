@@ -39,7 +39,7 @@ uvx --from 'datamodel-code-generator[ruff]' datamodel-codegen \
     --no-use-closed-typed-dict \
     --formatters ruff-format ruff-check \
     --openapi-scopes paths \
-    --openapi-include-paths '/chat/completions' '/files' '/batches'
+    --openapi-include-paths '/chat/completions' '/files' '/batches' '/embeddings'
 
 # Fix TypedDict inheritance issue: child cannot narrow type (int | None -> int)
 sed -i 's/top_logprobs: NotRequired\[int\]$/top_logprobs: NotRequired[int | None]/' "$OUTPUT_FILE"

@@ -14,7 +14,7 @@ from padwan_ai import otel
 otel.instrument()  # uses the global tracer/meter/logger providers
 ```
 
-`instrument()` wraps every provider client (OpenAI, Gemini, Mistral, Grok, Anthropic): chat completions and streams, batch operations, embeddings, realtime sessions, agent turns and tool execution, and MCP tool calls. It is idempotent; call `otel.uninstrument()` to restore the original methods.
+`instrument()` wraps every provider client (OpenAI, Gemini, Mistral, Grok, Anthropic, Voyage): chat completions and streams, batch operations, embeddings, realtime sessions, agent turns and tool execution, and MCP tool calls. It is idempotent; call `otel.uninstrument()` to restore the original methods.
 
 `OpenAIClient.complete()` and `OpenAIClient.stream()` also create chat spans when called directly. Calls through `complete_chat()` or `stream_chat()` share the existing chat span. With content capture enabled, raw responses preserve each choice separately, including function and custom tool calls.
 
@@ -108,7 +108,7 @@ Each chat call emits one `CLIENT` span named `chat <model>` (or `chat` when no m
 | Attribute | Example | Notes |
 |-----------|---------|-------|
 | `gen_ai.operation.name` | `chat` | |
-| `gen_ai.provider.name` | `openai`, `gcp.gemini`, `mistral_ai`, `x_ai`, `anthropic` | semconv well-known values; OpenAI-compatible endpoints report `openai`, distinguished by `server.address` |
+| `gen_ai.provider.name` | `openai`, `gcp.gemini`, `mistral_ai`, `x_ai`, `anthropic`, `voyage` | semconv well-known values (`voyage` has none); OpenAI-compatible endpoints report `openai`, distinguished by `server.address` |
 | `gen_ai.request.model` | `gpt-4o` | omitted when no model is set |
 | `gen_ai.request.temperature` | `0.7` | only when actually sent on the wire |
 | `gen_ai.request.stream` | `true` | streams only |
@@ -157,13 +157,17 @@ Agent invocations also record dedicated duration, inference-call count, and tool
 
 ## Embeddings, batch, realtime, and MCP
 
-- **Embeddings**: `MistralClient.fetch_embeddings` emits an `embeddings <model>` span (`gen_ai.operation.name=embeddings`).
+- **Embeddings**: every `fetch_embeddings` (OpenAI-compatible clients, Gemini, Voyage) emits an `embeddings <model>` span (`gen_ai.operation.name=embeddings`); the model is the one passed to the call, else the client's default. The span carries the semconv embeddings attributes below; input tokens also feed `gen_ai.client.token.usage`.
 - **Batch**: batch operations (`create_batch`, `get_batch`, `list_batches`, `cancel_batch`, and the OpenAI/Grok file helpers) emit a span named after the operation. No model attribute is set — batch requests carry their own per-request models.
 - **Realtime**: a `realtime <model>` span covers the whole `RealtimeClient` session, from connect to close, with connect failures recorded as errors.
 - **MCP**: initialization, tool-list refresh, ping, and direct tool calls emit CLIENT spans, named after `mcp.method.name` (tool calls use `tools/call <name>`). An MCP call dispatched through an agent enriches the existing `execute_tool` span instead of creating a duplicate span.
 
 | Attribute | Example | Notes |
 |-----------|---------|-------|
+| `gen_ai.embeddings.dimension.count` | `256` | length of the returned vectors, so it is set whether or not `dimensions=` was passed |
+| `gen_ai.request.encoding_formats` | `["base64"]` | when `extra_params` carries `encoding_format` |
+| `gen_ai.response.model` | `text-embedding-3-small` | OpenAI-shaped responses only |
+| `gen_ai.usage.input_tokens` | `4` | OpenAI-shaped responses only (`prompt_tokens`, else `total_tokens`); Gemini's batch endpoint reports no usage |
 | `mcp.method.name` | `tools/call` | |
 | `mcp.protocol.version` | `2025-06-18` | |
 | `mcp.session.id` | `1f5b…` | HTTP transports, once the server assigns one |

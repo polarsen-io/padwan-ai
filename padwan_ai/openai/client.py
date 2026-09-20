@@ -101,6 +101,8 @@ if TYPE_CHECKING:
         CreateChatCompletionRequest,
         CreateChatCompletionResponse,
         CreateChatCompletionStreamResponse,
+        CreateEmbeddingRequest,
+        CreateEmbeddingResponse,
     )
 
 OpenAIModel = Literal[
@@ -141,6 +143,7 @@ __all__ = (
     "OPENAI_ENDPOINT",
     "OPENAI_MODELS",
     "OpenAIClient",
+    "OpenAIEmbeddingModel",
     "OpenAIModel",
     "_OpenAIBase",
     "is_openai_model",
@@ -186,7 +189,21 @@ def _check_resp[T](
     return decoder(body)
 
 
-_OPENAI_PREFIXES = ("gpt-", "o1", "o3", "o4", "chatgpt-", "codex-")
+OpenAIEmbeddingModel = Literal[
+    "text-embedding-3-small",
+    "text-embedding-3-large",
+    "text-embedding-ada-002",
+]
+
+_OPENAI_PREFIXES = (
+    "gpt-",
+    "o1",
+    "o3",
+    "o4",
+    "chatgpt-",
+    "codex-",
+    "text-embedding-",
+)
 
 
 def is_openai_model(model_name: str | None) -> bool:
@@ -229,6 +246,8 @@ class _OpenAIBase(_OpenAIAuth, LLMClientBase[Retry], OpenAIToolMixin):
 
     model: str | None = "gpt-4o"
     base_url: str = OPENAI_ENDPOINT
+    _embedding_dimensions_key: ClassVar[str] = "dimensions"
+    """Wire key for the requested embedding size; differs across OpenAI-compatible APIs."""
     _retry: Retry = field(
         default_factory=partial(
             Retry,
@@ -299,6 +318,33 @@ class _OpenAIBase(_OpenAIAuth, LLMClientBase[Retry], OpenAIToolMixin):
     ) -> Sequence[ChatMessage]:
         """Hook for providers whose message wire format diverges from OpenAI's."""
         return messages
+
+    async def fetch_embeddings(
+        self,
+        input: str | list[str],
+        model: str | None = None,
+        *,
+        dimensions: int | None = None,
+        extra_params: dict[str, typing.Any] | None = None,
+    ) -> CreateEmbeddingResponse:
+        """Embed one text or a batch; ``model`` falls back to the client's default model.
+
+        Match vectors to inputs by each item's ``index``: the API does not
+        promise ``data`` order (see :func:`padwan_ai.embeddings.vectors`).
+        ``dimensions`` requests a reduced vector size on models that support it.
+        ``extra_params`` is merged into the request body for provider-only fields.
+        """
+        _model = model or self.model
+        if not _model:
+            raise LLMError(self.provider, "No model specified")
+        body: CreateEmbeddingRequest = {"model": _model, "input": input}
+        if dimensions is not None:
+            body[self._embedding_dimensions_key] = dimensions  # pyright: ignore[reportGeneralTypeIssues]
+        if extra_params:
+            body.update(cast(typing.Any, extra_params))
+        resp = await self.session.post("/embeddings", json=body)
+        data: CreateEmbeddingResponse = _check_resp(resp)
+        return data
 
     async def complete_chat(
         self,

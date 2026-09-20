@@ -12,7 +12,9 @@ from opentelemetry.trace import StatusCode
 DOC_PATH = Path(__file__).parents[1] / "docs" / "observability.md"
 
 # semconv well-known values, mirroring otel._PROVIDER_NAMES
-KNOWN_PROVIDERS = frozenset({"openai", "gcp.gemini", "mistral_ai", "x_ai", "anthropic"})
+KNOWN_PROVIDERS = frozenset(
+    {"openai", "gcp.gemini", "mistral_ai", "x_ai", "anthropic", "voyage"}
+)
 
 # operations built from _request_attrs(): they always carry provider, model and endpoint
 CLIENT_OPS = frozenset({"chat", "embeddings", "realtime"})
