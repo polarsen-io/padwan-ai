@@ -1,3 +1,39 @@
+## 0.12.0 (2026-09-20)
+
+Embeddings for every provider that offers them, plus a Voyage AI client.
+
+### Breaking
+
+- **`MistralClient.fetch_embeddings` no longer defaults to `mistral-embed`.** Pass `model=` on the client or on the call. (#85)
+
+### Features
+
+- **Embeddings on every provider.** `_OpenAIBase.fetch_embeddings(input, model=None, *, dimensions=None, extra_params=None)` serves OpenAI, Mistral, Grok, Voyage and custom `base_url` endpoints, and `GeminiClient` gets a native `batchEmbedContents` implementation. Both return the raw provider payload. (#85)
+- **Voyage AI client** (the provider Anthropic recommends for embeddings), with `VoyageModel` and `VOYAGE_MODELS`. (#85)
+- **`padwan_ai.vectors(resp, provider)`** pulls the vectors out of either payload shape in input order: Gemini is ordered by contract, OpenAI-shaped payloads are sorted by `index`. (#85)
+- **`OpenAIEmbeddingModel` and `GeminiEmbeddingModel` literals**, and `LLMClient` routes `text-embedding-*` and `voyage-*` model ids. (#85)
+
+```python
+async with OpenAIClient(model="text-embedding-3-small") as client:
+    vecs = vectors(await client.fetch_embeddings(["a", "b"], dimensions=256))
+```
+
+### Observability
+
+- **OpenTelemetry wraps `fetch_embeddings`** on the OpenAI base and on Gemini, emitting the semconv recommended `gen_ai.embeddings.dimension.count` (derived from the returned vectors), `gen_ai.request.encoding_formats`, `gen_ai.response.model` and `gen_ai.usage.input_tokens`, the last also recorded on `gen_ai.client.token.usage`. (#85)
+
+### Docs
+
+- **TypeSafe (JEV) is labelled experimental** in the README, the docs landing page, the site nav and an admonition on its page: the interface may change between minor releases without a deprecation cycle. (#84)
+- Provider matrices now distinguish "not implemented yet" (❌) from "the provider has no such API" (➖). (#85)
+
+### Dev
+
+- The weekly drift report tracks OpenAI and Gemini embedding models. (#85)
+- **Import benchmarks no longer flake on runner speed.** Times are normalised by interpreter startup and rescaled to a reference runner, and the perf job syncs only the otel extra instead of every group, which removed 3m33s of source builds on the 3.15 prerelease. Every Python version reports in a single PR comment. (#85, #86)
+
+**Full Changelog**: https://github.com/polarsen-io/padwan-ai/compare/0.11.1...0.12.0
+
 ## 0.11.1 (2026-09-20)
 
 Docs and packaging release.
