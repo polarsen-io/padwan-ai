@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789893580890,
+  "lastUpdate": 1789928950171,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -1428,6 +1428,66 @@ window.BENCHMARK_DATA = {
             "value": 237.39,
             "unit": "ms",
             "range": 3.53
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d176383a043b78c88b2559273c4a0f4663a80cf1",
+          "message": "feat: add embeddings for every provider (#85)\n\n* feat: add embeddings for every provider\n\nLift `fetch_embeddings` into the OpenAI-compatible base (OpenAI, Mistral,\nGrok, custom endpoints), add a native Gemini implementation and a Voyage AI\nclient (the embeddings provider Anthropic recommends). Every method shares\none signature: `fetch_embeddings(input, model=None, *, dimensions=None,\nextra_params=None)` returning the raw provider payload.\n\n- `padwan_ai.vectors(resp, provider)` extracts vectors in input order from\n  either payload shape (Gemini is ordered by contract, OpenAI-shaped is\n  sorted by `index`)\n- `OpenAIEmbeddingModel`, `GeminiEmbeddingModel`, `VoyageModel` Literals;\n  `LLMClient` routes `text-embedding-*` and `voyage-*` ids\n- otel instruments `fetch_embeddings` on `_OpenAIBase` and `GeminiClient`;\n  the span keeps the client's default model when `model=` is omitted\n- drift report tracks OpenAI and Gemini embedding models\n- docs matrices distinguish \"not implemented yet\" (❌) from \"provider has\n  no such API\" (➖)\n- OpenAI TypedDicts regenerated with `/embeddings`; Mistral's dropped\n\nBREAKING CHANGE: `MistralClient.fetch_embeddings` no longer defaults to\n`mistral-embed`; set `model=` on the client or the call.\n\n* test(e2e): voyage usage can report zero tokens\n\n* docs: mention voyage in otel intro, use vectors() in voyage page\n\n* feat(otel): emit the semconv recommended embeddings attributes\n\nDedicated fetch_embeddings wrapper: gen_ai.embeddings.dimension.count, gen_ai.request.encoding_formats, gen_ai.response.model and gen_ai.usage.input_tokens (also recorded on gen_ai.client.token.usage). The batch wrapper drops its unused model_param.\n\n* feat(otel): derive embeddings dimension count from the returned vectors\n\n* fix(ci): normalise import benchmarks against interpreter startup\n\nRunner-class variance scaled every import time by the same factor (cv ~12%\nacross master runs), tripping the 120% gate 15 times in 65 runs. Each import\nis now reported as a multiple of bare interpreter startup, so machine speed\ncancels out (cv ~2%, worst consecutive ratio 1.45 down to 1.06).\n\nThe version matrix also collapses into a single job, so the action posts one\ntable covering every Python version instead of one comment per version.",
+          "timestamp": "2026-09-20T20:23:36+02:00",
+          "tree_id": "13d6eb9a2b7c2e7e536cb1493b4f5732166a447e",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/d176383a043b78c88b2559273c4a0f4663a80cf1"
+        },
+        "date": 1789928949178,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "padwan_ai (facade) [3.13]",
+            "value": 9.609,
+            "unit": "x startup",
+            "range": 0.074
+          },
+          {
+            "name": "padwan_ai (facade) [3.15]",
+            "value": 2.271,
+            "unit": "x startup",
+            "range": 0.037
+          },
+          {
+            "name": "padwan_ai.openai [3.13]",
+            "value": 9.803,
+            "unit": "x startup",
+            "range": 0.247
+          },
+          {
+            "name": "padwan_ai.openai [3.15]",
+            "value": 8.788,
+            "unit": "x startup",
+            "range": 0.171
+          },
+          {
+            "name": "padwan_ai.otel [3.13]",
+            "value": 10.459,
+            "unit": "x startup",
+            "range": 0.155
+          },
+          {
+            "name": "padwan_ai.otel [3.15]",
+            "value": 10.297,
+            "unit": "x startup",
+            "range": 0.103
           }
         ]
       }
