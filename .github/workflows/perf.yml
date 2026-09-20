@@ -36,8 +36,10 @@ jobs:
         run: |
           for v in $PYTHON_VERSIONS; do
             export UV_PYTHON="$v"
-            uv sync --all-extras --all-groups --frozen
-            ./bin/bench-imports.sh --json --label "$v" > "bench-$v.json"
+            # otel extra only: the benchmarked imports need nothing from the groups,
+            # and dev deps have no wheels on prereleases (3m33s of source builds)
+            uv sync --extra otel --no-default-groups --frozen
+            PY=.venv/bin/python ./bin/bench-imports.sh --json --label "$v" > "bench-$v.json"
           done
           jq -s 'add | sort_by(.name)' bench-*.json > benchmark-results.json
 
