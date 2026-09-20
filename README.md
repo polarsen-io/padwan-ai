@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/static/logo-hood.png" alt="Padwan AI" width="120">
+  <img src="https://raw.githubusercontent.com/polarsen-io/padwan-ai/master/docs/static/logo-hood.png" alt="Padwan AI" width="120">
 </p>
 
 <h1 align="center">Padwan AI</h1>
@@ -18,7 +18,7 @@
 <p align="center">
   <a href="https://polarsen-io.github.io/padwan-ai">Documentation</a> ·
   <a href="https://pypi.org/project/padwan-ai/">PyPI</a> ·
-  <a href="CHANGELOG.md">Changelog</a>
+  <a href="https://github.com/polarsen-io/padwan-ai/blob/master/CHANGELOG.md">Changelog</a>
 </p>
 
 ## Install

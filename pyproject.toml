@@ -1,12 +1,15 @@
 [project]
 name = "padwan-ai"
 version = "0.12.0"
+description = "Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic and any OpenAI-compatible API."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { email = "julien.brayere@polarsen.io" }
 ]
 requires-python = ">=3.13"
 classifiers = [
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.13",
@@ -19,6 +22,11 @@ dependencies = [
     "qh3>=1.7.1",
     "urllib3-future>=2.24.904",
 ]
+
+[project.urls]
+Homepage = "https://polarsen-io.github.io/padwan-ai"
+Source = "https://github.com/polarsen-io/padwan-ai"
+Changelog = "https://github.com/polarsen-io/padwan-ai/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
 langfuse = ["langfuse>=4.9", "opentelemetry-api>=1.44"]
