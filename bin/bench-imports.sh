@@ -12,6 +12,7 @@
 # EXAMPLES
 #   RUNS=20 ./bin/bench-imports.sh
 #   ./bin/bench-imports.sh --json --label 3.13   # suffix names with the version
+#   PY=.venv/bin/python ./bin/bench-imports.sh   # benchmark a specific venv
 #
 # Requires: hyperfine, jq, uv
 
@@ -48,8 +49,9 @@ if [[ $MODE != profile ]] && ! command -v hyperfine >/dev/null; then
     exit 1
 fi
 
-# Resolve the venv interpreter once so uv startup is not part of the measurement
-PY=$(uv run --frozen python -c 'import sys; print(sys.executable)')
+# Resolve the venv interpreter once so uv startup is not part of the measurement.
+# A preset PY skips it: uv run would re-add the default groups to a lean env.
+PY="${PY:-$(uv run --frozen python -c 'import sys; print(sys.executable)')}"
 
 if [[ $MODE == profile ]]; then
     echo "Top cumulative import times for 'import padwan_ai' (µs):"
