@@ -5,6 +5,15 @@ authors = [
     { email = "julien.brayere@polarsen.io" }
 ]
 requires-python = ">=3.13"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Typing :: Typed",
+]
 dependencies = [
     "niquests>=3.21.0",
     "qh3>=1.7.1",

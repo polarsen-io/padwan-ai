@@ -4,250 +4,122 @@
 
 <h1 align="center">Padwan AI</h1>
 
-Lightweight, unified async client for OpenAI, Gemini, Mistral, Grok, Anthropic, and any OpenAI-compatible API.
-Single runtime dependency ([niquests](https://github.com/jawah/niquests)), automatic HTTP/2 and HTTP/3 negotiation.
+<p align="center">
+  Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, and any OpenAI-compatible API.<br>
+  One runtime dependency (<a href="https://github.com/jawah/niquests">niquests</a>), TypedDict everywhere, HTTP/2 and HTTP/3 out of the box.
+</p>
 
-For the full interactive CLI/TUI, use the separate [`padwan-cli`](https://github.com/polarsen-io/padwan-cli) package.
+<p align="center">
+  <a href="https://pypi.org/project/padwan-ai/"><img src="https://img.shields.io/pypi/v/padwan-ai" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/padwan-ai/"><img src="https://img.shields.io/pypi/pyversions/padwan-ai" alt="Python versions"></a>
+  <a href="https://github.com/polarsen-io/padwan-ai/actions/workflows/ci.yml"><img src="https://github.com/polarsen-io/padwan-ai/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
+</p>
 
-<img alt="Chat demo" src="https://github.com/polarsen-io/padwan-cli/raw/master/docs/static/chat.gif" width="500"/>
+<p align="center">
+  <a href="https://polarsen-io.github.io/padwan-ai">Documentation</a> ·
+  <a href="https://pypi.org/project/padwan-ai/">PyPI</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
 
-## Installation
+## Install
 
 ```bash
 pip install padwan-ai
 ```
 
-## Library Usage
+Extras: `[realtime]` for voice sessions, `[otel]` for OpenTelemetry, `[langfuse]` for the Langfuse adapter.
 
-### One-shot chat
+## Quickstart
 
 ```python
 from padwan_ai import LLMClient
 
-async with LLMClient(model="gpt-4o") as client:
+async with LLMClient(model="gpt-5.5") as client:
     response, usage = await client.complete_chat(
         [{"role": "user", "content": "Hello!"}]
     )
     print(response["content"])
 ```
 
-### Streaming with `ConversationState`
+The provider is picked from the model name; only the matching `*_API_KEY` env var is needed.
+
+### Streaming
 
 ```python
-from padwan_ai import LLMClient, ConversationState
+from padwan_ai import ConversationState, LLMClient
 
 state = ConversationState(system="You are a concise assistant.")
+state.add_user_message("What's Python?")
 
-async with LLMClient(model="gpt-4o") as client:
-    state.add_user_message("What's Python?")
-
-    stream = client.stream_chat(state.messages)
+async with LLMClient(model="gemini-3.5-flash") as client:
     chunks: list[str] = []
-    async for text in stream:
+    async for text in client.stream_chat(state.messages):
         print(text, end="", flush=True)
         chunks.append(text)
-
     state.add_assistant_message("".join(chunks))
-    if stream.usage:
-        state.accumulate_usage(stream.usage)
 ```
 
-### Agentic loop with `AgentSession`
+### Agent with tools
 
-`AgentSession` drives a multi-turn conversation that can dispatch tool calls on each
-round, feed the results back, and repeat until the model returns a plain text answer.
-The `mcp_tools` list accepts both individual `McpTool` instances and whole
-`McpTransport` servers — transports are entered as part of the session lifecycle:
+`AgentSession` runs the tool loop: call the model, dispatch tool calls, feed results back, repeat until a final answer. Tools come from typed Python functions or from MCP servers.
 
 ```python
 from padwan_ai import AgentSession, LLMClient, McpStdio
+from padwan_ai.tools import tool
+
+
+@tool
+async def add(a: int, b: int) -> int:
+    """Add two integers."""
+    return a + b
+
 
 async with AgentSession(
-    client=LLMClient(model="gpt-4o"),
-    mcp_tools=[McpStdio(command="uvx", args=["my-mcp-server"])],
-    system="You have access to tools. Use them when helpful.",
+    client=LLMClient(model="claude-sonnet-5"),
+    mcp_tools=[add, McpStdio(command="uvx", args=["my-mcp-server"])],
+    system="Use tools when helpful.",
 ) as session:
-    async for chunk in session.stream("What's the weather in Paris?"):
-        print(chunk, end="", flush=True)
-
-    # Or collect the full response in one call:
-    text = await session.send("And in London?")
+    print(await session.send("What is 2 + 3, and what's the weather in Paris?"))
 ```
 
-`AgentSession` supports sequential or parallel tool execution, approval hooks,
-per-tool error handlers, and optional snapshot persistence via a
-`ConversationStore` protocol — see [docs/agents.md](docs/agents.md).
+Typed final answers (`AgentOutput`), approval hooks, parallel tool execution and snapshot persistence are covered in the [agents guide](docs/agents.md).
 
-### MCP (Model Context Protocol)
-
-Both streamable-HTTP and stdio MCP transports are built in:
-
-```python
-from padwan_ai import McpStreamable, McpStdio
-
-# Remote MCP server over HTTP (with optional bearer token)
-async with McpStreamable(url="https://mcp.example.com/mcp", token="sk-...") as mcp:
-    for tool in mcp.tools:
-        print(tool.name, tool.description)
-
-# Local subprocess
-async with McpStdio(command="uvx", args=["my-mcp-server"]) as mcp:
-    result = await mcp.tools[0].handler({"query": "hello"})
-```
-
-See [docs/mcp.md](docs/mcp.md) for the full feature matrix and architecture.
-
-### Gemini thinking models
-
-Gemini's reasoning models can stream their internal thought tokens separately from
-the final answer. Wire an `on_thought` callback to receive them:
-
-```python
-from padwan_ai import GeminiClient
-
-thoughts: list[str] = []
-async with GeminiClient(
-    model="gemini-2.5-flash",
-    on_thought=thoughts.append,
-    thinking_config={"thinkingBudget": 2048, "includeThoughts": True},
-) as client:
-    stream = client.stream_chat([{"role": "user", "content": "What is 7 * 8?"}])
-    async for chunk in stream:
-        print(chunk, end="")
-
-print("\n---\nReasoning:", "".join(thoughts))
-```
-
-### Realtime speech-to-speech
-
-`RealtimeClient` opens a bidirectional voice session over a WebSocket and yields
-the live connection: stream microphone audio in, receive model audio and
-transcripts back. OpenAI (`gpt-realtime`), Gemini Live, and Grok Voice are
-supported, dispatched by model name. Requires the `realtime` extra
-(`pip install "padwan-ai[realtime]"`):
-
-```python
-from padwan_ai import RealtimeClient
-
-async with RealtimeClient(instructions="Answer briefly.", voice="marin") as conn:
-    await conn.append_audio(pcm16_chunk)  # mono PCM16 microphone audio
-    async for event in conn:
-        if audio := conn.audio_delta_bytes(event):
-            playback.write(audio)
-```
-
-Server-side VAD drives turn-taking by default; pass `turn_detection=NO_TURN_DETECTION`
-for manual push-to-talk. See the realtime sections of
-[docs/clients/openai.md](docs/clients/openai.md),
-[docs/clients/gemini.md](docs/clients/gemini.md), and
-[docs/clients/grok.md](docs/clients/grok.md).
-
-### OpenTelemetry instrumentation
-
-Opt-in GenAI spans and metrics for every provider client, following the OTel
-GenAI semantic conventions. Requires the `otel` extra
-(`pip install "padwan-ai[otel]"`):
-
-```python
-from padwan_ai import otel
-
-otel.instrument()  # uses the global tracer/meter providers
-```
-
-For a managed trace backend, the Langfuse adapter configures both sides and maps
-Padwan chat, agent, tool, embedding, and MCP spans to Langfuse observations:
+### One-shot from the shell
 
 ```bash
-pip install "padwan-ai[langfuse]"
+uvx padwan-ai "Hello!" -m gpt-5.4-mini
 ```
 
-```python
-from padwan_ai.langfuse import instrument
+For an interactive chat TUI use [`padwan-cli`](https://github.com/polarsen-io/padwan-cli).
 
-telemetry = instrument()  # uses the standard LANGFUSE_* environment variables
-```
+## Providers
 
-Chat calls emit a `chat <model>` client span (provider, model, server address,
-token usage including reasoning tokens, thinking duration, finish reasons,
-requested tool names) plus the `gen_ai.client.operation.duration` and
-`gen_ai.client.token.usage` histograms. Agent tool execution emits
-`execute_tool` spans; embeddings, batch operations, and realtime sessions get
-their own spans. See [docs/observability.md](docs/observability.md) for the
-full attribute list.
+| Provider | Chat + streaming | Batch | Realtime voice |
+|----------|:-:|:-:|:-:|
+| OpenAI | ✅ | ✅ | ✅ |
+| Gemini | ✅ | ✅ | ✅ |
+| Anthropic | ✅ | ❌ | ❌ |
+| Mistral | ✅ | ❌ | ❌ |
+| Grok | ✅ | ✅ | ✅ |
+| OpenAI-compatible (`base_url=`) | ✅ | depends on the server | |
 
-`just e2e-otel` runs the e2e suite against a local Grafana stack with a
-ready-made GenAI dashboard
-([bin/observability/dashboards](bin/observability/dashboards)):
+Thinking tokens stream separately through an `on_thought` callback on every client that exposes them. Per-provider details, multimodal input (images, audio, files) and embeddings: [docs/clients](docs/clients/), [docs/multimodal.md](docs/multimodal.md).
 
-<img alt="Grafana GenAI dashboard" src="docs/static/grafana-dashboard.png" width="800"/>
+**TypeSafe (JEV)** structured evaluations (Noul, Choice, Score questions) use the standalone [`TypeSafeClient`](docs/clients/typesafe.md).
 
-## One-Shot Command
+## More
+
+- **MCP**: streamable-HTTP and stdio transports, usable standalone or inside an agent. [docs/mcp.md](docs/mcp.md)
+- **Realtime voice**: `RealtimeClient` speech-to-speech over WebSocket for OpenAI, Gemini Live and Grok Voice. [docs/clients/openai.md](docs/clients/openai.md)
+- **Observability**: opt-in OpenTelemetry GenAI spans and metrics with `otel.instrument()`, or a one-call Langfuse adapter. Ships a Grafana dashboard. [docs/observability.md](docs/observability.md)
+- **Gateway mode**: route every model through one OpenAI-compatible endpoint with `PADWAN_BASE_URL` and `PADWAN_API_KEY`. [docs/clients/openai-compatible.md](docs/clients/openai-compatible.md)
+- **Testing agents**: `padwan_ai.testing.ScriptedClient` replays scripted responses, no API key needed. [docs/agents.md](docs/agents.md)
+
+## Development
 
 ```bash
-export OPENAI_API_KEY=...
-
-padwan-ai "Hello!" -m gpt-4o-mini
-
-# Or without installing:
-uvx padwan-ai "Hello!" -m gpt-4o-mini
+uv sync --all-extras --all-groups
+just ci          # ruff + pyright + pytest
+just e2e         # live provider tests, keys from .env (see env.template)
+just docs        # serve the docs site locally
 ```
-
-## Supported Models
-
-Auto-detected providers: **OpenAI**, **Gemini**, **Mistral**, **Grok**, **Anthropic** (`claude-*`).
-
-Any OpenAI-compatible API (Groq, Together AI, Ollama, vLLM, ...) is supported via `OpenAIClient` with a custom `base_url`.
-
-**TypeSafe (JEV)** structured evaluations use the standalone
-[`TypeSafeClient`](docs/clients/typesafe.md), with Noul, Choice, and Score questions.
-
-## Testing
-
-Unit tests run by default (no API keys needed):
-
-```bash
-uv run pytest
-```
-
-E2e tests require API keys. Create a `.env` file or pass one with `--env-file`:
-
-```bash
-uv run pytest tests/e2e/ -m e2e
-uv run pytest tests/e2e/ -m e2e --env-file path/to/.env
-```
-
-Tests for providers whose API key is missing are automatically skipped.
-
-## Environment Variables
-
-```bash
-OPENAI_API_KEY=...
-GEMINI_API_KEY=...
-MISTRAL_API_KEY=...
-GROK_API_KEY=...
-ANTHROPIC_API_KEY=...
-TYPESAFE_API_KEY=...
-```
-
-### Unified gateway (one URL + one token)
-
-Aggregators that expose OSS variants of many model families behind a single
-OpenAI-compatible endpoint and token are supported with two env vars — every
-model then routes through that gateway, with no per-provider keys or per-call
-overrides:
-
-```bash
-PADWAN_BASE_URL=https://your-gateway.example.com/v1/
-PADWAN_API_KEY=...
-```
-
-```python
-# Names that would normally route to a native client (gemini-*, mistral-*, …)
-# go through the gateway as OpenAI-compatible instead.
-async with LLMClient(model="gemini-2.5-flash") as client:
-    response, usage = await client.complete_chat([{"role": "user", "content": "Hi!"}])
-```
-
-Precedence is explicit `base_url`/`api_key` args → `PADWAN_*` → native
-per-provider env vars. Passing an explicit `base_url` disables gateway mode and
-restores native provider routing.
