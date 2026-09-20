@@ -5,6 +5,7 @@ Voyage AI is an embeddings-only provider (the one Anthropic recommends alongside
 ## Configuration
 
 ```python
+from padwan_ai import vectors
 from padwan_ai.voyage import VoyageClient
 
 client = VoyageClient(
@@ -25,7 +26,7 @@ async with VoyageClient() as client:
     query = await client.fetch_embeddings(
         "search text", extra_params={"input_type": "query"}
     )
-    vectors = [item["embedding"] for item in docs["data"]]
+    doc_vectors = vectors(docs, "voyage")  # one list[float] per input, in input order
 ```
 
 `input_type` prepends Voyage's retrieval prompts; leave it out for symmetric use cases. See the [Voyage embeddings docs](https://docs.voyageai.com/docs/embeddings) for models and dimensions.

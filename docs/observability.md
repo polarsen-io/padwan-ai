@@ -14,7 +14,7 @@ from padwan_ai import otel
 otel.instrument()  # uses the global tracer/meter/logger providers
 ```
 
-`instrument()` wraps every provider client (OpenAI, Gemini, Mistral, Grok, Anthropic): chat completions and streams, batch operations, embeddings, realtime sessions, agent turns and tool execution, and MCP tool calls. It is idempotent; call `otel.uninstrument()` to restore the original methods.
+`instrument()` wraps every provider client (OpenAI, Gemini, Mistral, Grok, Anthropic, Voyage): chat completions and streams, batch operations, embeddings, realtime sessions, agent turns and tool execution, and MCP tool calls. It is idempotent; call `otel.uninstrument()` to restore the original methods.
 
 `OpenAIClient.complete()` and `OpenAIClient.stream()` also create chat spans when called directly. Calls through `complete_chat()` or `stream_chat()` share the existing chat span. With content capture enabled, raw responses preserve each choice separately, including function and custom tool calls.
 
