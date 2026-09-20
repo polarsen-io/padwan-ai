@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # DESCRIPTION
 #   Benchmark import times for padwan_ai (facade, single provider, otel).
-#   Results are reported relative to bare interpreter startup, so a slow CI
-#   runner scales both and cancels out.
+#   Times are normalised by bare interpreter startup and rescaled to a
+#   reference runner, so a slow machine scales both and cancels out.
 #
 # USAGE
 #   ./bin/bench-imports.sh              # Pretty-print results
@@ -11,7 +11,7 @@
 #
 # EXAMPLES
 #   RUNS=20 ./bin/bench-imports.sh
-#   ./bin/bench-imports.sh --json --label 3.13   # suffix names with the version
+#   ./bin/bench-imports.sh --json --label 3.13   # prefix names with the version
 #   PY=.venv/bin/python ./bin/bench-imports.sh   # benchmark a specific venv
 #
 # Requires: hyperfine, jq, uv
@@ -28,6 +28,9 @@ LABEL=
 # Baseline command: whatever makes it slower makes the imports slower too
 CONTROL="interpreter startup"
 
+# Interpreter startup on a GitHub runner; only rescales the reported ms
+REF_STARTUP_MS="${REF_STARTUP_MS:-23}"
+
 while [[ $# -gt 0 ]]; do
     case $1 in
         --json) MODE=json; shift ;;
@@ -39,7 +42,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-SUFFIX=${LABEL:+ [$LABEL]}
+PREFIX=${LABEL:+$LABEL · }
 
 for cmd in uv jq; do
     command -v "$cmd" >/dev/null || { echo "Missing required tool: $cmd" >&2; exit 1; }
@@ -76,20 +79,22 @@ hyperfine --warmup "$WARMUP" --min-runs "$RUNS" \
 BASE=$(jq --arg c "$CONTROL" '.results[] | select(.command == $c) | .mean' "$RESULTS")
 
 if [[ $MODE == json ]]; then
-    jq --arg c "$CONTROL" --arg suffix "$SUFFIX" --argjson base "$BASE" '
+    jq --arg c "$CONTROL" --arg prefix "$PREFIX" \
+        --argjson base "$BASE" --argjson ref "$REF_STARTUP_MS" '
         [.results[] | select(.command != $c) | {
-            name: (.command + $suffix),
-            unit: "x startup",
-            value: (.mean / $base * 1000 | round / 1000),
-            range: (.stddev / $base * 1000 | round / 1000)
+            name: ($prefix + .command),
+            unit: "ms",
+            value: (.mean / $base * $ref * 100 | round / 100),
+            range: (.stddev / $base * $ref * 100 | round / 100)
         }]' "$RESULTS"
 else
-    printf "\n📊 Import Benchmark Results (interpreter startup: %.2fms):\n" "$(jq -n --argjson b "$BASE" '$b * 1000')"
+    printf "\n📊 Import Benchmark Results (startup here: %.2fms, normalised to %sms):\n" \
+        "$(jq -n --argjson b "$BASE" '$b * 1000')" "$REF_STARTUP_MS"
     printf "============================================================\n"
-    jq -r --arg c "$CONTROL" --argjson base "$BASE" \
-        '.results[] | select(.command != $c) | [.command, (.mean * 1000), (.stddev * 1000), (.mean / $base)] | @tsv' "$RESULTS" \
-        | while IFS=$'\t' read -r name mean std ratio; do
-            printf "  %-30s %9.2fms (±%.2fms)  %5.2fx startup\n" "$name" "$mean" "$std" "$ratio"
+    jq -r --arg c "$CONTROL" --argjson base "$BASE" --argjson ref "$REF_STARTUP_MS" \
+        '.results[] | select(.command != $c) | [.command, (.mean / $base * $ref), (.stddev / $base * $ref)] | @tsv' "$RESULTS" \
+        | while IFS=$'\t' read -r name mean std; do
+            printf "  %-30s %9.2fms (±%.2fms)\n" "$name" "$mean" "$std"
         done
     printf "============================================================\n"
 fi
