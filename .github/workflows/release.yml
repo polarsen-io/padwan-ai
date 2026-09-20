@@ -4,6 +4,11 @@ on:
   pull_request:
     types: [closed]
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing release tag to re-publish (e.g. 0.11.0)
+        required: true
 
 permissions:
   contents: write
@@ -12,13 +17,14 @@ permissions:
 jobs:
   release:
     if: >-
-      github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'release/')
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
-          ref: master
+          ref: ${{ inputs.version || 'master' }}
           fetch-depth: 0
           token: ${{ secrets.POLARSEN_BOT_PAT }}
 
@@ -26,8 +32,9 @@ jobs:
         id: version
         env:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${HEAD_REF#release/}"
+          VERSION="${INPUT_VERSION:-${HEAD_REF#release/}}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "$HEAD_REF" ]; then
             echo "error: could not extract version from $HEAD_REF" >&2
             exit 1
@@ -37,7 +44,11 @@ jobs:
       - name: Save PR body as release notes
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
+          GH_TOKEN: ${{ secrets.POLARSEN_BOT_PAT }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
+          # On dispatch, reuse the notes of the existing GitHub Release
+          if [ -z "$PR_BODY" ]; then PR_BODY=$(gh release view "$VERSION" --json body --jq .body); fi
           printf '%s\n' "$PR_BODY" > RELEASE_NOTES.md
           if [ ! -s RELEASE_NOTES.md ]; then
             echo "error: PR body is empty — refusing to release" >&2
@@ -54,6 +65,10 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          # Idempotent so a partially failed run can be re-dispatched
+          if git ls-remote --exit-code --tags origin "refs/tags/$VERSION" >/dev/null; then
+            echo "tag $VERSION already exists, skipping"; exit 0
+          fi
           git config user.name "Polarsen bot"
           git config user.email "bot@polarsen.io"
           git tag -a "$VERSION" -F RELEASE_NOTES.md
