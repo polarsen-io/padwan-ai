@@ -1,7 +1,7 @@
 [project]
 
 site_name = "Padwan AI"
-site_description = "Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, TypeSafe (JEV), and any OpenAI-compatible API"
+site_description = "Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, TypeSafe (JEV, experimental), and any OpenAI-compatible API"
 site_url = "https://polarsen-io.github.io/padwan-ai"
 
 repo_url = "https://github.com/polarsen-io/padwan-ai"
@@ -20,7 +20,7 @@ nav = [
     { "Mistral" = "clients/mistral.md" },
     { "Grok" = "clients/grok.md" },
     { "Anthropic" = "clients/anthropic.md" },
-    { "TypeSafe (JEV)" = "clients/typesafe.md" },
+    { "TypeSafe (JEV, experimental)" = "clients/typesafe.md" },
   ] },
   { "Multimodal" = "multimodal.md" },
   { "MCP" = "mcp.md" },

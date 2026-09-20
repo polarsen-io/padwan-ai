@@ -1,5 +1,8 @@
 # TypeSafe (JEV)
 
+!!! warning "Experimental"
+    The TypeSafe client is experimental: its interface and typed payloads may change between minor releases without a deprecation cycle.
+
 `TypeSafeClient` evaluates text or structured state against named Noul, Choice,
 and Score questions using the [System One API](https://docs.typesafe.ai/sdk/python).
 It has its own evaluation interface; use it directly rather than `LLMClient` or

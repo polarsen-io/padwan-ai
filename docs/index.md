@@ -1,6 +1,6 @@
 # Padwan AI
 
-Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, TypeSafe (JEV), and any OpenAI-compatible API.
+Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, TypeSafe (JEV, experimental), and any OpenAI-compatible API.
 
 ## Why
 
