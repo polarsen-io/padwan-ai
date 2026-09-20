@@ -5,7 +5,7 @@
 <h1 align="center">Padwan AI</h1>
 
 <p align="center">
-  Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, TypeSafe (JEV), and any OpenAI-compatible API.<br>
+  Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, TypeSafe (JEV, experimental), and any OpenAI-compatible API.<br>
   One runtime dependency (<a href="https://github.com/jawah/niquests">niquests</a>), TypedDict everywhere, HTTP/2 and HTTP/3 out of the box.
 </p>
 
@@ -105,7 +105,7 @@ For an interactive chat TUI use [`padwan-cli`](https://github.com/polarsen-io/pa
 
 Thinking tokens stream separately through an `on_thought` callback on every client that exposes them. Per-provider details, multimodal input (images, audio, files) and embeddings: [docs/clients](docs/clients/), [docs/multimodal.md](docs/multimodal.md).
 
-**TypeSafe (JEV)** structured evaluations (Noul, Choice, Score questions) use the standalone [`TypeSafeClient`](docs/clients/typesafe.md).
+**TypeSafe (JEV, experimental)** structured evaluations (Noul, Choice, Score questions) use the standalone [`TypeSafeClient`](docs/clients/typesafe.md).
 
 ## More
 
