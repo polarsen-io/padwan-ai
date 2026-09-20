@@ -164,7 +164,7 @@ Agent invocations also record dedicated duration, inference-call count, and tool
 
 | Attribute | Example | Notes |
 |-----------|---------|-------|
-| `gen_ai.embeddings.dimension.count` | `256` | when `dimensions=` is passed |
+| `gen_ai.embeddings.dimension.count` | `256` | length of the returned vectors, so it is set whether or not `dimensions=` was passed |
 | `gen_ai.request.encoding_formats` | `["base64"]` | when `extra_params` carries `encoding_format` |
 | `gen_ai.response.model` | `text-embedding-3-small` | OpenAI-shaped responses only |
 | `gen_ai.usage.input_tokens` | `4` | OpenAI-shaped responses only (`prompt_tokens`, else `total_tokens`); Gemini's batch endpoint reports no usage |

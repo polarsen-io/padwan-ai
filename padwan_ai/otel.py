@@ -1,7 +1,7 @@
 import functools
 import inspect
 import time
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from contextlib import aclosing
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -1316,6 +1316,14 @@ def _wrap_operation(original: Any, inst: _Instruments, op: str) -> Any:
     return wrapper
 
 
+def _embedding_dimension_count(payload: Mapping[str, Any]) -> int | None:
+    """Length of the first returned vector, whichever payload shape the provider uses."""
+    items = payload.get("data") or payload.get("embeddings") or []
+    first = items[0] if items else {}
+    vector = first.get("embedding") or first.get("values")
+    return len(vector) if isinstance(vector, list) else None
+
+
 def _wrap_embeddings(original: Any, inst: _Instruments) -> Any:
     """Wrap `fetch_embeddings` in an `embeddings <model>` span with the semconv embeddings attributes."""
     sig = inspect.signature(original)
@@ -1335,8 +1343,6 @@ def _wrap_embeddings(original: Any, inst: _Instruments) -> Any:
             attributes=attrs,
         )
         # request details stay off `attrs`, which also feeds the metrics
-        if (dimensions := bound.arguments["dimensions"]) is not None:
-            span.set_attribute("gen_ai.embeddings.dimension.count", dimensions)
         extra = bound.arguments["extra_params"] or {}
         if encoding := extra.get("encoding_format"):
             span.set_attribute("gen_ai.request.encoding_formats", [encoding])
@@ -1346,6 +1352,8 @@ def _wrap_embeddings(original: Any, inst: _Instruments) -> Any:
         except BaseException as e:
             _record_end(inst, span, attrs, start, error=e)
             raise
+        if (count := _embedding_dimension_count(result)) is not None:
+            span.set_attribute("gen_ai.embeddings.dimension.count", count)
         # OpenAI-shaped payloads carry model and usage; Gemini's batch endpoint has neither
         if isinstance(response_model := result.get("model"), str):
             span.set_attribute("gen_ai.response.model", response_model)
