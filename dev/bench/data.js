@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789928950171,
+  "lastUpdate": 1789930068475,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -1488,6 +1488,66 @@ window.BENCHMARK_DATA = {
             "value": 10.297,
             "unit": "x startup",
             "range": 0.103
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd2ad918a59e696079883fea055491d164b4a1cb",
+          "message": "fix(ci): benchmark imports in a minimal environment (#86)\n\n* fix(ci): benchmark imports in a minimal environment\n\nThe perf job synced --all-extras --all-groups (178 packages) to time three\nimports that need 24. The 3.15 prerelease has no wheels for the dev-group\nnative packages, so every run rebuilt pydantic-core, pandas, pyyaml, jiter,\nmsgspec and markupsafe from source (3m33s), and setup-uv skips saving its\ncache on a key hit, so the build was discarded each run.\n\nSyncing only the otel extra removes every source build. bench-imports.sh now\nhonours a preset PY, since its own uv run would re-add the default groups to\nthe lean environment.\n\nBaselines drop by about 6%: __init__ calls importlib.metadata.version() at\nimport time, which scans every installed dist-info.\n\n* fix(ci): report benchmark times in ms, grouped by version\n\nPrefix rows with the Python version so each version's benchmarks are\nadjacent, and rescale the startup-normalised ratio by a reference startup\nconstant so the table reads in ms instead of multiples.",
+          "timestamp": "2026-09-20T20:47:02+02:00",
+          "tree_id": "0b8993c3490baf653931e06d88fdedef1b91798e",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/dd2ad918a59e696079883fea055491d164b4a1cb"
+        },
+        "date": 1789930067711,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 205,
+            "unit": "ms",
+            "range": 1.24
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 204.59,
+            "unit": "ms",
+            "range": 1.32
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 220.04,
+            "unit": "ms",
+            "range": 2.49
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 51.16,
+            "unit": "ms",
+            "range": 0.58
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 181.27,
+            "unit": "ms",
+            "range": 2.9
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 216.72,
+            "unit": "ms",
+            "range": 3.81
           }
         ]
       }
