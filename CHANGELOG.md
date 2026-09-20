@@ -1,3 +1,11 @@
+## 0.12.1 (2026-09-20)
+
+### Fixes
+
+- **PyPI metadata**: `description`, `readme`, `license = "MIT"` (with `license-files`) and `[project.urls]` (Homepage, Source, Changelog) were all absent, so the PyPI page showed no summary, README, links or license. The MIT trove classifier is dropped — PEP 639 rejects it alongside a license expression. (#88)
+- **README links absolutized** (logo image, changelog) so they resolve in the PyPI-rendered description. (#88)
+- **`py.typed` marker shipped** (PEP 561). The package declared `Typing :: Typed` but had no marker file, so downstream type checkers ignored its inline annotations. (#88)
+
 ## 0.12.0 (2026-09-20)
 
 Embeddings for every provider that offers them, plus a Voyage AI client.
