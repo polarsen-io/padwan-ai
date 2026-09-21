@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789938606026,
+  "lastUpdate": 1790013007837,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -1728,6 +1728,66 @@ window.BENCHMARK_DATA = {
             "value": 221.64,
             "unit": "ms",
             "range": 2.59
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bot@polarsen.io",
+            "name": "Polarsen-bot",
+            "username": "Polarsen-bot"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "aeb263c70f8da6b6b7f0b08ce82352d5cf93dd26",
+          "message": "chore: weekly LLM SDK refresh (#90)\n\n* chore: weekly LLM SDK refresh\n\n- Bump openai, google-genai, xai-sdk, mcp to latest\n- Regenerate OpenAI/Mistral OpenAPI TypedDicts\n- Include provider model drift report\n\n* chore: track new provider model aliases\n\nCo-authored-by: Andarius <5070712+Andarius@users.noreply.github.com>\n\n* test: cover new mistral model aliases\n\nCo-authored-by: Andarius <5070712+Andarius@users.noreply.github.com>\n\n* test: cover gemini live alias routing\n\nCo-authored-by: Andarius <5070712+Andarius@users.noreply.github.com>\n\n---------\n\nCo-authored-by: Polarsen-bot <248777799+Polarsen-bot@users.noreply.github.com>\nCo-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>\nCo-authored-by: Andarius <5070712+Andarius@users.noreply.github.com>",
+          "timestamp": "2026-09-21T19:49:18+02:00",
+          "tree_id": "75a824e0cc8a572a52150595ed51bf0f5cb5814a",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/aeb263c70f8da6b6b7f0b08ce82352d5cf93dd26"
+        },
+        "date": 1790013006816,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 223.95,
+            "unit": "ms",
+            "range": 2.44
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 223.44,
+            "unit": "ms",
+            "range": 2.44
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 243.09,
+            "unit": "ms",
+            "range": 1.85
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 54.5,
+            "unit": "ms",
+            "range": 1.08
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 196.78,
+            "unit": "ms",
+            "range": 1.54
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 236.44,
+            "unit": "ms",
+            "range": 1.83
           }
         ]
       }
