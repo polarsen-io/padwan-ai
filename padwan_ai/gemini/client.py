@@ -465,23 +465,31 @@ class GeminiClient(_GeminiAuth, LLMClientBase[Retry], GeminiToolMixin):
             gen_config["thinkingConfig"] = self.thinking_config
         return gen_config
 
-    async def stream(self, body: StreamBody) -> AsyncIterator[dict]:
+    async def stream(
+        self, body: StreamBody, model: str | None = None
+    ) -> AsyncIterator[dict]:
         """Stream chat completions from Gemini, yielding response chunks as they arrive via SSE."""
-        if not self.model:
+        _model = model or self.model
+        if not _model:
             raise LLMError(self.provider, "No model specified for streaming")
         _temperature = body.get("temperature", self.temperature)
 
         payload: dict = {
             "contents": body["contents"],
-            "generationConfig": self._build_gen_config(_temperature),
+            # A caller-supplied generationConfig wins; otherwise build from
+            # the request temperature + the client's thinking config.
+            "generationConfig": body.get("generationConfig")
+            or self._build_gen_config(_temperature),
         }
         if system := body.get("systemInstruction"):
             payload["systemInstruction"] = system
         if gemini_tools := body.get("tools"):
             payload["tools"] = gemini_tools
+        if tool_config := body.get("toolConfig"):
+            payload["toolConfig"] = tool_config
 
         resp = await self.session.post(
-            self._sse_url(f"/models/{self.model}:streamGenerateContent"),
+            self._sse_url(f"/models/{_model}:streamGenerateContent"),
             params={"alt": "sse"},
             json=payload,
         )
