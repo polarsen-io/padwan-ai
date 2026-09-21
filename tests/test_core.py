@@ -179,6 +179,18 @@ def test_llm_error(cause: Exception | None):
         pytest.param(is_mistral_model, "mistral-custom", True, id="mistral-prefix"),
         pytest.param(
             is_mistral_model,
+            "zai-glm-5",
+            True,
+            id="mistral-zai-glm-5-prefix",
+        ),
+        pytest.param(
+            is_mistral_model,
+            "zai-glm-5-3",
+            True,
+            id="mistral-zai-glm-5-3-prefix",
+        ),
+        pytest.param(
+            is_mistral_model,
             "zai-glm-5-2",
             True,
             id="mistral-zai-glm-prefix",
@@ -215,6 +227,10 @@ def test_is_model(func, model, expected: bool):
             "mistral-large-latest", MistralClient, nullcontext(), id="mistral"
         ),
         pytest.param("glm-5-2", MistralClient, nullcontext(), id="mistral-glm"),
+        pytest.param("zai-glm-5", MistralClient, nullcontext(), id="mistral-zai-glm-5"),
+        pytest.param(
+            "zai-glm-5-3", MistralClient, nullcontext(), id="mistral-zai-glm-5-3"
+        ),
         pytest.param(
             "zai-glm-latest", MistralClient, nullcontext(), id="mistral-zai-glm-latest"
         ),
