@@ -392,6 +392,20 @@ def test_gemini_audio_delta_bytes(message, expected) -> None:
             id="gemini",
         ),
         pytest.param(
+            "gemini-3.8-live",
+            GeminiRealtimeClient,
+            "GEMINI_API_KEY",
+            LIVE_ENDPOINT,
+            id="gemini-3.8-live",
+        ),
+        pytest.param(
+            "gemini-3.8-live-extended-thinking",
+            GeminiRealtimeClient,
+            "GEMINI_API_KEY",
+            LIVE_ENDPOINT,
+            id="gemini-3.8-live-extended-thinking",
+        ),
+        pytest.param(
             "grok-voice-latest",
             GrokRealtimeClient,
             "GROK_API_KEY",

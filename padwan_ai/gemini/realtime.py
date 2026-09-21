@@ -40,6 +40,8 @@ GeminiLiveModel = Literal[
     "gemini-3.1-flash-live-preview",
     "gemini-2.5-flash-native-audio-latest",
     "gemini-3.5-transcribe-live",
+    "gemini-3.8-live",
+    "gemini-3.8-live-extended-thinking",
 ]
 
 # The Live API is asymmetric: mono little-endian PCM16 at 16 kHz in, 24 kHz out.
