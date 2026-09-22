@@ -171,6 +171,7 @@ class FunctionCallPart(TypedDict):
 
 
 class FunctionResponse(TypedDict):
+    id: NotRequired[str]
     name: str
     response: dict[str, Any]
 
@@ -233,6 +234,7 @@ class GenerationConfig(TypedDict, total=False):
 
 
 class StreamBody(TypedDict):
+    model: NotRequired[str]
     contents: list[Content]
     temperature: NotRequired[float]
     systemInstruction: NotRequired[SystemInstruction]
@@ -242,6 +244,7 @@ class StreamBody(TypedDict):
 
 
 class CompletionBody(TypedDict):
+    model: NotRequired[str]
     contents: list[Content]
     systemInstruction: NotRequired[SystemInstruction]
     generationConfig: NotRequired[GenerationConfig]
