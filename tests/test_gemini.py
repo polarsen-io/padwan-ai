@@ -1,7 +1,7 @@
 import json
 import re
 from contextlib import nullcontext
-from typing import get_type_hints
+from typing import cast, get_type_hints
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,6 +11,7 @@ from google.genai.types import (
     PartDict,
     ThinkingConfigDict,
 )
+from urllib3 import AsyncHTTPResponse
 
 from padwan_ai.conversation import Message
 from padwan_ai.errors import LLMError, QuotaExceededError, TooManyRequestsError
@@ -18,6 +19,7 @@ from padwan_ai.gemini.batch import BatchJob, BatchResult
 from padwan_ai.gemini.client import (
     GeminiChatStream,
     GeminiClient,
+    GeminiRetry,
     _check_resp,
     _parse_retry_delay,
 )
@@ -89,42 +91,52 @@ def test_check_resp(status, json_data, ctx, make_resp):
         assert result == json_data
 
 
-# @pytest.mark.parametrize(
-#     "body, expected",
-#     [
-#         pytest.param(
-#             json.dumps(
-#                 {
-#                     "error": {
-#                         "details": [
-#                             {
-#                                 "@type": "type.googleapis.com/google.rpc.RetryInfo",
-#                                 "retryDelay": "30.5s",
-#                             }
-#                         ]
-#                     }
-#                 }
-#             ).encode(),
-#             31,
-#             id="extracts-delay",
-#         ),
-#         pytest.param(b"not json", None, id="invalid-json"),
-#         pytest.param(
-#             json.dumps({"error": {"details": []}}).encode(),
-#             None,
-#             id="no-retry-info",
-#         ),
-#     ],
-# )
-# async def test_gemini_retry_async_get_retry_after(body: bytes, expected: float | None):
-#     retry = GeminiRetry()
-#
-#     class _Resp:
-#         @property
-#         async def data(self):
-#             return body
-#
-#     assert await retry.async_get_retry_after(_Resp()) == expected
+@pytest.mark.parametrize(
+    "body, headers, expected",
+    [
+        pytest.param(
+            json.dumps(
+                {
+                    "error": {
+                        "details": [
+                            {
+                                "@type": "type.googleapis.com/google.rpc.RetryInfo",
+                                "retryDelay": "30.5s",
+                            }
+                        ]
+                    }
+                }
+            ).encode(),
+            {},
+            31,
+            id="body-delay",
+        ),
+        pytest.param(b"not json", {"retry-after": "12"}, 12, id="header-fallback"),
+        pytest.param(
+            json.dumps({"error": {"details": []}}).encode(),
+            {},
+            None,
+            id="no-delay",
+        ),
+    ],
+)
+async def test_gemini_retry_async_get_retry_after(
+    body: bytes, headers: dict[str, str], expected: float | None
+) -> None:
+    class Response:
+        def __init__(self) -> None:
+            self.headers = {key.title(): value for key, value in headers.items()}
+
+        @property
+        async def data(self) -> bytes:
+            return body
+
+    response = cast("AsyncHTTPResponse", Response())
+    assert await GeminiRetry().async_get_retry_after(response) == expected
+
+
+def test_gemini_retry_caches_response_body() -> None:
+    assert GeminiClient(api_key="test")._retry.cache_response_body is True
 
 
 class TestGeminiChatStream:
