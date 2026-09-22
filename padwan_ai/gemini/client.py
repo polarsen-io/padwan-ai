@@ -212,9 +212,7 @@ _BATCH_STATE_MAP: dict[str, str] = {
 class GeminiRetry(Retry):
     """Use Gemini's response-body retry delay when present."""
 
-    async def async_get_retry_after(
-        self, response: AsyncHTTPResponse
-    ) -> float | None:
+    async def async_get_retry_after(self, response: AsyncHTTPResponse) -> float | None:
         try:
             data = _json_loads(await response.data)
             for detail in data.get("error", {}).get("details", []):
