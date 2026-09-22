@@ -16,7 +16,6 @@ from typing import (
     Protocol,
     Self,
     TypedDict,
-    cast,
     runtime_checkable,
 )
 from urllib.parse import urlparse
@@ -402,10 +401,11 @@ class McpStreamable:
             return await self._rpc(method, params, _reinit=False)
         r.raise_for_status()
         if sid := r.headers.get("MCP-Session-Id"):
-            self._session_id = cast(str, sid)
-        ct = cast(str, r.headers.get("content-type", ""))
+            self._session_id = sid
+        ct = r.headers.get("content-type", "")
         if "text/event-stream" in ct:
-            return await self._read_sse_response(r)
+            async with r:
+                return await self._read_sse_response(r)
         data: dict[str, Any] = await r.json()
         _check_rpc_error(data)
         return data.get("result")
@@ -422,6 +422,10 @@ class McpStreamable:
             raise RuntimeError("SSE extension not available on response")
         while not ext.closed:
             event = await ext.next_payload()
+            # urllib3-future can swallow cancellation while reading an SSE frame.
+            task = asyncio.current_task()
+            if task is not None and task.cancelling():
+                raise asyncio.CancelledError
             if event is None:
                 break
             if event.id:
@@ -467,6 +471,9 @@ class McpStreamable:
                 retries = 0
                 while not ext.closed:
                     event = await ext.next_payload()
+                    task = asyncio.current_task()
+                    if task is not None and task.cancelling():
+                        raise asyncio.CancelledError
                     if event is None:
                         break
                     if event.id:
