@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from base64 import b64decode, urlsafe_b64encode
+from collections.abc import AsyncIterator, Mapping
 from typing import TYPE_CHECKING, Any, cast
 
 from .._json import dumps as _json_dumps, loads as _json_loads
 from ..gemini.models import (
-    CompletionBody,
+    FunctionCallingConfig,
     FunctionCallPart,
     FunctionDeclaration,
     GeminiPart,
     GeminiTool,
     InlineDataPart,
     Part,
+    StreamBody,
     SystemInstruction,
     ToolConfig,
 )
@@ -67,7 +69,9 @@ def _image_source_to_inline_data(
             data = source.get("data", "")
             return {"inlineData": {"mimeType": mime_type, "data": data}}
         case "url":
-            log.debug("anthropic compat: Gemini drops remote image URLs %r", source.get("url"))
+            log.debug(
+                "anthropic compat: Gemini drops remote image URLs %r", source.get("url")
+            )
             return None
         case unknown:
             log.debug("anthropic compat: skipping image source type %r", unknown)
@@ -99,21 +103,11 @@ def _maybe_json(text: str) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {"result": parsed}
 
 
-def _user_blocks_to_content(blocks: list[AnthropicContentBlock]) -> list[dict[str, Any]]:
-    """Convert a user message's content blocks to Gemini Content entries.
-
-    tool_result blocks each become a `role: "user"` functionResponse content;
-    contiguous text/image blocks become a `role: "user"` content with parts.
-    """
-    contents: list[dict[str, Any]] = []
+def _user_blocks_to_content(
+    blocks: list[AnthropicContentBlock], tool_names: Mapping[str, str]
+) -> list[dict[str, Any]]:
+    """Keep parallel tool results together and resolve their function names."""
     parts: list[GeminiPart] = []
-
-    def flush_parts() -> None:
-        if not parts:
-            return
-        contents.append({"role": "user", "parts": list(parts)})
-        parts.clear()
-
     for block in blocks:
         match block.get("type"):
             case "text":
@@ -123,25 +117,59 @@ def _user_blocks_to_content(blocks: list[AnthropicContentBlock]) -> list[dict[st
                 if part := _image_source_to_inline_data(block.get("source") or {}):
                     parts.append(part)
             case "tool_result":
-                flush_parts()
-                response = _flatten_tool_result_content(block.get("content"))
-                contents.append(
+                tool_id = block.get("tool_use_id", "")
+                if tool_id not in tool_names:
+                    raise ValueError(
+                        f"No preceding tool_use for tool_result {tool_id!r}"
+                    )
+                original_id, _ = _decode_tool_id(tool_id)
+                parts.append(
                     {
-                        "role": "user",
-                        "parts": [
-                            {
-                                "functionResponse": {
-                                    "name": block.get("tool_use_id", ""),
-                                    "response": response,
-                                }
-                            }
-                        ],
+                        "functionResponse": {
+                            "id": original_id,
+                            "name": tool_names[tool_id],
+                            "response": _flatten_tool_result_content(
+                                block.get("content")
+                            ),
+                        }
                     }
                 )
             case unknown:
                 log.debug("anthropic compat: skipping user block type %r", unknown)
-    flush_parts()
-    return contents
+    return [{"role": "user", "parts": parts}] if parts else []
+
+
+_SIGNED_TOOL_ID_PREFIX = "gemini_signed_"
+
+
+def _encode_tool_id(tool_id: str, signature: str | None) -> str:
+    """Carry function-call signatures in the opaque ID that clients replay."""
+    if not signature:
+        return tool_id
+    payload = _json_dumps([tool_id, signature]).encode()
+    return _SIGNED_TOOL_ID_PREFIX + urlsafe_b64encode(payload).decode().rstrip("=")
+
+
+def _decode_tool_id(tool_id: str) -> tuple[str, str | None]:
+    """Restore a signed Gemini call ID, rejecting malformed envelopes."""
+    if not tool_id.startswith(_SIGNED_TOOL_ID_PREFIX):
+        return tool_id, None
+    encoded = tool_id.removeprefix(_SIGNED_TOOL_ID_PREFIX)
+    try:
+        data = _json_loads(
+            b64decode(
+                encoded + "=" * (-len(encoded) % 4), altchars=b"-_", validate=True
+            )
+        )
+    except (ValueError, TypeError) as exc:
+        raise ValueError("Invalid signed Gemini tool ID") from exc
+    if (
+        not isinstance(data, list)
+        or len(data) != 2
+        or not all(isinstance(v, str) and v for v in data)
+    ):
+        raise ValueError("Invalid signed Gemini tool ID")
+    return data[0], data[1]
 
 
 def _assistant_blocks_to_content(blocks: list[AnthropicContentBlock]) -> dict[str, Any]:
@@ -153,13 +181,16 @@ def _assistant_blocks_to_content(blocks: list[AnthropicContentBlock]) -> dict[st
                 if text := block.get("text"):
                     parts.append(Part(text=text))
             case "tool_use":
+                tool_id, signature = _decode_tool_id(block.get("id", ""))
                 part: FunctionCallPart = {
                     "functionCall": {
                         "name": block.get("name", ""),
                         "args": block.get("input") or {},
-                        "id": block.get("id", ""),
+                        "id": tool_id,
                     }
                 }
+                if signature:
+                    part["thoughtSignature"] = signature
                 parts.append(part)
             case "thinking" | "redacted_thinking":
                 log.debug("anthropic compat: dropping thinking block on replay")
@@ -191,25 +222,26 @@ def _tools_to_gemini(tools: list[AnthropicTool]) -> list[GeminiTool]:
 
 def _tool_config(tool_choice: AnthropicToolChoice) -> ToolConfig:
     """Map Anthropic tool_choice to Gemini's functionCallingConfig."""
-    mode = "ANY" if tool_choice["type"] in ("any", "tool") else tool_choice["type"].upper()
-    config: ToolConfig = {"function_calling_config": {"mode": cast("Any", mode)}}
+    modes: dict[str, FunctionCallingConfig] = {
+        "auto": {"mode": "AUTO"},
+        "any": {"mode": "ANY"},
+        "tool": {"mode": "ANY"},
+        "none": {"mode": "NONE"},
+    }
+    config: ToolConfig = {"function_calling_config": modes[tool_choice["type"]]}
     if tool_choice["type"] == "tool":
-        config["function_calling_config"]["allowed_function_names"] = [tool_choice.get("name", "")]
+        config["function_calling_config"]["allowed_function_names"] = [
+            tool_choice.get("name", "")
+        ]
     return config
 
 
 def messages_to_gemini(
     body: AnthropicCompatBody, *, model: str | None = None
-) -> CompletionBody:
-    """Translate an Anthropic Messages API request to a Gemini generateContent body.
-
-    `model` overrides the requested (Anthropic) model name with the backend
-    model to use; when omitted the original name is kept. `cache_control`
-    markers, `metadata`, and the `thinking` config are dropped; thinking blocks
-    are stripped from replayed assistant turns (their signatures only make
-    sense to the Anthropic API).
-    """
+) -> StreamBody:
+    """Translate Messages into a Gemini body with a client-side model override."""
     contents: list[dict[str, Any]] = []
+    tool_names: dict[str, str] = {}
     for msg in body["messages"]:
         content = msg["content"]
         if msg["role"] == "assistant":
@@ -217,10 +249,16 @@ def messages_to_gemini(
                 contents.append({"role": "model", "parts": [Part(text=content)]})
             else:
                 contents.append(_assistant_blocks_to_content(content))
+                for block in content:
+                    if block.get("type") == "tool_use":
+                        tool_id, name = block.get("id"), block.get("name")
+                        if not tool_id or not name:
+                            raise ValueError("tool_use requires a nonempty id and name")
+                        tool_names[tool_id] = name
         elif isinstance(content, str):
             contents.append({"role": "user", "parts": [Part(text=content)]})
         else:
-            contents.extend(_user_blocks_to_content(content))
+            contents.extend(_user_blocks_to_content(content, tool_names))
 
     gen_config: dict[str, Any] = {"maxOutputTokens": body["max_tokens"]}
     if (temperature := body.get("temperature")) is not None:
@@ -244,7 +282,7 @@ def messages_to_gemini(
         log.debug("anthropic compat: dropping thinking config (backend-specific)")
     # Carry the resolved model; complete()/stream() also accept it explicitly.
     request["model"] = model or body["model"]
-    return cast(CompletionBody, request)
+    return cast(StreamBody, request)
 
 
 def _parts_to_blocks(parts: list[dict[str, Any]]) -> list[AnthropicContentBlock]:
@@ -262,7 +300,9 @@ def _parts_to_blocks(parts: list[dict[str, Any]]) -> list[AnthropicContentBlock]
             blocks.append(
                 {
                     "type": "tool_use",
-                    "id": fc.get("id") or f"call_{i}",
+                    "id": _encode_tool_id(
+                        fc.get("id") or f"call_{i}", part.get("thoughtSignature")
+                    ),
                     "name": fc.get("name", ""),
                     "input": fc.get("args") or {},
                 }
@@ -298,15 +338,13 @@ def gemini_response_to_anthropic(
         saw_tool_call = any(b.get("type") == "tool_use" for b in blocks)
         raw_reason = choice.get("finishReason") or "STOP"
     stop_reason: StopReason = (
-        "tool_use"
-        if saw_tool_call
-        else _GEMINI_TO_STOP.get(raw_reason, "end_turn")
+        "tool_use" if saw_tool_call else _GEMINI_TO_STOP.get(raw_reason, "end_turn")
     )
     return {
-        "id": data.get("id") or _new_message_id(),
+        "id": data.get("responseId") or _new_message_id(),
         "type": "message",
         "role": "assistant",
-        "model": model or data.get("model", ""),
+        "model": model or data.get("modelVersion", ""),
         "content": blocks,
         "stop_reason": stop_reason,
         "stop_sequence": None,
@@ -368,7 +406,9 @@ async def gemini_stream_to_anthropic(
                         open_kind = "thinking"
                         for event in emitter.open({"type": "thinking", "thinking": ""}):
                             yield event
-                    yield emitter.delta({"type": "thinking_delta", "thinking": thought_text})
+                    yield emitter.delta(
+                        {"type": "thinking_delta", "thinking": thought_text}
+                    )
                 continue
             if (text := part.get("text")) is not None:
                 if open_kind != "text":
@@ -386,7 +426,10 @@ async def gemini_stream_to_anthropic(
                     for event in emitter.open(
                         {
                             "type": "tool_use",
-                            "id": fc.get("id") or f"call_{idx}",
+                            "id": _encode_tool_id(
+                                fc.get("id") or f"call_{idx}",
+                                part.get("thoughtSignature"),
+                            ),
                             "name": fc.get("name", ""),
                             "input": {},
                         }
