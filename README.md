@@ -114,6 +114,7 @@ Thinking tokens stream separately through an `on_thought` callback on every clie
 
 - **MCP**: streamable-HTTP and stdio transports, usable standalone or inside an agent. [docs/mcp.md](docs/mcp.md)
 - **Realtime voice**: `RealtimeClient` speech-to-speech over WebSocket for OpenAI, Gemini Live and Grok Voice. [docs/clients/openai.md](docs/clients/openai.md)
+- **Text-to-speech**: `GeminiClient.generate_speech` for Gemini TTS models, single voice or scripted two-speaker dialogue. [docs/clients/gemini.md](docs/clients/gemini.md#text-to-speech)
 - **Observability**: opt-in OpenTelemetry GenAI spans and metrics with `otel.instrument()`, or a one-call Langfuse adapter. Ships a Grafana dashboard. [docs/observability.md](docs/observability.md)
 - **Gateway mode**: route every model through one OpenAI-compatible endpoint with `PADWAN_BASE_URL` and `PADWAN_API_KEY`. [docs/clients/openai-compatible.md](docs/clients/openai-compatible.md)
 - **Testing agents**: `padwan_ai.testing.ScriptedClient` replays scripted responses, no API key needed. [docs/agents.md](docs/agents.md)
