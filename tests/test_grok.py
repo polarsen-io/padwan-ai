@@ -1,6 +1,7 @@
 # xai-sdk is absent on 3.15 (grpcio), leaving these imports unresolved there
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
-from typing import cast, get_type_hints
+from typing import Any, cast, get_type_hints
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from google.protobuf.descriptor import Descriptor
@@ -13,7 +14,8 @@ from xai_sdk.proto.v6.batch_pb2 import (
 )
 from xai_sdk.proto.v6.chat_pb2 import GetCompletionsRequest
 
-from padwan_ai.grok.batch import GrokBatchJob, GrokBatchResult
+from padwan_ai.grok import GrokClient
+from padwan_ai.grok.batch import GrokBatchJob, GrokBatchRequest, GrokBatchResult
 from padwan_ai.grok.types import (
     BatchResponse,
     BatchResultItem,
@@ -235,3 +237,35 @@ def test_sdk_compat(local_type: type, sdk_descriptor: Descriptor):
         assert key in sdk_keys, (
             f"{local_type.__name__}.{key} not in {sdk_descriptor.name}"
         )
+
+
+@pytest.mark.parametrize(
+    "model, expected_model",
+    [
+        pytest.param(None, "grok-3", id="client-model"),
+        pytest.param("grok-4", "grok-4", id="explicit-model"),
+    ],
+)
+async def test_add_batch_requests_forwards_full_body(
+    model: str | None, expected_model: str
+):
+    """Regression: only `messages` used to be forwarded; params were dropped."""
+    client = GrokClient(api_key="k")
+    session = MagicMock()
+    session.post = AsyncMock(return_value=MagicMock())
+    client._session = session
+    body = {
+        "model": "ignored",
+        "messages": [{"role": "user", "content": "hi"}],
+        "temperature": 0.2,
+        "max_tokens": 10,
+        "tools": [{"type": "function", "function": {"name": "f"}}],
+    }
+    await client.add_batch_requests(
+        "b1", [GrokBatchRequest(body=cast(Any, body), custom_id="r1")], model=model
+    )
+    sent = session.post.call_args.kwargs["json"]["batch_requests"][0]
+    assert sent["batch_request"]["chat_get_completion"] == {
+        **body,
+        "model": expected_model,
+    }
