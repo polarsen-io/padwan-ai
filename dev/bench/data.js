@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790013007837,
+  "lastUpdate": 1790187852348,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -1788,6 +1788,66 @@ window.BENCHMARK_DATA = {
             "value": 236.44,
             "unit": "ms",
             "range": 1.83
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb7f69a43c164a435df1fb37f240e35b236c3e8b",
+          "message": "fix: adopt urllib3-future fixes and preserve MCP cancellation (#92)\n\n* fix: adopt urllib3-future realtime and retry fixes\n\n* style: format Gemini retry method\n\n* fix: preserve MCP cancellation and update reasoning tests\n\n* fix: route SSE through a cancellation-preserving extension\n\nSubclass urllib3-future's async SSE extension under the sse+ai scheme so\ntask cancellation propagates instead of returning None\n(jawah/urllib3.future#419). Compare cancelling() to its pre-call value\nsince urllib3-future's Timeout leaks cancel requests. Inline Gemini's\nalt=sse query: niquests drops params on custom SSE schemes.\n\n* test: import urllib3 webextensions directly for pyright",
+          "timestamp": "2026-09-23T20:23:21+02:00",
+          "tree_id": "8a7be01a79c4686032552d9aadedcda7da47849c",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/bb7f69a43c164a435df1fb37f240e35b236c3e8b"
+        },
+        "date": 1790187851036,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 206.59,
+            "unit": "ms",
+            "range": 1.15
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 206.53,
+            "unit": "ms",
+            "range": 0.74
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 221.2,
+            "unit": "ms",
+            "range": 1.44
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 53.38,
+            "unit": "ms",
+            "range": 1.97
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 187.85,
+            "unit": "ms",
+            "range": 3.3
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 216.52,
+            "unit": "ms",
+            "range": 1.48
           }
         ]
       }
