@@ -17,7 +17,7 @@ import os
 from collections.abc import Mapping, Sequence
 from typing import Any, Never, NotRequired, TypedDict, overload
 
-from ._base import LLMClientBase, OnThought
+from ._base import PADWAN_API_KEY_ENV, LLMClientBase, OnThought
 from .anthropic import AnthropicClient, AnthropicModel, is_anthropic_model
 from .gemini import GeminiClient, GeminiModel, GeminiRealtimeClient, is_gemini_model
 from .gemini.realtime import GeminiLiveModel
@@ -40,7 +40,6 @@ __all__ = ("LLMClient", "RealtimeClient")
 # model family. Set these to route all models through one endpoint/token
 # instead of per-provider env vars.
 PADWAN_BASE_URL_ENV = "PADWAN_BASE_URL"
-PADWAN_API_KEY_ENV = "PADWAN_API_KEY"
 
 
 class _ClientKwargs(TypedDict):
