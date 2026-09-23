@@ -1,3 +1,42 @@
+## 0.13.0 (2026-09-24)
+
+Gemini text-to-speech, MCP progress and cancellation that actually reach the server, and docs re-checked against the code.
+
+### Breaking
+
+- **`OpenAIClient` no longer sends `OPENAI_API_KEY` to a non-OpenAI `base_url`.** Without an explicit `api_key`, any host other than `api.openai.com` (Scaleway, a local vLLM, a proxy) now falls back to `PADWAN_API_KEY`, then `"no-key-required"`. Proxies that relied on the implicit `OPENAI_API_KEY` must pass `api_key=`. Also applies to `OpenAIRealtimeClient`. (#98)
+
+### Features
+
+- **Gemini text-to-speech**: `GeminiClient.generate_speech()` for the Gemini 3.8 TTS models (`gemini-3.8-flash-tts`, `gemini-3.8-flash-lite-tts`) and the 2.5/3.1 TTS models. Single voice or `{speaker: voice}` multi-speaker, optional `language_code`, script lines tagged with `speechMetadata`. Returns `(GeminiSpeech(audio, mime_type), usage)`. (#95)
+
+```python
+async with GeminiClient(model="gemini-3.8-flash-tts") as client:
+    speech, usage = await client.generate_speech("Hello!", voice="Puck")
+```
+
+- **vLLM reasoning deltas**: the OpenAI stream parser also reads vLLM's `reasoning` field alongside `reasoning_content`. (#94)
+
+### Fixes
+
+- **MCP progress**: `tools/call` sends `_meta.progressToken` when `on_progress` is set, so spec-compliant servers now report progress. (#98)
+- **MCP cancellation**: cancelling the task awaiting a tool call sends `notifications/cancelled` for that request (best-effort, 1s cap), then re-raises. (#98)
+- **MCP listener**: warns when the GET listener gives up after 5 consecutive reconnect failures instead of stopping silently. (#98)
+- **Async `on_mcp_connect`** callbacks are now awaited. (#98)
+- **Grok batch** forwards the full request body (`temperature`, `tools`, ...) instead of only `messages`. (#98)
+- **urllib3-future 2.25.900** for concurrent WebSocket reads/writes; Gemini `RetryInfo` delays restored with a `Retry-After` fallback; SSE streams propagate task cancellation; non-streaming chat accepts provider parameters. (#92)
+
+### Docs
+
+- Every page re-verified against the code: fixed wrong claims (inheritance of Mistral/Grok, `otel.instrument()` idempotency, audio formats, agent dispatch order and denial message, `JsonStore` example), documented MCP transport parameters, name collisions and session recovery. (#98)
+- Provider logos in the site nav. (#98)
+
+### Dev
+
+- E2E runs on the `e2e` label or manual dispatch, one parallel job per test file. (#96)
+- Observability recipes moved into a `just` module. (#97)
+- Weekly LLM SDK refresh. (#90)
+
 ## 0.12.1 (2026-09-20)
 
 ### Fixes
