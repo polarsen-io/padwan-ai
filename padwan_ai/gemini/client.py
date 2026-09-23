@@ -479,8 +479,8 @@ class GeminiClient(_GeminiAuth, LLMClientBase[GeminiRetry], GeminiToolMixin):
             payload["tools"] = gemini_tools
 
         resp = await self.session.post(
-            self._sse_url(f"/models/{self.model}:streamGenerateContent"),
-            params={"alt": "sse"},
+            # inline query: niquests drops `params` on custom SSE schemes
+            self._sse_url(f"/models/{self.model}:streamGenerateContent?alt=sse"),
             json=payload,
         )
         _check_resp_status(resp)

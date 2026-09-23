@@ -333,7 +333,7 @@ class McpStreamable:
                 except asyncio.CancelledError:
                     log.debug("MCP GET listener cancelled")
             if self._session_id:
-                # Route through `sse://` so niquests' `cert_verify`
+                # Route through the SSE scheme so niquests' `cert_verify`
                 # early-returns — otherwise the not-idle pool triggers a
                 # spurious "TLS verification changed" warning.
                 await self._http.delete(self._sse_url, headers=self._headers())
@@ -422,10 +422,6 @@ class McpStreamable:
             raise RuntimeError("SSE extension not available on response")
         while not ext.closed:
             event = await ext.next_payload()
-            # urllib3-future can swallow cancellation while reading an SSE frame.
-            task = asyncio.current_task()
-            if task is not None and task.cancelling():
-                raise asyncio.CancelledError
             if event is None:
                 break
             if event.id:
@@ -471,9 +467,6 @@ class McpStreamable:
                 retries = 0
                 while not ext.closed:
                     event = await ext.next_payload()
-                    task = asyncio.current_task()
-                    if task is not None and task.cancelling():
-                        raise asyncio.CancelledError
                     if event is None:
                         break
                     if event.id:

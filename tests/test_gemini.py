@@ -271,6 +271,11 @@ class TestGeminiStream:
         client.session.post.return_value = make_sse_resp(events)
         chunks = [c async for c in GeminiClient.stream(client, {"contents": []})]
         assert chunks == [chunk1, chunk2]
+        # niquests drops `params` on `sse+ai://`, so the query must be inline
+        assert client.session.post.call_args.args[0].endswith(
+            ":streamGenerateContent?alt=sse"
+        )
+        assert "params" not in client.session.post.call_args.kwargs
 
     @pytest.mark.asyncio
     async def test_skips_keepalive_frames(self, client, make_sse_event, make_sse_resp):

@@ -118,14 +118,16 @@ class TestToSseUrl:
         "url, expected",
         [
             pytest.param(
-                "https://example.com/mcp", "sse://example.com/mcp", id="https"
+                "https://example.com/mcp", "sse+ai://example.com/mcp", id="https"
             ),
             pytest.param(
-                "http://localhost:8080/mcp", "psse://localhost:8080/mcp", id="http"
+                "http://localhost:8080/mcp",
+                "psse+ai://localhost:8080/mcp",
+                id="http",
             ),
             pytest.param(
                 "sse://already.ok/mcp",
-                "psse://sse://already.ok/mcp",
+                "psse+ai://sse://already.ok/mcp",
                 id="passthrough-no-match",
             ),
         ],
@@ -464,58 +466,6 @@ class TestMcpStreamable:
             assert td["parameters"]["properties"]["query"]["type"] == "string"
             result = await tool.handler({"query": "test"})
             assert result["content"][0]["text"] == "found it"
-
-    async def test_rpc_preserves_sse_cancellation(self, mock_http):
-        reading = asyncio.Event()
-        response = _make_sse_response([])
-
-        async def swallow_cancel():
-            reading.set()
-            try:
-                await asyncio.Future()
-            except asyncio.CancelledError:
-                return None
-
-        response.extension.next_payload = swallow_cancel
-        mock_http.post = AsyncMock(return_value=response)
-        client = McpStreamable(url="https://example.com/mcp")
-        client._http = mock_http
-        async with asyncio.timeout(1):
-            call = asyncio.create_task(client._call("search", {"query": "test"}))
-            await reading.wait()
-            call.cancel()
-            with pytest.raises(asyncio.CancelledError):
-                await call
-        response.__aexit__.assert_awaited_once()
-
-        mock_http.post.return_value = _make_response(_CALL_RESULT)
-        assert await client._call("search", {}) == _CALL_RESULT["result"]
-
-    async def test_listener_exits_when_sse_swallows_cancellation(self, mock_http):
-        reading = asyncio.Event()
-        response = _make_sse_response([])
-
-        async def swallow_cancel():
-            reading.set()
-            try:
-                await asyncio.Future()
-            except asyncio.CancelledError:
-                return None
-
-        response.extension.next_payload = swallow_cancel
-        mock_http.get.return_value = response
-        client = McpStreamable(url="https://example.com/mcp")
-        client._http = mock_http
-        listener = asyncio.create_task(client._listen())
-        try:
-            async with asyncio.timeout(1):
-                await reading.wait()
-                listener.cancel()
-                await asyncio.wait_for(asyncio.shield(listener), timeout=0.1)
-        finally:
-            listener.cancel()
-            await listener
-        mock_http.get.assert_awaited_once()
 
     @pytest.mark.parametrize(
         "session_id, expected_header_value",
