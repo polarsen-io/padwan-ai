@@ -84,13 +84,18 @@ Uses `batchEmbedContents`; the response holds one `values` vector per input, in 
 
 ```python
 async with GeminiClient(model="gemini-3.8-flash-tts") as client:
-    speech, usage = await client.generate_speech("Say cheerfully: have a nice day!", "Kore")
+    speech, usage = await client.generate_speech(
+        "Say cheerfully: have a nice day!", "Kore"
+    )
     # speech.audio: bytes, speech.mime_type: "audio/wav"
 
     # Two speakers: tag each line; speaker names must match the voice mapping.
     speech, _ = await client.generate_speech(
         [
-            {"text": "Hi Bob!", "speechMetadata": {"speaker": "Alice", "style": "excited"}},
+            {
+                "text": "Hi Bob!",
+                "speechMetadata": {"speaker": "Alice", "style": "excited"},
+            },
             {"text": "<laughs> Hey Alice.", "speechMetadata": {"speaker": "Bob"}},
         ],
         {"Alice": "Leda", "Bob": "Puck"},
