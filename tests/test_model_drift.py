@@ -107,3 +107,40 @@ def test_typesafe_drift_report(
         )
     else:
         fetch.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "model_id, expected",
+    [
+        pytest.param("gemini-3.8-flash-tts", True, id="ga"),
+        pytest.param("gemini-2.5-flash-preview-tts", True, id="preview"),
+        pytest.param("gemini-3.1-flash-tts-preview", True, id="preview-suffix"),
+        pytest.param("gemini-3.8-flash", False, id="chat-model"),
+        pytest.param("gemini-3.8-flash-tts-0925", False, id="dated"),
+        pytest.param("gemini-2.0-flash-tts", False, id="old"),
+    ],
+)
+def test_is_gemini_tts_model(
+    model_drift: ModuleType, model_id: str, expected: bool
+) -> None:
+    assert model_drift._is_gemini_tts_model(model_id) is expected
+
+
+def test_gemini_speech_type_drift(
+    model_drift: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from typing import NotRequired, TypedDict
+
+    from padwan_ai.gemini import models
+
+    class VoiceConfig(TypedDict):
+        prebuiltVoiceConfig: models.PrebuiltVoiceConfig
+        replicatedVoiceConfig: NotRequired[dict]
+        voice: NotRequired[str]
+        legacyField: NotRequired[str]
+
+    monkeypatch.setattr(models, "VoiceConfig", VoiceConfig)
+    drift = model_drift._gemini_speech_type_drift()
+    assert set(drift) == {"VoiceConfig"}
+    assert drift["VoiceConfig"].added == set()
+    assert drift["VoiceConfig"].removed == {"legacy_field"}

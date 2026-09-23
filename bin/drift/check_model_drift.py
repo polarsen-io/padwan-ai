@@ -2,6 +2,7 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
+#     "google-genai>=2.25.0",
 #     "openai>=2.36.0",
 #     "piou>=0.34.1",
 #     "padwan-ai",
@@ -33,7 +34,8 @@ import niquests
 from openai.types import ChatModel, EmbeddingModel
 
 from padwan_ai.anthropic.client import ANTHROPIC_MODELS, ANTHROPIC_VERSION
-from padwan_ai.gemini.client import GEMINI_MODELS, GeminiEmbeddingModel
+from padwan_ai.gemini import models as gemini_models
+from padwan_ai.gemini.client import GEMINI_MODELS, GeminiEmbeddingModel, GeminiTTSModel
 from padwan_ai.gemini.realtime import DEFAULT_LIVE_MODEL, GeminiLiveModel
 from padwan_ai.grok.client import GROK_MODELS
 from padwan_ai.mistral.client import (
@@ -380,6 +382,69 @@ def _gemini_embedding_models() -> RemoteModels:
     return _gemini_models("embedContent", _is_gemini_embedding_model)
 
 
+def _is_gemini_tts_model(model_id: str) -> bool:
+    return (
+        model_id.startswith("gemini-")
+        and "-tts" in model_id
+        and not _DATE_SUFFIX.search(model_id)
+        and not model_id.startswith(_GEMINI_OLD_PREFIXES)
+    )
+
+
+def _gemini_tts_models() -> RemoteModels:
+    return _gemini_models("generateContent", _is_gemini_tts_model)
+
+
+# Local camelCase TypedDict -> google-genai snake_case TypedDict.
+_GEMINI_SPEECH_TYPES = (
+    "SpeechConfig",
+    "VoiceConfig",
+    "PrebuiltVoiceConfig",
+    "MultiSpeakerVoiceConfig",
+    "SpeakerVoiceConfig",
+    "SpeechMetadata",
+)
+
+
+def _gemini_speech_type_drift() -> dict[str, Diff]:
+    """Diff field names of our speech TypedDicts against the installed google-genai ones."""
+    from google.genai import types as sdk
+
+    out: dict[str, Diff] = {}
+    for name in _GEMINI_SPEECH_TYPES:
+        local = {
+            re.sub(r"(?<=[a-z0-9])([A-Z])", r"_\1", key).lower()
+            for key in typing.get_type_hints(getattr(gemini_models, name))
+        }
+        remote = set(typing.get_type_hints(getattr(sdk, f"{name}Dict")))
+        if (diff := _diff(remote, local)).has_drift:
+            out[name] = diff
+    return out
+
+
+def _render_gemini_speech_types(lines: list[str], drift: dict[str, Diff]) -> None:
+    lines.append("## Gemini speech types")
+    lines.append("")
+    lines.append("Source: `google.genai.types.*Dict` in the installed SDK.")
+    lines.append(
+        f"Target: `padwan_ai/gemini/models.py::{', '.join(_GEMINI_SPEECH_TYPES)}`."
+    )
+    lines.append("")
+    if not drift:
+        lines.append("No field drift against the SDK.")
+        lines.append("")
+        return
+    for name, diff in drift.items():
+        lines.append(f"### {name}")
+        lines.append("")
+        _render_diff(
+            lines,
+            diff,
+            add_label="**New SDK fields** - not modelled locally:",
+            remove_label="**Removed from the SDK** - still in our TypedDict:",
+        )
+
+
 def _gemini_realtime_models() -> RemoteModels:
     return _gemini_models("bidiGenerateContent", _is_gemini_realtime_model)
 
@@ -700,6 +765,7 @@ def _render(
     realtime_models: set[str],
     realtime_voice_diff: Diff,
     live_checks: list[LiveCheck],
+    gemini_speech_drift: dict[str, Diff],
 ) -> str:
     lines: list[str] = [
         "# Provider Model Drift Report",
@@ -712,6 +778,7 @@ def _render(
     _render_openai_realtime(lines, realtime_models, realtime_voice_diff)
     for check in live_checks:
         _render_live(lines, check)
+    _render_gemini_speech_types(lines, gemini_speech_drift)
 
     lines.extend(
         [
@@ -816,6 +883,18 @@ def check(out: Path | None = None) -> None:
             ),
         ),
         _live_check(
+            "Gemini TTS",
+            "GET https://generativelanguage.googleapis.com/v1beta/models",
+            "padwan_ai/gemini/client.py::GeminiTTSModel",
+            "https://ai.google.dev/gemini-api/docs/speech-generation",
+            _gemini_tts_models(),
+            set(typing.get_args(GeminiTTSModel)),
+            notes=(
+                "Only `-tts` models supporting `generateContent` are considered; "
+                "dated and old names are filtered.",
+            ),
+        ),
+        _live_check(
             "Gemini Live (realtime)",
             "GET https://generativelanguage.googleapis.com/v1beta/models",
             "padwan_ai/gemini/realtime.py::GeminiLiveModel, DEFAULT_LIVE_MODEL",
@@ -880,7 +959,12 @@ def check(out: Path | None = None) -> None:
         )
 
     report = _render(
-        openai_sdk_diff, openai_live, realtime_models, realtime_voice_diff, live_checks
+        openai_sdk_diff,
+        openai_live,
+        realtime_models,
+        realtime_voice_diff,
+        live_checks,
+        _gemini_speech_type_drift(),
     )
     print(report)
     if out:
