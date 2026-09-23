@@ -113,7 +113,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "Telemetry from `just e2e-otel`. Pick a **Run** above \u2014 each run is a short-lived process whose counters stop changing when it exits, so panels read them with `last_over_time()` and the time picker only decides which runs are still visible, not what the numbers mean."
+        "content": "Telemetry from `just obs::e2e-otel`. Pick a **Run** above \u2014 each run is a short-lived process whose counters stop changing when it exits, so panels read them with `last_over_time()` and the time picker only decides which runs are still visible, not what the numbers mean."
       },
       "id": 2
     },
