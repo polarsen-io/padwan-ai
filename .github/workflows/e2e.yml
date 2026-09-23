@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - id: files
-        run: echo "files=$(ls tests/e2e/test_*.py | jq -Rsc 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+        run: echo "files=$(ls tests/e2e/test_*.py | grep -v test_vllm.py | jq -Rsc 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
 
   e2e:
     name: E2E (${{ matrix.file }})
@@ -54,3 +54,28 @@ jobs:
 
       - name: Run end-to-end tests
         run: uv run pytest ${{ matrix.file }} -m e2e -vv
+
+  e2e-vllm:
+    name: E2E (tests/e2e/test_vllm.py)
+    needs: collect
+    # needs a reachable vLLM server; shown as skipped until the repo variable is set
+    if: vars.VLLM_BASE_URL != ''
+    runs-on: ubuntu-latest
+    env:
+      VLLM_BASE_URL: ${{ vars.VLLM_BASE_URL }}
+      VLLM_MODEL: ${{ vars.VLLM_MODEL }}
+
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --all-groups
+
+      - name: Run end-to-end tests
+        run: uv run pytest tests/e2e/test_vllm.py -m e2e -vv

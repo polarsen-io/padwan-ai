@@ -19,7 +19,7 @@ async def test_reasoning_forwarded_to_on_thought(stream: bool) -> None:
     """vLLM `reasoning` field reaches on_thought, not the answer text."""
     received: list[str] = []
     async with OpenAIClient(
-        model=os.environ.get("VLLM_MODEL", "Qwen/Qwen3-0.6B"),
+        model=os.environ.get("VLLM_MODEL") or "Qwen/Qwen3-0.6B",
         base_url=os.environ["VLLM_BASE_URL"],
         api_key="EMPTY",
         on_thought=received.append,
