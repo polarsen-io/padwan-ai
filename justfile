@@ -66,6 +66,23 @@ e2e-langfuse env=".env" *args: langfuse-up
     export LANGFUSE_SECRET_KEY=$LANGFUSE_INIT_PROJECT_SECRET_KEY
     just e2e {{ env }} --langfuse {{ args }}
 
+vllm_model := env("VLLM_MODEL", "Qwen/Qwen3-0.6B")
+
+# Start a local vLLM server on :8100 (native via uvx, GPU, reasoning parser on)
+[group('vllm')]
+vllm-up:
+    ./bin/vllm-up.sh {{ vllm_model }}
+
+# Stop the local vLLM server
+[group('vllm')]
+vllm-down:
+    ./bin/vllm-down.sh
+
+# Run vLLM e2e tests against the local server
+[group('vllm')]
+e2e-vllm *args: vllm-up
+    VLLM_BASE_URL=http://localhost:8100/v1 VLLM_MODEL={{ vllm_model }} uv run pytest tests/e2e/test_vllm.py -m e2e {{ args }}
+
 # Type check
 [group('dev')]
 check:
