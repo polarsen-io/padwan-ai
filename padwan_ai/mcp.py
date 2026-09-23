@@ -6,7 +6,7 @@ import inspect
 import os.path
 import re
 import uuid
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from http import HTTPStatus
 from importlib.metadata import version as _pkg_version
@@ -70,11 +70,21 @@ class ProgressEvent(TypedDict):
 class _JsonRpcNotification(TypedDict):
     jsonrpc: str
     method: str
-    params: NotRequired[dict[str, Any]]
+    params: NotRequired[Mapping[str, Any]]
 
 
 class _JsonRpcRequest(_JsonRpcNotification):
     id: str
+
+
+class _RequestMeta(TypedDict):
+    progressToken: str
+
+
+class _ToolCallParams(TypedDict):
+    name: str
+    arguments: dict[str, Any]
+    _meta: NotRequired[_RequestMeta]
 
 
 @dataclass
@@ -218,11 +228,11 @@ def _mcp_headers(
 
 
 def _call_params(
-    name: str, args: dict[str, Any], on_progress: Callable[[ProgressEvent], Any] | None
-) -> dict[str, Any]:
-    """Build `tools/call` params, requesting progress when a callback is set."""
-    params: dict[str, Any] = {"name": name, "arguments": args}
-    if on_progress is not None:
+    name: str, args: dict[str, Any], *, with_progress: bool
+) -> _ToolCallParams:
+    """Build `tools/call` params, optionally requesting progress notifications."""
+    params: _ToolCallParams = {"name": name, "arguments": args}
+    if with_progress:
         params["_meta"] = {"progressToken": uuid.uuid4().hex}
     return params
 
@@ -400,7 +410,7 @@ class McpStreamable:
     async def _rpc(
         self,
         method: _RpcMethod,
-        params: dict[str, Any] | None = None,
+        params: Mapping[str, Any] | None = None,
         *,
         _reinit: bool = True,
         _reauth: bool = True,
@@ -587,7 +597,8 @@ class McpStreamable:
 
     async def _call(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
         result = await self._rpc(
-            "tools/call", _call_params(name, args, self.on_progress)
+            "tools/call",
+            _call_params(name, args, with_progress=self.on_progress is not None),
         )
         return _normalize_call_result(result)
 
@@ -785,7 +796,7 @@ class McpStdio:
             log.warning("MCP stdio stderr drain failed", exc_info=True)
 
     async def _rpc(
-        self, method: _RpcMethod, params: dict[str, Any] | None = None
+        self, method: _RpcMethod, params: Mapping[str, Any] | None = None
     ) -> Any:
         self._next_id += 1
         rid = str(self._next_id)
@@ -884,7 +895,8 @@ class McpStdio:
 
     async def _call(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
         result = await self._rpc(
-            "tools/call", _call_params(name, args, self.on_progress)
+            "tools/call",
+            _call_params(name, args, with_progress=self.on_progress is not None),
         )
         return _normalize_call_result(result)
 
