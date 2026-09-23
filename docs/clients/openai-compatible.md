@@ -1,8 +1,12 @@
+---
+icon: lucide/plug
+---
+
 # OpenAI-Compatible APIs
 
 `OpenAIClient` can be used directly with any API that implements the OpenAI chat completions interface. Use it to connect to providers like Groq, Together AI, Fireworks, Ollama, vLLM, LiteLLM, or any other OpenAI-compatible endpoint.
 
-The named provider clients (`MistralClient`, `GrokClient`) inherit from this class.
+The named provider clients (`MistralClient`, `GrokClient`, `VoyageClient`) share the OpenAI-compatible base (`_OpenAIBase`) with `OpenAIClient`, not `OpenAIClient` itself.
 
 ## Configuration
 
@@ -16,7 +20,8 @@ client = OpenAIClient(
 )
 ```
 
-Both `base_url` and `api_key` are required when targeting a non-OpenAI endpoint.
+!!! note "API key fallback"
+    `OPENAI_API_KEY` is only used when `base_url` points at `api.openai.com`. For any other host (Scaleway, a local vLLM, a proxy, ...) a missing `api_key` falls back to `PADWAN_API_KEY`, then `"no-key-required"` — your OpenAI key is never sent to a third-party endpoint. Pass `api_key` explicitly when the endpoint needs one.
 
 ## Unified gateway via environment
 
@@ -52,6 +57,9 @@ Passing an explicit `base_url` disables gateway mode and restores native
 per-provider routing (so you can still point `GeminiClient` at a Gemini-protocol
 proxy). In gateway mode the token never falls back to `OPENAI_API_KEY`; if
 `PADWAN_API_KEY` is unset it defaults to `"no-key-required"` for local gateways.
+Even outside gateway mode, an explicit `base_url` with no `api_key` still
+prefers `PADWAN_API_KEY` over the provider's native env key, on both
+`LLMClient` and `RealtimeClient`.
 
 ## Usage
 

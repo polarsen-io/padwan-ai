@@ -1,6 +1,10 @@
+---
+icon: simple/x
+---
+
 # Grok Client
 
-The Grok client provides access to xAI's Grok models. It inherits from [`OpenAIClient`](openai.md) since Grok uses an OpenAI-compatible API.
+The Grok client provides access to xAI's Grok models. It shares [`OpenAIClient`](openai.md)'s OpenAI-compatible chat base (no batch API) since Grok uses an OpenAI-compatible API; its own batch methods (`get_batch_results`, `list_batches`) have different signatures than OpenAI's.
 
 ## Configuration
 
@@ -12,6 +16,8 @@ client = GrokClient(
     model="grok-3",  # default model
 )
 ```
+
+`padwan_ai.grok.supports_audio(model)` / `supports_vision(model)` check model capabilities.
 
 ## Usage
 
@@ -48,7 +54,7 @@ state.add_user_message("Hello!")
 
 async with GrokClient() as client:
     response, usage = await client.complete_chat(state.messages)
-    state.add_assistant_message(response["content"])
+    state.add_assistant_response(response)
     state.accumulate_usage(usage)
 ```
 
@@ -78,6 +84,10 @@ async with GrokClient() as client:
     print(job.batch_id, job.num_requests)
 ```
 
+Each request's `body` is forwarded in full (`temperature`, `tools`, etc.); `model` comes from the client or the `create_batch(model=)`/`add_batch_requests(model=)` argument, overriding any `model` in `body`.
+
+Use `client.add_batch_requests(batch_id, requests)` to add more requests to an existing batch.
+
 ### Check status and fetch results
 
 ```python
@@ -85,9 +95,11 @@ async with GrokClient() as client:
     job = await client.get_batch("batch-abc")
 
     if job.succeeded:
-        results, _ = await client.get_batch_results(job.batch_id)
+        results, next_token = await client.get_batch_results(job.batch_id)
         for r in results:
             print(r.custom_id, r.content)
+        # get_batch_results pages (default limit=100); pass next_token as
+        # pagination_token= to fetch the rest
 ```
 
 ### List and cancel batches
@@ -103,8 +115,8 @@ async with GrokClient() as client:
 | Type | Fields |
 |------|--------|
 | `GrokBatchRequest` | Single request: `body`, `custom_id` |
-| `GrokBatchJob` | Job state: `batch_id`, `name`, `num_requests`, `num_pending`, `num_success`, `num_error`, `num_cancelled`, `is_terminal`, `succeeded` |
-| `GrokBatchResult` | Parsed result: `custom_id`, `content`, `input_tokens`, `output_tokens`, `total_tokens`, `error_message` |
+| `GrokBatchJob` | Job state: `batch_id`, `name`, `num_requests`, `num_pending`, `num_success`, `num_error`, `num_cancelled`, `create_time`, `expire_time`, `is_terminal`, `succeeded` |
+| `GrokBatchResult` | Parsed result: `custom_id`, `content`, `input_tokens`, `output_tokens`, `total_tokens`, `finish_reason`, `error_message` |
 
 ## Method Outputs
 

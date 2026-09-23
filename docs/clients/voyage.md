@@ -1,3 +1,7 @@
+---
+icon: lucide/sailboat
+---
+
 # Voyage AI Client
 
 Voyage AI is an embeddings-only provider (the one Anthropic recommends alongside Claude). The client shares the OpenAI-compatible base, so only `fetch_embeddings` is meaningful; chat methods are not served by the API.

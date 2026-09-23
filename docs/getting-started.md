@@ -39,9 +39,9 @@ async with client:
 
 ### Supported Models
 
-The provider is auto-detected from the model name: **OpenAI**, **Gemini**, **Mistral**, **Grok**, **Anthropic** (`claude-*`).
+The provider is auto-detected from the model name: **OpenAI**, **Gemini**, **Mistral**, **Grok**, **Anthropic** (`claude-*`), **Voyage AI** (embeddings only).
 
-For other providers, use `OpenAIClient` directly:
+For other providers, pass `base_url=` to `LLMClient` (or use `OpenAIClient` directly):
 
 ```python
 from padwan_ai import OpenAIClient
@@ -56,6 +56,8 @@ async with OpenAIClient(
     )
 ```
 
+Passing a model a provider has scheduled for retirement emits a one-time `ModelDeprecationWarning` (a `FutureWarning`); the model keeps working until retirement.
+
 ### Environment Variables
 
 Each provider looks for its API key in environment variables:
@@ -67,7 +69,10 @@ Each provider looks for its API key in environment variables:
 | Mistral  | `MISTRAL_API_KEY`   |
 | Grok     | `GROK_API_KEY`      |
 | Anthropic | `ANTHROPIC_API_KEY` |
+| Voyage AI | `VOYAGE_API_KEY` |
 | TypeSafe (JEV) | `TYPESAFE_API_KEY` |
+
+Gateway mode routes every model through one OpenAI-compatible endpoint instead: set `PADWAN_BASE_URL` and `PADWAN_API_KEY` — see [openai-compatible.md](clients/openai-compatible.md).
 
 ```python
 # No need to pass api_key if environment variable is set
