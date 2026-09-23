@@ -23,22 +23,22 @@ e2e env=".env" *args:
 # Local observability stacks (OTel, Langfuse): just obs::<tab>
 mod obs "bin/observability"
 
-vllm_model := env("VLLM_MODEL", "Qwen/Qwen3-0.6B")
+vllm_compose := "docker compose -p padwan-vllm -f bin/vllm/docker-compose.yml"
 
-# Start a local vLLM server on :8100 (Docker, NVIDIA GPU, reasoning parser on)
+# Start a local vLLM server on :8100 (Docker, NVIDIA GPU; model via VLLM_MODEL)
 [group('vllm')]
 vllm-up:
-    ./bin/vllm-up.sh {{ vllm_model }}
+    {{ vllm_compose }} up -d --wait
 
-# Stop and remove the local vLLM server
+# Stop the local vLLM server
 [group('vllm')]
 vllm-down:
-    ./bin/vllm-down.sh
+    {{ vllm_compose }} down
 
 # Run vLLM e2e tests against the local server
 [group('vllm')]
 e2e-vllm *args: vllm-up
-    VLLM_BASE_URL=http://localhost:8100/v1 VLLM_MODEL={{ vllm_model }} uv run pytest tests/e2e/test_vllm.py -m e2e {{ args }}
+    VLLM_BASE_URL=http://localhost:8100/v1 uv run pytest tests/e2e/test_vllm.py -m e2e {{ args }}
 
 # Type check
 [group('dev')]
