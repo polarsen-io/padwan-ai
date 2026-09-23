@@ -1,3 +1,7 @@
+---
+icon: simple/modelcontextprotocol
+---
+
 # Model Context Protocol (MCP)
 
 Padwan AI ships two MCP client transports — `McpStreamable` (HTTP) and `McpStdio` (subprocess) — both implementing the [MCP 2025-11-25 spec](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports). They expose the same `tools` interface, but their internal concurrency models differ in important ways.
@@ -33,6 +37,31 @@ async with McpStdio(command="uvx", args=["my-mcp-server"]) as mcp:
 | Ping | ✅ | ✅ |
 | Request cancellation | ✅ (`cancel()`) | ✅ (`cancel()`) |
 
+## Constructor parameters
+
+### `McpStreamable`
+
+| Parameter | Default | Description |
+|---|---|---|
+| `url` | required | MCP server endpoint. |
+| `token` | `None` | Bearer token, sent as `Authorization: Bearer <token>`. |
+| `on_progress` | `None` | Callback for `notifications/progress`; also makes `tools/call` send `_meta.progressToken`. |
+| `on_auth` | `None` | Callback to refresh `token` on HTTP 401 — see [Token refresh on 401](#token-refresh-on-401). |
+| `client_name` / `client_version` | `"padwan-ai"` / package version | Sent as `clientInfo` in `initialize`. |
+| `name_prefix` | `None` | Namespace for this transport's tools; used by `AgentSession` to avoid name collisions. |
+
+### `McpStdio`
+
+| Parameter | Default | Description |
+|---|---|---|
+| `command` | required | Executable to spawn. |
+| `args` | `[]` | Arguments passed to `command`. |
+| `env` | `None` | Subprocess environment. **Replaces the process environment entirely**, it does not merge into it — pass `os.environ \| {...}` to extend rather than overwrite. `None` inherits the parent's environment as-is. |
+| `cwd` | `None` | Working directory for the subprocess. |
+| `on_progress` | `None` | Same as `McpStreamable.on_progress`. |
+| `client_name` / `client_version` | same defaults | Same as `McpStreamable`. |
+| `name_prefix` | `None` | Same as `McpStreamable`. |
+
 ## `McpStreamable` — dual-channel architecture
 
 The streamable HTTP transport runs **two concurrent communication channels** against the same endpoint:
@@ -43,7 +72,7 @@ flowchart LR
         Caller["User code<br/>tool.handler"]
         RPC["_rpc<br/>foreground POST"]
         Listen["_listen<br/>background GET task"]
-        Pending["pending requests<br/>by JSON-RPC id"]
+        Tools["tools list<br/>(_tools)"]
     end
 
     subgraph server["MCP server"]
@@ -57,7 +86,7 @@ flowchart LR
 
     Listen -.->|GET SSE persistent| Endpoint
     Endpoint -.->|server-pushed notifications| Listen
-    Listen -.->|tools list_changed, refresh tools| Pending
+    Listen -.->|tools list_changed, refresh| Tools
     Listen -.->|progress, on_progress callback| Caller
 ```
 
@@ -66,6 +95,10 @@ The **foreground channel** (`_rpc`) handles request/response: you `await tool.ha
 The **background channel** (`_listen`) is a persistent GET against the same `/mcp` endpoint, opened during `__aenter__` and torn down in `__aexit__`. It receives **unsolicited server pushes** — things the server wants to tell you without being asked, like `notifications/tools/list_changed` (server's tool list changed, we should re-fetch) or out-of-band `notifications/progress` for long-running operations.
 
 This separation means **the listener can deliver notifications even while you have no in-flight RPC**. Without it, a server that wanted to tell you "my tools changed" would have to wait until you happened to ask for something.
+
+Notifications aren't limited to the background channel: if a POST's response is itself an SSE stream, `_rpc` also handles `tools/list_changed` and `progress` events that arrive inline before the response.
+
+Setting `on_progress` makes `tools/call` send `_meta.progressToken` with the request, so a spec-compliant server knows to emit `notifications/progress` for that call. Without `on_progress`, no token is sent and no progress notifications arrive.
 
 ## `McpStreamable` — full lifecycle
 
@@ -108,9 +141,13 @@ sequenceDiagram
 
 The key thing to notice: the background `_listen` task is **spawned during `__aenter__`** and lives for the entire duration of the `async with` block. It runs in parallel with all your RPC calls and can deliver notifications at any moment.
 
+### Session recovery and cleanup
+
+If a request gets HTTP 404 with an active session (the server forgot it), the client re-initializes once and retries the request. On `__aexit__`, the client sends `DELETE` to end the session server-side.
+
 ### Token refresh on 401
 
-Set `on_auth` to recover from expired bearer tokens. When an RPC returns HTTP 401, the client invokes the callback (sync or async), stores the returned token, and retries the request exactly once:
+Set `on_auth` to recover from expired bearer tokens. This applies to request/response RPCs only (`initialize`, `tools/list`, `tools/call`, `ping`) — when one returns HTTP 401, the client invokes the callback (sync or async), stores the returned token, and retries the request exactly once. The `notifications/initialized` POST, `cancel()`, and the background listener's GET don't call `on_auth`; a 401 on the listener GET instead burns one of its reconnect attempts.
 
 ```python
 async def refresh(transport: McpStreamable) -> str:
@@ -145,7 +182,9 @@ sequenceDiagram
     Server-->>Listener: event id="evt-3"<br/>(resumes after evt-2)
 ```
 
-The retry budget is bounded by `max_retries` (default `5`) and the inter-attempt delay is controlled by the server via the SSE `retry:` field — if the server sends `retry: 5000`, the next reconnect waits 5 seconds. The client falls back to `_DEFAULT_RETRY_MS = 3000` ms otherwise.
+The retry budget allows up to 5 consecutive failed reconnects (not configurable) before the listener gives up; a clean stream end counts as one retry too, and a successful reconnect resets the counter back to 0. The inter-attempt delay is controlled by the server via the SSE `retry:` field — if the server sends `retry: 5000`, the next reconnect waits 5 seconds. The client falls back to `_DEFAULT_RETRY_MS = 3000` ms otherwise.
+
+Once the 5 consecutive failures are exhausted, the listener logs a warning and stops. `is_open` stays `True` — the transport is still usable for RPCs — but push notifications (progress events, `tools/list_changed`) no longer arrive.
 
 If the server returns `405 Method Not Allowed` on the GET, the listener exits cleanly — that signals "this server doesn't support push notifications," which is allowed by the spec.
 
@@ -177,7 +216,7 @@ flowchart LR
     Reader -->|notification without id| OnProg
 ```
 
-Because both directions share a single pipe, there's a **single background reader task** parsing NDJSON lines as they arrive. Each outgoing request gets a unique JSON-RPC `id`, and the reader uses that id to look up the right `asyncio.Future` and resolve it with the response. Notifications (messages without an `id`) are dispatched directly to the appropriate handler — `tools/list_changed` triggers a refresh, `progress` invokes the user's `on_progress` callback.
+Because both directions share a single pipe, there's a **single background reader task** parsing NDJSON lines as they arrive. Each outgoing request gets a unique JSON-RPC `id`, and the reader uses that id to look up the right `asyncio.Future` and resolve it with the response. Notifications (messages without an `id`) are dispatched directly to the appropriate handler — `tools/list_changed` triggers a refresh, `progress` invokes the user's `on_progress` callback. Server-initiated requests (e.g. a server `ping`) and messages with an unrecognized `id` fall into the same branch as notifications and are silently ignored — the client never answers them.
 
 Compared to `McpStreamable`:
 
@@ -189,6 +228,8 @@ Compared to `McpStreamable`:
 ## Cancellation
 
 Both transports support `cancel(request_id)`, which sends a `notifications/cancelled` message to the server. The server is expected to abort the in-flight operation and stop sending progress events for it. This is best-effort — the spec doesn't require the server to actually stop, just to acknowledge the request.
+
+`cancel(request_id)` is low-level: request ids are generated internally (`uuid4().hex` for `McpStreamable`, an incrementing counter for `McpStdio`) and never exposed to callers, so there's no supported way to obtain a `request_id` to pass it.
 
 The user-facing way to cancel is to cancel the `asyncio.Task` that's awaiting `tool.handler(...)`. The transport catches `CancelledError`, sends the cancellation notification, and re-raises.
 

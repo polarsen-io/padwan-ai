@@ -1,3 +1,7 @@
+---
+icon: lucide/activity
+---
+
 # Observability (OpenTelemetry)
 
 Padwan AI ships opt-in OpenTelemetry instrumentation following the [GenAI semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai). It only depends on `opentelemetry-api`, behind the `otel` extra:
@@ -14,7 +18,7 @@ from padwan_ai import otel
 otel.instrument()  # uses the global tracer/meter/logger providers
 ```
 
-`instrument()` wraps every provider client (OpenAI, Gemini, Mistral, Grok, Anthropic, Voyage): chat completions and streams, batch operations, embeddings, realtime sessions, agent turns and tool execution, and MCP tool calls. It is idempotent; call `otel.uninstrument()` to restore the original methods.
+`instrument()` wraps every provider client (OpenAI, Gemini, Mistral, Grok, Anthropic, Voyage): chat completions and streams, batch operations, embeddings, realtime sessions, agent turns and tool execution, and MCP tool calls. Calling it twice raises `RuntimeError`; call `otel.uninstrument()` first to restore the original methods (check with `otel.is_instrumented()`).
 
 `OpenAIClient.complete()` and `OpenAIClient.stream()` also create chat spans when called directly. Calls through `complete_chat()` or `stream_chat()` share the existing chat span. With content capture enabled, raw responses preserve each choice separately, including function and custom tool calls.
 
@@ -57,7 +61,7 @@ with instrument() as telemetry:
     asyncio.run(main())
 ```
 
-The returned `LangfuseIntegration` exposes the configured Langfuse client as `telemetry.client`. Its context manager flushes and shuts down the exporter, then restores the original Padwan methods. Call `flush()` only to send pending traces without shutting down; `shutdown()` is idempotent.
+The returned `LangfuseIntegration` exposes the configured Langfuse client as `telemetry.client`. Its context manager restores the original Padwan methods, then shuts down (and flushes) the Langfuse client. Call `flush()` only to send pending traces without shutting down; `shutdown()` is idempotent.
 
 ![Langfuse tracing view](static/langfuse-traces.png)
 
@@ -97,7 +101,7 @@ def redact_inputs(*, params: MaskOtelSpansParams) -> MaskOtelSpansResult:
 telemetry = instrument(capture_content=True, mask_otel_spans=redact_inputs)
 ```
 
-`instrument()` accepts Langfuse credentials and routing (`public_key`, `secret_key`, `base_url`), trace metadata (`environment`, `release`), delivery controls (`sample_rate`, `timeout`, `flush_at`, `flush_interval`), `debug`, an existing `tracer_provider`, and `should_export_span`. For tests, `span_exporter` (e.g. an `InMemorySpanExporter`) and `httpx_client` (e.g. an `httpx.MockTransport`) are handed to the Langfuse client as-is, so a test can assert on every attribute the integration would send without opening a socket. The credential arguments fall back to the standard Langfuse environment variables. A custom span filter is applied after the adapter includes Padwan spans.
+`instrument()` accepts Langfuse credentials and routing (`public_key`, `secret_key`, `base_url`), trace metadata (`environment`, `release`), delivery controls (`sample_rate`, `timeout`, `flush_at`, `flush_interval`), `debug`, an existing `tracer_provider`, and `should_export_span`. For tests, `span_exporter` (e.g. an `InMemorySpanExporter`) and `httpx_client` (e.g. `httpx.Client(transport=httpx.MockTransport(...))`) are handed to the Langfuse client as-is, so a test can assert on every attribute the integration would send without opening a socket. The credential arguments fall back to the standard Langfuse environment variables. A custom span filter is applied after the adapter includes Padwan spans.
 
 The integration exports traces only. Padwan metrics and exception log events still require separately configured OpenTelemetry meter and logger providers. Start the Langfuse integration before using Padwan; if `padwan_ai.otel.instrument()` is already active, the adapter raises instead of silently attaching to a different provider. See the [Langfuse OpenTelemetry integration](https://langfuse.com/integrations/native/opentelemetry) for backend configuration and troubleshooting.
 

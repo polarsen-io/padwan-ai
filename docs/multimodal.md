@@ -14,12 +14,12 @@ from padwan_ai import content_parts
 parts = content_parts(
     "What is in this screenshot?",  # str -> text part
     Path("shot.png"),  # image extension -> base64 data: URL image part
-    Path("voice.wav"),  # wav/mp3 extension -> base64 audio part
+    Path("voice.wav"),  # audio extension (wav/mp3/flac/ogg/aac/aiff/m4a) -> base64 audio part
     Path("notes.md"),  # any other file -> inlined text file part
 )
 ```
 
-Strings are always text (never treated as paths), so message text that mentions a filename is safe; wrap files in `Path` to have them read. Files are classified by extension: an image MIME type yields an image part, a wav/mp3 audio MIME type an audio part (other audio formats raise `ValueError`), anything else is inlined as text.
+Strings are always text (never treated as paths), so message text that mentions a filename is safe; wrap files in `Path` to have them read. Files are classified by extension: an image MIME type yields an image part, a supported audio extension yields an audio part (other `audio/*` types raise `ValueError`), anything else is inlined as text. A prebuilt `ContentPart` dict passes through unchanged.
 
 The explicit builders remain for full control:
 
@@ -65,7 +65,7 @@ supports_vision("mistral-large-latest")  # False - text-only
 supports_vision("some-local-model")  # True - unknown models are attempted
 ```
 
-Each provider package exposes its own `supports_vision` (e.g. `padwan_ai.mistral.supports_vision`); the top-level function dispatches to them in the same order as `LLMClient` routing. Unknown models default to `True` so the request is attempted and the provider surfaces the real error instead of the check guessing wrong.
+Each provider package exposes its own `supports_vision` (e.g. `padwan_ai.mistral.supports_vision`); the top-level function dispatches to them in the same prefix order as `LLMClient` (OpenAI, Gemini, Mistral, Grok, Anthropic). Unknown models default to `True` so the request is attempted and the provider surfaces the real error instead of the check guessing wrong.
 
 | Provider | Image input |
 |----------|-------------|
@@ -100,6 +100,6 @@ Each audio-capable provider package also exposes its accepted formats as `AUDIO_
 
 ## Limitations
 
-- No video parts, image generation, or audio generation.
+- No video parts or image generation; audio output comes only from Gemini TTS (`generate_speech`) and `RealtimeClient`.
 - Content parts are for user messages; assistant messages stay text-only.
 - The Anthropic client passes message content through unconverted, so image and audio parts are not usable with Claude models yet (and the Messages API takes no audio anyway).

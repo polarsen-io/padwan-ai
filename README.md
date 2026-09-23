@@ -6,7 +6,7 @@
 
 <p align="center">
   Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, TypeSafe (JEV, experimental), and any OpenAI-compatible API.<br>
-  One runtime dependency (<a href="https://github.com/jawah/niquests">niquests</a>), TypedDict everywhere, HTTP/2 and HTTP/3 out of the box.
+  One HTTP dependency (<a href="https://github.com/jawah/niquests">niquests</a>, plus its qh3/urllib3-future stack), TypedDict everywhere, HTTP/2 and HTTP/3 out of the box.
 </p>
 
 <p align="center">
@@ -82,6 +82,8 @@ async with AgentSession(
     print(await session.send("What is 2 + 3, and what's the weather in Paris?"))
 ```
 
+`@tool` needs `msgspec` or `pydantic` installed to build the parameter schema.
+
 Typed final answers (`AgentOutput`), approval hooks, parallel tool execution and snapshot persistence are covered in the [agents guide](docs/agents.md).
 
 ### One-shot from the shell
@@ -94,15 +96,15 @@ For an interactive chat TUI use [`padwan-cli`](https://github.com/polarsen-io/pa
 
 ## Providers
 
-| Provider | Chat + streaming | Batch | Realtime voice | Embeddings |
-|----------|:-:|:-:|:-:|:-:|
-| OpenAI | ✅ | ✅ | ✅ | ✅ |
-| Gemini | ✅ | ✅ | ✅ | ✅ |
-| Anthropic | ✅ | ❌ | ➖ | ➖ |
-| Mistral | ✅ | ❌ | ❌ | ✅ |
-| Grok | ✅ | ✅ | ✅ | ➖ |
-| Voyage AI | ➖ | ➖ | ➖ | ✅ |
-| OpenAI-compatible (`base_url=`) | ✅ | depends on the server | | depends on the server |
+| Provider | Chat + streaming | Batch | Realtime voice | Transcription | Embeddings |
+|----------|:-:|:-:|:-:|:-:|:-:|
+| OpenAI | ✅ | ✅ | ✅ | ❌ | ✅ |
+| Gemini | ✅ | ✅ | ✅ | ➖ | ✅ |
+| Anthropic | ✅ | ❌ | ➖ | ➖ | ➖ |
+| Mistral | ✅ | ❌ | ❌ | ✅ | ✅ |
+| Grok | ✅ | ✅ | ✅ | ➖ | ➖ |
+| Voyage AI | ➖ | ➖ | ➖ | ➖ | ✅ |
+| OpenAI-compatible (`base_url=`) | ✅ | depends on the server | depends on the server | depends on the server | depends on the server |
 
 ❌ = the provider offers it, not implemented yet. ➖ = the provider has no such API.
 

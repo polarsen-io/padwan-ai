@@ -1,3 +1,7 @@
+---
+icon: simple/anthropic
+---
+
 # Anthropic Client
 
 The Anthropic client provides access to Claude models through the native
@@ -58,7 +62,7 @@ state.add_user_message("Hello!")
 
 async with AnthropicClient() as client:
     response, usage = await client.complete_chat(state.messages)
-    state.add_assistant_message(response["content"])
+    state.add_assistant_response(response)
     state.accumulate_usage(usage)
 ```
 
@@ -117,6 +121,8 @@ async with AnthropicClient(
         [{"role": "user", "content": "What is 7 * 8?"}]
     )
 ```
+
+`stream_chat` accepts `extra_params`, merged into the request body. `client.build_body(messages, tools)` builds the raw Messages API body if you need it directly.
 
 ## Method Outputs
 
