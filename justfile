@@ -25,12 +25,12 @@ mod obs "bin/observability"
 
 vllm_model := env("VLLM_MODEL", "Qwen/Qwen3-0.6B")
 
-# Start a local vLLM server on :8100 (native via uvx, GPU, reasoning parser on)
+# Start a local vLLM server on :8100 (Docker, NVIDIA GPU, reasoning parser on)
 [group('vllm')]
 vllm-up:
     ./bin/vllm-up.sh {{ vllm_model }}
 
-# Stop the local vLLM server
+# Stop and remove the local vLLM server
 [group('vllm')]
 vllm-down:
     ./bin/vllm-down.sh

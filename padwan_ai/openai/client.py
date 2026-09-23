@@ -64,20 +64,7 @@ def _extract_text_payload(payload: dict[str, typing.Any]) -> str | None:
 
 
 def _extract_thought_payload(payload: dict[str, typing.Any]) -> str | None:
-    """Pull reasoning text out of a `delta` or `message` dict.
-
-    Handles two shapes:
-
-    - `reasoning_content: str` — xAI/Grok and DeepSeek-style reasoning
-      models surface their scratchpad as a sibling string field on the
-      delta/message.
-    - `content: list[{"type": "thinking", "thinking": [{"type": "text",
-      "text": ...}]}]` — Mistral's `Magistral` models embed reasoning as
-      a `ThinkChunk` inside a structured content array.
-
-    Returns the concatenated thought text, or `None` if neither shape
-    carries any reasoning content.
-    """
+    """Reasoning text from `reasoning_content`, `reasoning` or Mistral thinking chunks."""
     if rc := payload.get("reasoning_content") or payload.get("reasoning"):
         return rc if isinstance(rc, str) else None
     content = payload.get("content")

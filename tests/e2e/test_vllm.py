@@ -5,9 +5,13 @@ import pytest
 from padwan_ai import OpenAIClient
 from padwan_ai.conversation import Message
 
-from .conftest import _skip_no_key
+VLLM_BASE_URL = os.environ.get("VLLM_BASE_URL", "")
+VLLM_MODEL = os.environ.get("VLLM_MODEL") or "Qwen/Qwen3-0.6B"
 
-pytestmark = [pytest.mark.e2e, _skip_no_key("VLLM_BASE_URL")]
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.skipif(not VLLM_BASE_URL, reason="VLLM_BASE_URL not set"),
+]
 
 PROMPT = [Message(role="user", content="What is 7 * 8?")]
 
@@ -19,8 +23,8 @@ async def test_reasoning_forwarded_to_on_thought(stream: bool) -> None:
     """vLLM `reasoning` field reaches on_thought, not the answer text."""
     received: list[str] = []
     async with OpenAIClient(
-        model=os.environ.get("VLLM_MODEL") or "Qwen/Qwen3-0.6B",
-        base_url=os.environ["VLLM_BASE_URL"],
+        model=VLLM_MODEL,
+        base_url=VLLM_BASE_URL,
         api_key="EMPTY",
         on_thought=received.append,
     ) as client:
