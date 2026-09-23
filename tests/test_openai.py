@@ -256,6 +256,13 @@ class TestStreamForwardsThoughts:
                 id="grok_reasoning_content",
             ),
             pytest.param(
+                [{"choices": [{"delta": {"content": "The answer is 42"}}]}],
+                "The answer is 42",
+                [],
+                True,
+                id="reasoning_not_exposed",
+            ),
+            pytest.param(
                 [
                     {
                         "choices": [
@@ -331,6 +338,54 @@ class TestStreamForwardsThoughts:
         produced = [t async for t in stream]
         assert "".join(produced) == expected_text
         assert thoughts == expected_thoughts
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        pytest.param(
+            {
+                "content": [
+                    {
+                        "type": "thinking",
+                        "thinking": [{"type": "text", "text": "Thinking"}],
+                    },
+                    {"type": "text", "text": "56"},
+                ]
+            },
+            id="mistral",
+        ),
+        pytest.param({"content": "56", "reasoning_content": "Thinking"}, id="grok"),
+    ],
+)
+async def test_complete_chat_reasoning_effort(
+    monkeypatch: pytest.MonkeyPatch, message: dict
+):
+    thoughts: list[str] = []
+    client = OpenAIClient(api_key="k", on_thought=thoughts.append)
+    complete = AsyncMock(
+        return_value=(
+            {
+                "choices": [
+                    {
+                        "message": message,
+                        "finish_reason": "stop",
+                    }
+                ],
+            },
+            {"input": 1, "output": 2, "total": 3},
+        )
+    )
+    monkeypatch.setattr(client, "complete", complete)
+
+    response, _ = await client.complete_chat(
+        [{"role": "user", "content": "What is 7 * 8?"}],
+        extra_params={"reasoning_effort": "high"},
+    )
+
+    assert complete.call_args.args[0]["reasoning_effort"] == "high"
+    assert response["content"] == "56"
+    assert thoughts == ["Thinking"]
 
 
 class TestOpenAIStream:

@@ -118,14 +118,16 @@ class TestToSseUrl:
         "url, expected",
         [
             pytest.param(
-                "https://example.com/mcp", "sse://example.com/mcp", id="https"
+                "https://example.com/mcp", "sse+ai://example.com/mcp", id="https"
             ),
             pytest.param(
-                "http://localhost:8080/mcp", "psse://localhost:8080/mcp", id="http"
+                "http://localhost:8080/mcp",
+                "psse+ai://localhost:8080/mcp",
+                id="http",
             ),
             pytest.param(
                 "sse://already.ok/mcp",
-                "psse://sse://already.ok/mcp",
+                "psse+ai://sse://already.ok/mcp",
                 id="passthrough-no-match",
             ),
         ],
