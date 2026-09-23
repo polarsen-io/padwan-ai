@@ -42,6 +42,7 @@ GrokModel = Literal[
     "grok-4.5",
     "grok-4.5-latest",
     "grok-4.6",
+    "grok-4.7",
     "grok-4.3",
     "grok-4.3-latest",
     "grok-4.20",

@@ -179,6 +179,18 @@ def test_llm_error(cause: Exception | None):
         pytest.param(is_mistral_model, "mistral-custom", True, id="mistral-prefix"),
         pytest.param(
             is_mistral_model,
+            "zai-glm-5",
+            True,
+            id="mistral-zai-glm-5-prefix",
+        ),
+        pytest.param(
+            is_mistral_model,
+            "zai-glm-5-3",
+            True,
+            id="mistral-zai-glm-5-3-prefix",
+        ),
+        pytest.param(
+            is_mistral_model,
             "zai-glm-5-2",
             True,
             id="mistral-zai-glm-prefix",
@@ -191,6 +203,7 @@ def test_llm_error(cause: Exception | None):
         ),
         pytest.param(is_mistral_model, "gpt-4o", False, id="mistral-miss"),
         pytest.param(is_grok_model, "grok-4-1-fast-reasoning", True, id="grok-4.1"),
+        pytest.param(is_grok_model, "grok-4.7", True, id="grok-4.7"),
         pytest.param(is_grok_model, "grok-build-latest", True, id="grok-build"),
         pytest.param(is_grok_model, "grok-code-fast-1", True, id="grok-code"),
         pytest.param(is_grok_model, None, False, id="grok-none"),
@@ -214,9 +227,17 @@ def test_is_model(func, model, expected: bool):
             "mistral-large-latest", MistralClient, nullcontext(), id="mistral"
         ),
         pytest.param("glm-5-2", MistralClient, nullcontext(), id="mistral-glm"),
+        pytest.param("zai-glm-5", MistralClient, nullcontext(), id="mistral-zai-glm-5"),
+        pytest.param(
+            "zai-glm-5-3", MistralClient, nullcontext(), id="mistral-zai-glm-5-3"
+        ),
+        pytest.param(
+            "zai-glm-latest", MistralClient, nullcontext(), id="mistral-zai-glm-latest"
+        ),
         pytest.param("zai-glm-5-2", MistralClient, nullcontext(), id="mistral-zai-glm"),
         pytest.param("gpt-5.6-sol", OpenAIClient, nullcontext(), id="openai-gpt5.6"),
         pytest.param("grok-3", GrokClient, nullcontext(), id="grok"),
+        pytest.param("grok-4.7", GrokClient, nullcontext(), id="grok-4.7"),
         pytest.param("grok-build-latest", GrokClient, nullcontext(), id="grok-build"),
         pytest.param("voyage-4", VoyageClient, nullcontext(), id="voyage"),
         pytest.param("unknown-xyz", OpenAIClient, nullcontext(), id="unknown-fallback"),

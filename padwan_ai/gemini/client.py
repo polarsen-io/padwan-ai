@@ -11,9 +11,11 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, ClassVar, Literal, cast, get_args
 
 import niquests
+from urllib3 import AsyncHTTPResponse
 from urllib3.util.retry import Retry
 
 from .._base import ChatStream, LLMClientBase, Provider, env_api_key
+from .._json import loads as _json_loads
 from ..content import ContentPart
 from ..conversation import AssistantToolMessage, ChatMessage, ToolResultMessage
 from ..errors import LLMError, QuotaExceededError, TooManyRequestsError
@@ -207,23 +209,18 @@ _BATCH_STATE_MAP: dict[str, str] = {
 }
 
 
-# TODO: restore body-based retry delay extraction once
-# https://github.com/jawah/urllib3.future/issues/346 lands.
-#
-# class GeminiRetry(Retry):
-#     async def async_get_retry_after(self, response):
-#         body = await response.data
-#         if not body:
-#             return None
-#         try:
-#             data = _json_loads(body.decode("utf-8"))
-#             for detail in data.get("error", {}).get("details", []):
-#                 if detail.get("@type") == "type.googleapis.com/google.rpc.RetryInfo":
-#                     delay_str = detail.get("retryDelay", "")
-#                     return math.ceil(float(delay_str.rstrip("s")))
-#         except (ValueError, KeyError):
-#             pass
-#         return None
+class GeminiRetry(Retry):
+    """Use Gemini's response-body retry delay when present."""
+
+    async def async_get_retry_after(self, response: AsyncHTTPResponse) -> float | None:
+        try:
+            data = _json_loads(await response.data)
+            for detail in data.get("error", {}).get("details", []):
+                if detail.get("@type") == "type.googleapis.com/google.rpc.RetryInfo":
+                    return _parse_retry_delay(detail["retryDelay"])
+        except (AttributeError, KeyError, TypeError, ValueError):
+            pass
+        return await super().async_get_retry_after(response)
 
 
 @dataclasses.dataclass
@@ -237,19 +234,20 @@ class _GeminiAuth:
 
 
 @dataclasses.dataclass
-class GeminiClient(_GeminiAuth, LLMClientBase[Retry], GeminiToolMixin):
+class GeminiClient(_GeminiAuth, LLMClientBase[GeminiRetry], GeminiToolMixin):
     """Gemini API client with structured output support."""
 
     model: str | None = "gemini-2.5-flash"
     base_url: str = GEMINI_ENDPOINT
     thinking_config: ThinkingConfig | None = None
-    _retry: Retry = field(
+    _retry: GeminiRetry = field(
         default_factory=partial(
-            Retry,
+            GeminiRetry,
             total=3,
             backoff_factor=0.5,
             status_forcelist=[500, 502, 503, 504],
             allowed_methods=["POST"],
+            cache_response_body=True,
         )
     )
 
@@ -491,8 +489,8 @@ class GeminiClient(_GeminiAuth, LLMClientBase[Retry], GeminiToolMixin):
             payload["toolConfig"] = tool_config
 
         resp = await self.session.post(
-            self._sse_url(f"/models/{_model}:streamGenerateContent"),
-            params={"alt": "sse"},
+            # inline query: niquests drops `params` on custom SSE schemes
+            self._sse_url(f"/models/{_model}:streamGenerateContent?alt=sse"),
             json=payload,
         )
         _check_resp_status(resp)

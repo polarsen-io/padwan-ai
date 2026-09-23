@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, cast, get_args
 
 from .._base import NO_TURN_DETECTION, RealtimeClientBase
-from .._ws import READ_POLL_INTERVAL, WsConnection, enable_read_polling
+from .._ws import WsConnection
 from ..errors import LLMError
 from .client import _OpenAIAuth
 
@@ -100,8 +100,6 @@ class OpenAIRealtimeClient(_OpenAIAuth, RealtimeClientBase["RealtimeConnection"]
 
     @asynccontextmanager
     async def _connect(self) -> AsyncIterator[RealtimeConnection]:
-        # timeout bounds only the upgrade handshake; afterwards the read
-        # timeout is re-armed as the poll interval (see _enable_read_polling).
         resp = await self.session.get(
             self.base_url,
             params={"model": self.model},
@@ -114,7 +112,6 @@ class OpenAIRealtimeClient(_OpenAIAuth, RealtimeClientBase["RealtimeConnection"]
                 f"realtime handshake did not upgrade to a websocket "
                 f"(status {resp.status_code})",
             )
-        enable_read_polling(ext, READ_POLL_INTERVAL)
         conn = RealtimeConnection(ext, sample_rate=self.sample_rate)
         await conn.configure(
             instructions=self.instructions,

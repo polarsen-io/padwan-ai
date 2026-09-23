@@ -598,7 +598,7 @@ async def test_converted_request_selects_endpoint(
         await client.complete(body, model=override)
         suffix = "generateContent"
     args, kwargs = session.post.call_args
-    assert args[0].endswith(f"/models/{expected}:{suffix}")
+    assert args[0].partition("?")[0].endswith(f"/models/{expected}:{suffix}")
     assert kwargs["json"] == {
         key: value for key, value in body.items() if key != "model"
     }

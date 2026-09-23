@@ -3,7 +3,6 @@ import base64
 import re
 from typing import get_type_hints
 
-import niquests
 import pytest
 from google.genai.types import (
     AutomaticActivityDetectionDict,
@@ -53,33 +52,19 @@ class FakeExt:
         self.closed = True
 
 
-class LockedExt(FakeExt):
-    """FakeExt mimicking the transport: one lock on the socket, timed-out reads.
-
-    ``next_payload`` holds the lock while parked (like the real traffic police)
-    and raises ``ReadTimeout`` after the poll interval, releasing the lock so a
-    queued ``send_payload`` can borrow the socket.
-    """
+class ConcurrentExt(FakeExt):
+    """Fake the transport's independent read and write paths."""
 
     def __init__(self):
         super().__init__()
-        self.lock = asyncio.Lock()
         self.queue: asyncio.Queue[str | None] = asyncio.Queue()
 
     async def next_payload(self) -> str | bytes | None:
-        async with self.lock:
-            try:
-                return await asyncio.wait_for(self.queue.get(), 0.05)
-            except TimeoutError:
-                raise niquests.exceptions.ReadTimeout("poll tick")
-
-    async def send_payload(self, buf: str | bytes) -> None:
-        async with self.lock:
-            await super().send_payload(buf)
+        return await self.queue.get()
 
 
 async def test_send_progresses_while_read_is_parked() -> None:
-    ext = LockedExt()
+    ext = ConcurrentExt()
     conn = RealtimeConnection(ext)
     received: list[dict] = []
 
@@ -89,15 +74,13 @@ async def test_send_progresses_while_read_is_parked() -> None:
 
     consumer = asyncio.create_task(consume())
     try:
-        await asyncio.sleep(0.01)  # reader is parked, holding the socket lock
+        await asyncio.sleep(0.01)
 
-        # Must go out at the next poll tick, not wait for a server event.
         await asyncio.wait_for(conn.send_event({"type": "input_audio_buffer.clear"}), 1)
         assert [_json_loads(s) for s in ext.sent] == [
             {"type": "input_audio_buffer.clear"}
         ]
 
-        # Poll ticks are swallowed: later events still come through.
         await ext.queue.put('{"type":"session.created"}')
         await ext.queue.put(None)
         await asyncio.wait_for(consumer, 1)
@@ -390,6 +373,20 @@ def test_gemini_audio_delta_bytes(message, expected) -> None:
             "GEMINI_API_KEY",
             LIVE_ENDPOINT,
             id="gemini",
+        ),
+        pytest.param(
+            "gemini-3.8-live",
+            GeminiRealtimeClient,
+            "GEMINI_API_KEY",
+            LIVE_ENDPOINT,
+            id="gemini-3.8-live",
+        ),
+        pytest.param(
+            "gemini-3.8-live-extended-thinking",
+            GeminiRealtimeClient,
+            "GEMINI_API_KEY",
+            LIVE_ENDPOINT,
+            id="gemini-3.8-live-extended-thinking",
         ),
         pytest.param(
             "grok-voice-latest",

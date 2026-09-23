@@ -50,7 +50,10 @@ MistralModel = Literal[
     "labs-leanstral-1-5",
     "labs-leanstral-1-5-1",
     "glm-5-2",
+    "zai-glm-5",
+    "zai-glm-5-3",
     "zai-glm-5-2",
+    "zai-glm-latest",
 ]
 
 MistralEmbeddingModel = Literal["mistral-embed", "codestral-embed"]
