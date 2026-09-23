@@ -7,7 +7,7 @@ from typing import Any, Literal, cast, get_args
 import niquests
 
 from .._base import NO_TURN_DETECTION, RealtimeClientBase
-from .._ws import READ_POLL_INTERVAL, WsConnection, enable_read_polling
+from .._ws import WsConnection
 from ..errors import LLMError
 from ..logs import log
 from .client import _GeminiAuth
@@ -120,8 +120,6 @@ class GeminiRealtimeClient(_GeminiAuth, RealtimeClientBase["GeminiRealtimeConnec
 
     @asynccontextmanager
     async def _connect(self) -> AsyncIterator["GeminiRealtimeConnection"]:
-        # timeout bounds only the upgrade handshake; afterwards the read
-        # timeout is re-armed as the poll interval (see enable_read_polling).
         resp = await self.session.get(
             self.base_url,
             params={"key": self._api_key},
@@ -134,7 +132,6 @@ class GeminiRealtimeClient(_GeminiAuth, RealtimeClientBase["GeminiRealtimeConnec
                 f"live handshake did not upgrade to a websocket "
                 f"(status {resp.status_code})",
             )
-        enable_read_polling(ext, READ_POLL_INTERVAL)
         conn = GeminiRealtimeConnection(ext)
         await conn.send_event(self.setup_payload())
         async for message in conn:

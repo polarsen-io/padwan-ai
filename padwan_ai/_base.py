@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import abc
+import asyncio
 import os
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 import niquests
 from niquests.typing import JSONEncoderType
+from urllib3.contrib.webextensions._async import AsyncServerSideEventExtensionFromHTTP
 from urllib3.util.retry import Retry
 
 from ._deprecation import warn_if_deprecated
@@ -56,12 +58,34 @@ def env_api_key(provider: Provider, var: str) -> str:
     return api_key
 
 
+# niquests parse_scheme() ignores schemes longer than 9 chars ("psse+ai" is 7)
+SSE_IMPLEMENTATION: Literal["ai"] = "ai"
+
+
+class _SseExtension(AsyncServerSideEventExtensionFromHTTP):
+    """SSE extension that propagates task cancellation instead of returning ``None``."""
+
+    @staticmethod
+    def implementation() -> str:
+        return SSE_IMPLEMENTATION
+
+    async def next_payload(self, *, raw: bool = False) -> Any:
+        task = asyncio.current_task()
+        # compare to the count before: urllib3-future's Timeout leaks cancel requests
+        before = task.cancelling() if task else 0
+        event = await super().next_payload(raw=raw)
+        # upstream swallows CancelledError, see https://github.com/jawah/urllib3.future/issues/419
+        if event is None and task and task.cancelling() > before:
+            raise asyncio.CancelledError
+        return event
+
+
 def to_sse_url(url: str) -> str:
-    """Convert http(s):// URL to the niquests SSE scheme (``sse://`` or ``psse://``)."""
+    """Convert http(s):// URL to our SSE scheme (``sse+ai://`` or ``psse+ai://``)."""
     stripped = url.removeprefix("https://")
     if stripped is not url:
-        return "sse://" + stripped
-    return "psse://" + url.removeprefix("http://")
+        return f"sse+{SSE_IMPLEMENTATION}://" + stripped
+    return f"psse+{SSE_IMPLEMENTATION}://" + url.removeprefix("http://")
 
 
 @dataclass
@@ -176,7 +200,7 @@ class LLMClientBase[RetryT: Retry](abc.ABC):
         """Build a full SSE-scheme URL for the given path.
 
         niquests activates its SSE extension (``r.extension``) only when
-        the request URL uses the ``sse://`` (TLS) or ``psse://`` (plain)
+        the request URL uses the ``sse+ai://`` (TLS) or ``psse+ai://`` (plain)
         scheme. This helper resolves *path* against ``base_url`` and
         swaps the scheme so streaming requests get proper SSE parsing.
         """

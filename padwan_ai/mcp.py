@@ -16,7 +16,6 @@ from typing import (
     Protocol,
     Self,
     TypedDict,
-    cast,
     runtime_checkable,
 )
 from urllib.parse import urlparse
@@ -334,7 +333,7 @@ class McpStreamable:
                 except asyncio.CancelledError:
                     log.debug("MCP GET listener cancelled")
             if self._session_id:
-                # Route through `sse://` so niquests' `cert_verify`
+                # Route through the SSE scheme so niquests' `cert_verify`
                 # early-returns — otherwise the not-idle pool triggers a
                 # spurious "TLS verification changed" warning.
                 await self._http.delete(self._sse_url, headers=self._headers())
@@ -402,10 +401,11 @@ class McpStreamable:
             return await self._rpc(method, params, _reinit=False)
         r.raise_for_status()
         if sid := r.headers.get("MCP-Session-Id"):
-            self._session_id = cast(str, sid)
-        ct = cast(str, r.headers.get("content-type", ""))
+            self._session_id = sid
+        ct = r.headers.get("content-type", "")
         if "text/event-stream" in ct:
-            return await self._read_sse_response(r)
+            async with r:
+                return await self._read_sse_response(r)
         data: dict[str, Any] = await r.json()
         _check_rpc_error(data)
         return data.get("result")

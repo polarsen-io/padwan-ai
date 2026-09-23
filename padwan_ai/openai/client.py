@@ -350,6 +350,7 @@ class _OpenAIBase(_OpenAIAuth, LLMClientBase[Retry], OpenAIToolMixin):
         self,
         messages: Sequence[ChatMessage],
         tools: Sequence[ToolDefinition] | None = None,
+        extra_params: dict[str, typing.Any] | None = None,
     ) -> tuple[ChatResponse, UsageToken]:
         """Send a chat conversation and return the structured response."""
         if not self.model:
@@ -361,6 +362,8 @@ class _OpenAIBase(_OpenAIAuth, LLMClientBase[Retry], OpenAIToolMixin):
         }
         if tools:
             body["tools"] = cast(list, self._tools_to_openai(tools))
+        if extra_params:
+            body.update(cast(typing.Any, extra_params))
         data, token = await self.complete(body)
         choice = data["choices"][0]
         message_dict = cast(dict[str, typing.Any], choice["message"])

@@ -52,3 +52,41 @@ jobs:
         with:
           name: coverage-html-${{ matrix.python-version }}
           path: htmlcov
+
+  e2e:
+    name: End-to-end tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: tests
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: uv sync --all-extras --all-groups
+
+      - name: Check API keys
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in OPENAI_API_KEY MISTRAL_API_KEY GEMINI_API_KEY GROK_API_KEY ANTHROPIC_API_KEY VOYAGE_API_KEY TYPESAFE_API_KEY; do
+            [[ -n "${!name:-}" ]] || missing+=("$name")
+          done
+          [[ ${#missing[@]} -eq 0 ]] || { echo "Missing secrets: ${missing[*]}"; exit 1; }
+
+      - name: Run end-to-end tests
+        run: uv run pytest tests/e2e/ -m e2e -vv
