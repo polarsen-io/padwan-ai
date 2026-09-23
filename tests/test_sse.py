@@ -3,8 +3,8 @@ from contextlib import nullcontext
 from unittest.mock import MagicMock
 
 import pytest
-from niquests.packages.urllib3.contrib.webextensions._async import load_extension
 from niquests.utils import merge_base_url
+from urllib3.contrib.webextensions._async import load_extension
 
 from padwan_ai._base import _SseExtension, to_sse_url
 
