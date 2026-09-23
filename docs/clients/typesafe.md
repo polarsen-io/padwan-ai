@@ -1,3 +1,7 @@
+---
+icon: lucide/shield-check
+---
+
 # TypeSafe (JEV)
 
 !!! warning "Experimental"
@@ -51,9 +55,10 @@ print(response["model"], response["usage"])
 
 Responses are typed dictionaries preserving the API's `model`, `answers`, and
 `usage` fields. Noul answers contain a probability, Choice answers contain a
-selected label and probabilities, and Score answers contain a score, legend,
-and probabilities. Score legend and probability keys remain strings (`"0"`,
-`"1"`, etc.). Usage exposes `input_tokens` and `output_tokens`.
+selected label, a confidence, and probabilities, and Score answers contain a
+score, a confidence, a legend, and probabilities. Score legend and probability
+keys remain strings (`"0"`, `"1"`, etc.). Usage exposes `input_tokens` and
+`output_tokens`.
 
 `TypeSafeModel` and `TYPESAFE_MODELS` track the `jev-latest` and `jev-preview`
 aliases. A pinned model ID is also accepted through the constructor or the

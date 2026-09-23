@@ -1,11 +1,12 @@
 import asyncio
+import contextlib
 import enum
 import functools
 import inspect
 import os.path
 import re
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from http import HTTPStatus
 from importlib.metadata import version as _pkg_version
@@ -44,6 +45,7 @@ _JSONRPC = "2.0"
 _PROTOCOL_VERSION = "2025-11-25"
 _MAX_LISTEN_RETRIES = 5
 _DEFAULT_RETRY_MS = 3_000
+_CANCEL_TIMEOUT_S = 1.0
 
 
 class _Notification(enum.StrEnum):
@@ -68,11 +70,21 @@ class ProgressEvent(TypedDict):
 class _JsonRpcNotification(TypedDict):
     jsonrpc: str
     method: str
-    params: NotRequired[dict[str, Any]]
+    params: NotRequired[Mapping[str, Any]]
 
 
 class _JsonRpcRequest(_JsonRpcNotification):
     id: str
+
+
+class _RequestMeta(TypedDict):
+    progressToken: str
+
+
+class _ToolCallParams(TypedDict):
+    name: str
+    arguments: dict[str, Any]
+    _meta: NotRequired[_RequestMeta]
 
 
 @dataclass
@@ -213,6 +225,38 @@ def _mcp_headers(
     if token:
         h["Authorization"] = f"Bearer {token}"
     return h
+
+
+def _call_params(
+    name: str, args: dict[str, Any], *, with_progress: bool
+) -> _ToolCallParams:
+    """Build `tools/call` params, optionally requesting progress notifications."""
+    params: _ToolCallParams = {"name": name, "arguments": args}
+    if with_progress:
+        params["_meta"] = {"progressToken": uuid.uuid4().hex}
+    return params
+
+
+@contextlib.asynccontextmanager
+async def _cancel_on_abort(
+    cancel: Callable[[str, str | None], Awaitable[None]],
+    request_id: str,
+    method: _RpcMethod,
+) -> AsyncIterator[None]:
+    """On task cancel, send `notifications/cancelled` (best-effort, 1s cap), then re-raise."""
+    try:
+        yield
+    except asyncio.CancelledError:
+        # spec: initialize must not be cancelled
+        if method == "initialize":
+            raise
+        try:
+            await asyncio.wait_for(
+                cancel(request_id, "client cancelled"), _CANCEL_TIMEOUT_S
+            )
+        except Exception:
+            log.warning("MCP: failed to send cancellation for %s", request_id)
+        raise
 
 
 def _check_rpc_error(data: dict[str, Any]) -> None:
@@ -366,7 +410,7 @@ class McpStreamable:
     async def _rpc(
         self,
         method: _RpcMethod,
-        params: dict[str, Any] | None = None,
+        params: Mapping[str, Any] | None = None,
         *,
         _reinit: bool = True,
         _reauth: bool = True,
@@ -381,11 +425,12 @@ class McpStreamable:
         payload: _JsonRpcRequest = {"jsonrpc": _JSONRPC, "id": req_id, "method": method}
         if params is not None:
             payload["params"] = params
-        r = await self._http.post(
-            self._sse_url,
-            json=payload,
-            headers=self._headers(accept="application/json, text/event-stream"),
-        )
+        async with _cancel_on_abort(self.cancel, req_id, method):
+            r = await self._http.post(
+                self._sse_url,
+                json=payload,
+                headers=self._headers(accept="application/json, text/event-stream"),
+            )
         if r.status_code == HTTPStatus.UNAUTHORIZED:
             if self.on_auth is not None and _reauth:
                 token = self.on_auth(self)
@@ -403,10 +448,11 @@ class McpStreamable:
         if sid := r.headers.get("MCP-Session-Id"):
             self._session_id = sid
         ct = r.headers.get("content-type", "")
-        if "text/event-stream" in ct:
-            async with r:
-                return await self._read_sse_response(r)
-        data: dict[str, Any] = await r.json()
+        async with _cancel_on_abort(self.cancel, req_id, method):
+            if "text/event-stream" in ct:
+                async with r:
+                    return await self._read_sse_response(r)
+            data: dict[str, Any] = await r.json()
         _check_rpc_error(data)
         return data.get("result")
 
@@ -509,6 +555,11 @@ class McpStreamable:
                     exc_info=True,
                 )
                 await asyncio.sleep(self._retry_ms / 1000)
+        log.warning(
+            "MCP GET listener stopped after %d failures; push notifications "
+            "(tools/list_changed, progress) will no longer be received",
+            max_retries,
+        )
 
     async def _initialize(self) -> None:
         """Perform the MCP initialization handshake.
@@ -545,7 +596,10 @@ class McpStreamable:
         )
 
     async def _call(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
-        result = await self._rpc("tools/call", {"name": name, "arguments": args})
+        result = await self._rpc(
+            "tools/call",
+            _call_params(name, args, with_progress=self.on_progress is not None),
+        )
         return _normalize_call_result(result)
 
     async def ping(self) -> None:
@@ -742,7 +796,7 @@ class McpStdio:
             log.warning("MCP stdio stderr drain failed", exc_info=True)
 
     async def _rpc(
-        self, method: _RpcMethod, params: dict[str, Any] | None = None
+        self, method: _RpcMethod, params: Mapping[str, Any] | None = None
     ) -> Any:
         self._next_id += 1
         rid = str(self._next_id)
@@ -752,8 +806,9 @@ class McpStdio:
         fut: asyncio.Future[Any] = self._loop.create_future()
         self._pending[rid] = fut
         try:
-            await self._send(payload)
-            return await fut
+            async with _cancel_on_abort(self.cancel, rid, method):
+                await self._send(payload)
+                return await fut
         finally:
             # Drop the entry on cancel/exception so a late response from the
             # server doesn't try to resolve a stale (possibly cancelled) future.
@@ -839,7 +894,10 @@ class McpStdio:
         )
 
     async def _call(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
-        result = await self._rpc("tools/call", {"name": name, "arguments": args})
+        result = await self._rpc(
+            "tools/call",
+            _call_params(name, args, with_progress=self.on_progress is not None),
+        )
         return _normalize_call_result(result)
 
     async def ping(self) -> None:

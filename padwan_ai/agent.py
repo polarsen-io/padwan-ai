@@ -43,7 +43,7 @@ __all__ = (
 
 type ToolErrorHandler = Callable[[McpTool, dict[str, Any], Exception], str]
 type ApprovalHook = Callable[[McpTool, dict[str, Any]], bool | Awaitable[bool]]
-type OnMcpConnect = Callable[[McpTransport], Any]
+type OnMcpConnect = Callable[[McpTransport], Awaitable[None] | None]
 
 
 @dataclass
@@ -307,7 +307,9 @@ class AgentSession[T: Answer = Answer]:
                     await self._exit_stack.enter_async_context(item)
                 await item.ping()
                 if self.on_mcp_connect is not None:
-                    self.on_mcp_connect(item)
+                    connected = self.on_mcp_connect(item)
+                    if inspect.isawaitable(connected):
+                        await connected
         except BaseException:
             await self._exit_stack.aclose()
             raise

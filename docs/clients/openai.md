@@ -1,6 +1,10 @@
+---
+icon: fontawesome/brands/openai
+---
+
 # OpenAI Client
 
-The OpenAI client provides access to GPT models through the OpenAI API. It also serves as the base for other OpenAI-compatible providers (Grok, Mistral, etc.).
+The OpenAI client provides access to GPT models through the OpenAI API. It shares its chat base (`_OpenAIBase`) with Grok, Mistral, and Voyage.
 
 ## Configuration
 
@@ -12,6 +16,8 @@ client = OpenAIClient(
     model="gpt-4o",  # default model
 )
 ```
+
+`padwan_ai.openai.supports_audio(model, fmt=None)` / `supports_vision(model)` check model capabilities; `AUDIO_FORMATS` lists supported formats.
 
 ## Usage
 
@@ -48,7 +54,7 @@ state.add_user_message("Hello!")
 
 async with OpenAIClient() as client:
     response, usage = await client.complete_chat(state.messages)
-    state.add_assistant_message(response["content"])
+    state.add_assistant_response(response)
     state.accumulate_usage(usage)
 ```
 
@@ -66,12 +72,16 @@ usage = stream.usage
 ## Embeddings
 
 ```python
+from padwan_ai import vectors
+
 async with OpenAIClient(model="text-embedding-3-small") as client:
     resp = await client.fetch_embeddings(["text 1", "text 2"], dimensions=512)
     vecs = vectors(resp)  # one list[float] per input, matched by index
 ```
 
 `padwan_ai.vectors(resp, provider)` returns the vectors in input order for any provider's payload; `provider` defaults to the OpenAI shape, pass `"gemini"` for Gemini. `fetch_embeddings` is available on every OpenAI-compatible client (Mistral, Grok, custom `base_url` endpoints). Pass `model=` to reuse a chat client; provider-only body fields go through `extra_params`.
+
+`complete_chat`/`stream_chat` also accept `extra_params` for provider-only body fields. For raw request bodies, `complete`/`stream` bypass the `ChatMessage` shaping.
 
 ## Batch Processing
 
@@ -118,12 +128,14 @@ jobs, next_cursor = await client.list_batches(limit=10)
 job = await client.cancel_batch("batch_abc123")
 ```
 
+Pass `after=` (the previous cursor) to `list_batches` to page further. `upload_batch_file` uploads a JSONL file directly if you'd rather build it yourself than pass `BatchRequest`s to `create_batch`.
+
 ### Batch types reference
 
 | Type | Description |
 |------|-------------|
 | `BatchRequest` | Single request: `body`, `custom_id` |
-| `BatchJob` | Job state: `id`, `status`, `input_file_id`, `output_file_id`, `request_counts`, `is_terminal`, `succeeded` |
+| `BatchJob` | Job state: `id`, `status`, `input_file_id`, `output_file_id`, `error_file_id`, `errors`, `request_counts`, `is_terminal`, `succeeded` |
 | `BatchResult` | Parsed result: `custom_id`, `content`, `input_tokens`, `output_tokens`, `total_tokens` |
 
 ## Realtime (Speech-to-Speech)
@@ -198,7 +210,7 @@ async with RealtimeClient(turn_detection=NO_TURN_DETECTION) as conn:
 | `api_key` | `None` | Falls back to `OPENAI_API_KEY` |
 | `base_url` | realtime endpoint | Custom `wss://` endpoint |
 
-Constructing `OpenAIRealtimeClient` directly additionally accepts `session_kwargs=` to forward constructor arguments (e.g. proxies) to the managed `AsyncSession`. To reconfigure a live session, call `conn.configure(...)`.
+Constructing `OpenAIRealtimeClient` directly additionally accepts `session_kwargs=` to forward constructor arguments (e.g. proxies) to the managed `AsyncSession`. To reconfigure a live session, call `conn.configure(...)`. For events not covered by the helper methods, `conn.send_event(...)` sends a raw event dict; `conn.session_payload` holds the session config sent on connect.
 
 ### Server events
 
@@ -216,4 +228,4 @@ Iterating the connection yields each server event as a decoded JSON dict. `Realt
 
 ### Realtime limitations
 
-- Reconnection is the caller's responsibility: a dropped socket ends iteration, and a new `connect()` starts a fresh session with no server-side memory of the previous one.
+- Reconnection is the caller's responsibility: a dropped socket ends iteration, and a new `async with client as conn:` starts a fresh session with no server-side memory of the previous one.

@@ -50,6 +50,9 @@ class ChatStream(abc.ABC):
         ...
 
 
+PADWAN_API_KEY_ENV = "PADWAN_API_KEY"
+
+
 def env_api_key(provider: Provider, var: str) -> str:
     """Read an API key from environment variable *var*, raising :class:`LLMError` if unset."""
     api_key = os.environ.get(var)

@@ -1,3 +1,7 @@
+---
+icon: simple/googlegemini
+---
+
 # Gemini Client
 
 The Gemini client provides access to Google's Gemini models.
@@ -12,6 +16,8 @@ client = GeminiClient(
     model="gemini-2.5-flash",  # default model
 )
 ```
+
+`padwan_ai.gemini.supports_audio(model, fmt=None)` / `supports_vision(model)` check model capabilities; `AUDIO_FORMATS` lists supported formats.
 
 ## Usage
 
@@ -37,6 +43,8 @@ async with GeminiClient() as client:
     async for chunk in stream:
         print(chunk, end="")
 ```
+
+Unlike the OpenAI-family clients and Anthropic's `stream_chat`, Gemini's `stream_chat` silently ignores `extra_params`, and `complete_chat` doesn't accept it at all.
 
 ## Thinking models
 
@@ -69,6 +77,8 @@ Without `includeThoughts=True`, the model may still think internally (consuming 
 ## Embeddings
 
 ```python
+from padwan_ai import vectors
+
 async with GeminiClient(model="gemini-embedding-001") as client:
     resp = await client.fetch_embeddings(
         ["text 1", "text 2"],
@@ -104,6 +114,8 @@ async with GeminiClient(model="gemini-3.8-flash-tts") as client:
 
 3.8 models return WAV and need tagged lines for multi-speaker. 2.5 models return raw 24 kHz PCM
 (`audio/L16`) and reject `speechMetadata`, so pass them a plain `Alice: ...` script instead.
+
+`generate_speech` also accepts `model=` (overriding the client default) and `language_code=`. For raw request bodies, `complete(body, model)`/`stream` bypass the `ChatMessage` shaping.
 
 ## Batch Processing
 
@@ -147,6 +159,7 @@ if job.succeeded:
 
 ```python
 jobs, next_token = await client.list_batches(page_size=10)
+# returns the raw BatchJobResponse dict, not a BatchJob
 await client.cancel_batch("batches/123456")
 ```
 
@@ -155,7 +168,7 @@ await client.cancel_batch("batches/123456")
 | Type | Description |
 |------|-------------|
 | `BatchRequest` | Single request: `contents`, `generation_config`, `system_instruction`, `key` |
-| `BatchJob` | Job state: `name`, `state`, `dest`, `stats`, `is_terminal`, `succeeded` |
+| `BatchJob` | Job state: `name`, `state`, `display_name`, `model`, `error`, `dest`, `stats`, `inlined_responses`, `is_terminal`, `succeeded` |
 | `BatchResult` | Parsed result: `key`, `content`, `input_tokens`, `output_tokens`, `total_tokens` |
 
 ## Realtime (Live API)
@@ -178,4 +191,4 @@ async with RealtimeClient(
             break
 ```
 
-Automatic activity detection (server VAD) is the default. Pass `turn_detection=NO_TURN_DETECTION` to disable it and mark turns yourself with `conn.activity_start()` / `conn.activity_end()`; a mapping tunes the `automaticActivityDetection` fields (e.g. `{"silenceDurationMs": 500}`). Input/output transcription events arrive via `conn.input_transcript(message)` / `conn.output_transcript(message)`; disable them by constructing `GeminiRealtimeClient(transcription=False)` directly.
+Automatic activity detection (server VAD) is the default. Pass `turn_detection=NO_TURN_DETECTION` to disable it and mark turns yourself with `conn.activity_start()` / `conn.activity_end()`; a mapping tunes the `automaticActivityDetection` fields (e.g. `{"silenceDurationMs": 500}`). Input/output transcription events arrive via `conn.input_transcript(message)` / `conn.output_transcript(message)`; disable them by passing `transcription_model=None` to `RealtimeClient` (or `GeminiRealtimeClient(transcription=False)` directly). `conn.send_text(...)` sends a text turn instead of audio, and `conn.audio_stream_end()` signals the end of an audio turn; `GeminiRealtimeClient.setup_payload` holds the session config sent on connect.

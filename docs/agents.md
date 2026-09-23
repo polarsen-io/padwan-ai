@@ -1,3 +1,7 @@
+---
+icon: lucide/bot
+---
+
 # Agents
 
 `AgentSession` is the agentic loop built on top of the unified chat interface. Given a client, a system prompt, and zero or more tools, it repeatedly calls the LLM, dispatches any tool calls the model requests, feeds the results back, and keeps going until the model produces a plain text answer (or a round limit is hit).
@@ -18,6 +22,8 @@ flowchart TD
 
 Each iteration of the loop is called a **round**. Tool lists are re-read at the top of every round, so MCP servers that emit `notifications/tools/list_changed` (and refresh `McpStreamable.tools` / `McpStdio.tools` in place) get picked up without restarting the session.
 
+With `output=` set (see [Typed answers](#typed-answers)), the round limit and a text answer without a tool call both raise `OutputError` instead of yielding a limit-reached message. `Dispatch` above runs each handler wrapped by the `on_tool` context manager, if set.
+
 ## Quick start
 
 ```python
@@ -36,6 +42,8 @@ Two entry points, depending on whether you want the response streamed:
 
 - `await session.send(user_input)` — returns the complete text as a string.
 - `async for chunk in session.stream(user_input)` — yields text chunks as the model produces them. Tool calls are silent on the stream; observe them via `on_tool`.
+
+`user_input` is plain text or a `list[ContentPart]` for multimodal input (text + images).
 
 ## Tools: individual or whole transports
 
@@ -62,7 +70,11 @@ async with AgentSession(
     text = await session.send("Summarize the README and check the forecast.")
 ```
 
-On `__aenter__` the session enters every transport in order (via an `AsyncExitStack`), pings each one to prove the connection is live, and then fires the optional `on_mcp_connect` callback with the transport instance. All transports are torn down in LIFO order on exit — even if one of them fails to initialize or ping.
+On `__aenter__` the session enters every transport that isn't already open (via an `AsyncExitStack`) — a transport passed in already open is only pinged, so the session won't tear it down on exit — then pings each one to prove the connection is live, and fires the optional `on_mcp_connect` callback with the transport instance. `on_mcp_connect` may be sync or async; an async callback is awaited. Every transport the session entered is torn down in LIFO order on exit — even if one of them fails to initialize or ping.
+
+### Name collisions
+
+If two tools end up with the same name (e.g. two MCP servers both expose `search`), `AgentSession` auto-prefixes the colliding **transports** with their `auto_prefix` — a name derived from the transport's identity (URL host for `McpStreamable`, `args[0]`/command basename for `McpStdio`) — unless the transport already has an explicit `name_prefix` set, which always wins. Local `McpTool` instances are never auto-prefixed. If a collision remains after auto-prefixing (two local tools sharing a name, two transports with the same derived prefix, or an explicit prefix that still collides), `AgentSession` raises `ValueError`.
 
 ## Tools from typed functions
 
@@ -142,7 +154,8 @@ any object implementing `ToolValidator` to plug in another library:
 
 ```python
 tool(get_weather, validator="msgspec")
-tool(get_weather, validator=MyValidator())  # compile(name, fields) + dump(result)
+# MyValidator implements compile(name, fields), adapt(cls) and dump(result)
+tool(get_weather, validator=MyValidator())
 ```
 
 Malformed arguments raise the chosen library's `ValidationError` inside the handler,
@@ -161,6 +174,8 @@ The model sees one extra tool, `submit` (rename it with `AgentOutput(tool=)`), w
 from typing import Literal
 
 import msgspec
+
+from padwan_ai import AgentOutput, AgentSession
 
 
 class Triage(msgspec.Struct):
@@ -181,22 +196,23 @@ The answer class is a `msgspec.Struct` or a `pydantic.BaseModel`, validated by i
 
 An invalid `submit` (a failed validation, or arguments that are not JSON) goes back to the model as the tool result, with the error, up to `AgentOutput(max_repairs=)` times (1 by default); one more failure raises `OutputError`. A text answer without `submit`, or the round limit, raise `OutputError` too: a typed run never returns prose. `OutputError.attempts` and `.details` say what happened.
 
-The first accepted answer, or the exhausted repair budget, settles the run: a second `submit` in the same round is answered with an error and ignored. Other tools called alongside `submit` still run (their results are recorded, the model just gets no further round). `submit` is dispatched like any tool, so `approve_tool` and `on_tool` see it; a hook that denies it ends the run at the round limit without consuming a repair.
+The first accepted answer, or the exhausted repair budget, settles the run: a second `submit` in the same round is answered with an error and ignored. Other tools called alongside `submit` still run (their results are recorded, the model just gets no further round). `submit` is dispatched like any tool, so `approve_tool` and `on_tool` see it; a denial doesn't consume a repair — the model may call `submit` again in a later round, and the run only hits the round limit if every attempt is denied.
 
 ## Configuration
 
 ```python
 AgentSession(
-    client=...,  # any ChatClient (e.g. LLMClient(model=...) or a ScriptedClient in tests)
+    client=...,  # any ChatClient — an async context manager with stream_chat() (e.g. LLMClient(model=...) or a ScriptedClient in tests)
     system=None,  # system prompt, stored in ConversationState
     mcp_tools=[],  # McpTool | McpTransport instances
     max_tool_rounds=5,  # round cap; None = unbounded (use with care)
     max_tool_result_chars=8_000,  # truncate tool results sent to the LLM; None = no limit
     execution="sequential",  # "sequential" or "parallel"
-    on_tool=None,  # callback fired per tool call: (name, args) -> None
+    on_tool=None,  # (ToolCallContext) -> context manager wrapping the dispatch
     on_tool_error=None,  # custom error formatter — see below
     approve_tool=None,  # pre-execution hook returning bool | Awaitable[bool]
     on_mcp_connect=None,  # fired per MCP transport after entering + pinging
+    extra_params=None,  # extra fields merged verbatim into every request body
     session_id=...,  # auto-generated; override to resume a saved session
     store=None,  # optional ConversationStore for persistence
     output=None,  # AgentOutput(cls, ...) for a typed answer through run() — see above
@@ -219,7 +235,7 @@ Use the default `"sequential"` if you care about ordering side effects or want t
 
 ### Approval hooks
 
-`approve_tool` runs before every tool dispatch. Return `False` to block the call — the agent will append a synthetic "denied by user" result instead of executing the handler. The hook may be sync or async:
+`approve_tool` runs before every tool dispatch. Return `False` to block the call — the agent will append `{"error": "Tool call denied by approval hook: <name>"}` as the result instead of executing the handler. The hook may be sync or async:
 
 ```python
 def prompt_user(tool, args):
@@ -235,7 +251,7 @@ session = AgentSession(
 
 ### Error handling
 
-By default, exceptions raised inside a tool handler are caught, formatted via a default string, and appended as the tool result so the model can recover. Override `on_tool_error` to customize:
+By default, exceptions raised inside a tool handler are caught, formatted as JSON `{"error": str(exc)}`, and appended as the tool result so the model can recover. Override `on_tool_error` to customize:
 
 ```python
 def format_error(tool, args, exc):
@@ -274,19 +290,27 @@ For a fire-and-forget side-effect, `yield` immediately after the action.
 Conversation state can be saved to any backend via the `ConversationStore` protocol:
 
 ```python
+import json
+from pathlib import Path
+
 from padwan_ai import ConversationSnapshot, ConversationStore
 
 
 class JsonStore:
-    def __init__(self, path):
+    def __init__(self, path: Path):
         self.path = path
 
     def save(self, session_id: str, snapshot: ConversationSnapshot) -> None:
         (self.path / f"{session_id}.json").write_text(json.dumps(snapshot))
 
     def load(self, session_id: str) -> ConversationSnapshot:
-        return json.loads((self.path / f"{session_id}.json").read_text())
+        file = self.path / f"{session_id}.json"
+        if not file.exists():
+            raise LookupError(session_id)
+        return json.loads(file.read_text())
 ```
+
+`load()` must raise `LookupError` for a missing snapshot — that's the only exception `AgentSession.load()` treats as "no snapshot yet" and starts fresh from; anything else propagates.
 
 Persist after a turn completes:
 
@@ -326,14 +350,12 @@ async with AgentSession.load(model="gpt-4o", store=store) as session:
 
 When the LLM response contains tool calls, the agent:
 
-1. Parses each call's arguments from JSON.
-2. Calls `on_tool(name, args)` if set.
-3. Asks `approve_tool` (if set). Denied calls get a synthetic `"Tool call denied."` result.
-4. Appends an `AssistantToolMessage` with all tool calls to the history.
-5. Runs the handlers (sequentially or in parallel).
-6. Catches any exception via `on_tool_error`.
-7. Appends a `ToolResultMessage` per call, in the original order.
-8. Loops back to the LLM call.
+1. Appends an `AssistantToolMessage` with all tool calls to the history.
+2. Parses each call's arguments from JSON and asks `approve_tool` (if set) — sequentially, even in `execution="parallel"` mode. Denied calls get `{"error": "Tool call denied by approval hook: <name>"}` as their result.
+3. Runs the handlers (sequentially or in parallel), each wrapped in the `on_tool` context manager if set — including denied and unknown-tool calls.
+4. Catches any exception; without `on_tool_error` the default is JSON `{"error": str(exc)}`.
+5. Appends a `ToolResultMessage` per call, in the original order.
+6. Loops back to the LLM call.
 
 Long tool results are truncated to `max_tool_result_chars` **in the copy sent to the LLM only**; the full content is preserved in `session.messages` for inspection or persistence.
 
@@ -344,6 +366,8 @@ session.messages  # full ChatMessage list including tool calls + results
 session.last_usage  # UsageToken from the most recent LLM call
 session.total_usage  # accumulated usage across all rounds in this session
 ```
+
+`session.add_user_message(text)` appends a user turn without running a round; `session.clear()` drops all messages. Both are for managing history by hand outside `send()`/`stream()`.
 
 ## Testing an agent
 
@@ -367,6 +391,8 @@ async with AgentSession(client=client, mcp_tools=[weather_tool]) as session:
 assert client.requests[1].messages[-1]["role"] == "tool"
 assert client.remaining == 0
 ```
+
+`Step(usage=...)` overrides the default token counts for that round; `Request.tool_names` is a shortcut for the names of the tools offered that round (derived from `Request.tools`).
 
 A script that runs out raises `AssertionError` on the next round: a test that drifts from its script fails loudly instead of hanging on an empty answer. `complete_chat` is scripted the same way for non-streaming callers.
 
