@@ -1,7 +1,7 @@
 # Local observability stack for padwan-ai e2e runs.
 # Profiles: `otel` (Grafana LGTM, OTLP in) and `langfuse` (vendored from the
 # upstream langfuse docker-compose, trimmed for local dev and pinned).
-# Drive it through `just otel-up` / `just langfuse-up`.
+# Drive it through `just obs::otel-up` / `just obs::langfuse-up`.
 
 services:
   # otel profile

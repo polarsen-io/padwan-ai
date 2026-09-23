@@ -219,6 +219,6 @@ Detailed status per section of the [GenAI semantic conventions](https://github.c
 
 ## Local dev stack
 
-`just e2e-otel` runs the e2e suite instrumented and exports traces and metrics to a local [otel-lgtm](https://github.com/grafana/docker-otel-lgtm) container (Grafana on `:3000`), provisioned with a GenAI dashboard from `bin/observability/dashboards/`. `just e2e-langfuse` does the same through the Langfuse adapter against a local Langfuse on `:3001`, headless-initialised with a dev project and seeded model prices. Both stacks live in one compose file (`bin/observability/docker-compose.yml`) behind the `otel` and `langfuse` profiles.
+`just obs::e2e-otel` runs the e2e suite instrumented and exports traces and metrics to a local [otel-lgtm](https://github.com/grafana/docker-otel-lgtm) container (Grafana on `:3000`), provisioned with a GenAI dashboard from `bin/observability/dashboards/`. `just obs::e2e-langfuse` does the same through the Langfuse adapter against a local Langfuse on `:3001`, headless-initialised with a dev project and seeded model prices. Both stacks live in one compose file (`bin/observability/docker-compose.yml`) behind the `otel` and `langfuse` profiles.
 
 ![Grafana GenAI dashboard](static/grafana-dashboard.png)

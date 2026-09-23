@@ -76,7 +76,7 @@ def otel_exporter(
     tracer_provider = TracerProvider(resource=resource)
     tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))
     readers: list[MetricReader] = [InMemoryMetricReader()]
-    # `just e2e-otel` sets the endpoint; without it the run stays offline
+    # `just obs::e2e-otel` sets the endpoint; without it the run stays offline
     if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
         tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
         readers.append(PeriodicExportingMetricReader(OTLPMetricExporter()))
