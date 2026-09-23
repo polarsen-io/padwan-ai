@@ -154,7 +154,8 @@ any object implementing `ToolValidator` to plug in another library:
 
 ```python
 tool(get_weather, validator="msgspec")
-tool(get_weather, validator=MyValidator())  # compile(name, fields) + adapt(cls) + dump(result)
+# MyValidator implements compile(name, fields), adapt(cls) and dump(result)
+tool(get_weather, validator=MyValidator())
 ```
 
 Malformed arguments raise the chosen library's `ValidationError` inside the handler,

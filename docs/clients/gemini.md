@@ -159,7 +159,8 @@ if job.succeeded:
 
 ```python
 jobs, next_token = await client.list_batches(page_size=10)
-await client.cancel_batch("batches/123456")  # returns the raw BatchJobResponse dict, not a BatchJob
+# returns the raw BatchJobResponse dict, not a BatchJob
+await client.cancel_batch("batches/123456")
 ```
 
 ### Batch types reference

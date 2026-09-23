@@ -14,7 +14,7 @@ from padwan_ai import content_parts
 parts = content_parts(
     "What is in this screenshot?",  # str -> text part
     Path("shot.png"),  # image extension -> base64 data: URL image part
-    Path("voice.wav"),  # audio extension (wav/mp3/flac/ogg/aac/aiff/m4a) -> base64 audio part
+    Path("voice.wav"),  # wav/mp3/flac/ogg/aac/aiff/m4a -> base64 audio part
     Path("notes.md"),  # any other file -> inlined text file part
 )
 ```
