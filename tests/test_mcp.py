@@ -12,6 +12,7 @@ from padwan_ai.mcp import (
     McpStdio,
     McpStreamable,
     McpTool,
+    ProgressEvent,
     _build_tools,
     _normalize_call_result,
     _sanitize_prefix,
@@ -741,7 +742,7 @@ class TestMcpStreamable:
             _make_response(_TOOLS_RESULT),
             _make_sse_response([progress, _make_sse_event(json.dumps(_CALL_RESULT))]),
         )
-        events: list[dict] = []
+        events: list[ProgressEvent] = []
         client = McpStreamable(
             url="https://example.com/mcp",
             on_progress=events.append if with_callback else None,
@@ -1100,7 +1101,7 @@ if __name__ == "__main__":
 class TestMcpStdio:
     async def test_progress_reaches_callback(self):
         """Regression: no progressToken was sent, so servers never reported progress."""
-        events: list[dict] = []
+        events: list[ProgressEvent] = []
         async with McpStdio(
             command=sys.executable,
             args=["-c", _STDIO_PROGRESS_SERVER_SCRIPT],
@@ -1108,8 +1109,8 @@ class TestMcpStdio:
         ) as client:
             await client.tools[0].handler({})
         assert len(events) == 1
-        assert events[0]["progress"] == 1
-        assert events[0]["total"] == 2
+        assert events[0].get("progress") == 1
+        assert events[0].get("total") == 2
 
     async def test_cancelled_rpc_sends_cancel_notification(self):
         client = McpStdio(command="anything")
