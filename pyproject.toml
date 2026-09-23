@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     "niquests>=3.21.0",
     "qh3>=1.7.1",
-    "urllib3-future>=2.24.904",
+    "urllib3-future>=2.25.900",
 ]
 
 [project.urls]

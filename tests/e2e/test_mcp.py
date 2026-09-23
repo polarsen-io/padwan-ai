@@ -26,6 +26,8 @@ class TestMcpStreamableDataGouv:
         async with McpStreamable(url=DATAGOUV_URL) as client:
             search = next(t for t in client.tools if t.name == "search_datasets")
             result = await search.handler({"query": "transport"})
+            assert not result.get("isError", False), result
             texts = [c["text"] for c in result["content"]]
             combined = "\n".join(texts)
             assert "transport" in combined.lower()
+        assert not client.is_open
