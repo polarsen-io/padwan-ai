@@ -34,9 +34,12 @@ __all__ = (
     "LiveGenerationConfig",
     "LiveSetup",
     "LiveSetupMessage",
+    "MultiSpeakerVoiceConfig",
     "PrebuiltVoiceConfig",
     "RealtimeInputConfig",
+    "SpeakerVoiceConfig",
     "SpeechConfig",
+    "SpeechMetadata",
     "VoiceConfig",
 )
 
@@ -144,8 +147,14 @@ class EmbedContentsResponse(TypedDict):
 # Content parts
 
 
+class SpeechMetadata(TypedDict, total=False):
+    speaker: str
+    style: str
+
+
 class Part(TypedDict):
     text: str
+    speechMetadata: NotRequired[SpeechMetadata]
 
 
 class InlineData(TypedDict):
@@ -215,6 +224,8 @@ class GenerationConfig(TypedDict, total=False):
     responseSchema: dict[str, Any]
     temperature: float
     thinkingConfig: ThinkingConfig
+    responseModalities: list[Literal["TEXT", "AUDIO"]]
+    speechConfig: SpeechConfig
 
 
 class StreamBody(TypedDict):
@@ -243,8 +254,19 @@ class VoiceConfig(TypedDict):
     prebuiltVoiceConfig: PrebuiltVoiceConfig
 
 
-class SpeechConfig(TypedDict):
+class SpeakerVoiceConfig(TypedDict):
+    speaker: str
     voiceConfig: VoiceConfig
+
+
+class MultiSpeakerVoiceConfig(TypedDict):
+    speakerVoiceConfigs: list[SpeakerVoiceConfig]
+
+
+class SpeechConfig(TypedDict):
+    voiceConfig: NotRequired[VoiceConfig]
+    multiSpeakerVoiceConfig: NotRequired[MultiSpeakerVoiceConfig]
+    languageCode: NotRequired[str]
 
 
 class LiveGenerationConfig(TypedDict):

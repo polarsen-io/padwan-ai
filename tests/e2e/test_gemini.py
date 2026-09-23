@@ -2,6 +2,7 @@ import pytest
 
 from padwan_ai import GeminiClient
 from padwan_ai.gemini.batch import BatchRequest
+from padwan_ai.gemini.models import Part
 
 from .conftest import skip_no_gemini
 
@@ -73,3 +74,36 @@ async def test_embeddings() -> None:
         resp = await client.fetch_embeddings(["Hello", "World"], dimensions=256)
         assert len(resp["embeddings"]) == 2
         assert len(resp["embeddings"][0]["values"]) == 256
+
+
+@pytest.mark.parametrize(
+    "model, text, voice",
+    [
+        pytest.param(
+            "gemini-3.8-flash-lite-tts",
+            "Say cheerfully: have a wonderful day!",
+            "Kore",
+            id="single-voice",
+        ),
+        pytest.param(
+            "gemini-3.8-flash-tts",
+            [
+                {
+                    "text": "Hi Bob!",
+                    "speechMetadata": {"speaker": "Alice", "style": "excited"},
+                },
+                {"text": "<laughs> Hey Alice.", "speechMetadata": {"speaker": "Bob"}},
+            ],
+            {"Alice": "Leda", "Bob": "Puck"},
+            id="multi-speaker-lines",
+        ),
+    ],
+)
+async def test_generate_speech(
+    model: str, text: str | list[Part], voice: str | dict[str, str]
+) -> None:
+    async with GeminiClient(model=model) as client:
+        speech, usage = await client.generate_speech(text, voice)
+    assert speech.mime_type == "audio/wav"
+    assert speech.audio[:4] == b"RIFF"
+    assert usage["output"] > 0

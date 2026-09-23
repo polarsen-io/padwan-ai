@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import base64
 import dataclasses
 import math
 import typing
-from collections.abc import AsyncIterator, Callable, Sequence
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from contextlib import aclosing
 from dataclasses import field
 from functools import partial
@@ -34,6 +35,8 @@ from .models import (
     GeminiPart,
     GenerationConfig,
     ListBatchesResponse,
+    Part,
+    SpeechConfig,
     StreamBody,
     ThinkingConfig,
 )
@@ -120,6 +123,8 @@ __all__ = (
     "GeminiClient",
     "GeminiEmbeddingModel",
     "GeminiModel",
+    "GeminiSpeech",
+    "GeminiTTSModel",
     "is_gemini_model",
 )
 
@@ -189,7 +194,24 @@ GeminiEmbeddingModel = Literal[
     "gemini-embedding-001",
 ]
 
+GeminiTTSModel = Literal[
+    "gemini-3.8-flash-tts",
+    "gemini-3.8-flash-lite-tts",
+    "gemini-3.1-flash-tts-preview",
+    "gemini-2.5-flash-preview-tts",
+    "gemini-2.5-pro-preview-tts",
+]
+
 GEMINI_MODELS: set[str] = set(get_args(GeminiModel))
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class GeminiSpeech:
+    """Synthesized audio; `mime_type` varies by model (`audio/wav` on 3.8, raw `audio/L16` PCM on 2.5)."""
+
+    audio: bytes
+    mime_type: str
+
 
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/"
 
@@ -281,6 +303,59 @@ class GeminiClient(_GeminiAuth, LLMClientBase[Retry], GeminiToolMixin):
             token["reasoning"] = thoughts
 
         return data, token
+
+    async def generate_speech(
+        self,
+        text: str | Sequence[Part],
+        voice: str | Mapping[str, str] = "Kore",
+        *,
+        model: str | None = None,
+        language_code: str | None = None,
+    ) -> tuple[GeminiSpeech, UsageToken]:
+        """Synthesize `text`, or script lines tagged with `speechMetadata` (3.8+, required there for multi-speaker).
+
+        A `{speaker: voice}` mapping enables multi-speaker; names must match the script or line speakers.
+        """
+        if isinstance(voice, str):
+            speech: SpeechConfig = {
+                "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": voice}}
+            }
+        else:
+            speech = {
+                "multiSpeakerVoiceConfig": {
+                    "speakerVoiceConfigs": [
+                        {
+                            "speaker": speaker,
+                            "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": name}},
+                        }
+                        for speaker, name in voice.items()
+                    ]
+                }
+            }
+        if language_code:
+            speech["languageCode"] = language_code
+        body: CompletionBody = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": text}] if isinstance(text, str) else list(text),
+                }
+            ],
+            "generationConfig": {
+                "responseModalities": ["AUDIO"],
+                "speechConfig": speech,
+            },
+        }
+        data, token = await self.complete(body, model)
+        candidates = data.get("candidates")
+        content = candidates[0].get("content") if candidates else None
+        parts = cast(list[dict[str, typing.Any]], (content or {}).get("parts") or [])
+        for part in parts:
+            if (inline := part.get("inlineData")) and inline.get("data"):
+                return GeminiSpeech(
+                    base64.b64decode(inline["data"]), inline["mimeType"]
+                ), token
+        raise LLMError(self.provider, "No audio in response")
 
     async def fetch_embeddings(
         self,
