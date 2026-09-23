@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790199705930,
+  "lastUpdate": 1790200844938,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -2088,6 +2088,66 @@ window.BENCHMARK_DATA = {
             "value": 247.56,
             "unit": "ms",
             "range": 5.46
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8ee9b3d90e5aa4eefebd0718532584b3a4d3a780",
+          "message": "fix: align docs with code and fix bugs found in review (#98)\n\n* fix(openai): never send OPENAI_API_KEY to a non-OpenAI base_url\n\nCustom endpoints without api_key now fall back to PADWAN_API_KEY, then \"no-key-required\".\n\n* fix(mcp): send progress tokens, cancel in-flight requests, await async on_mcp_connect\n\nAlso warn when the GET listener gives up after max reconnect failures.\n\n* fix(grok): forward the full request body in batch requests\n\n* docs: align docs with code, add nav icons\n\n* docs: keep code-block comments within ruff line length\n\n* test(mcp): type progress callbacks as ProgressEvent\n\n* docs(mcp): clarify _cancel_on_abort contract\n\n* refactor(mcp): type tools/call params as TypedDict",
+          "timestamp": "2026-09-23T23:59:54+02:00",
+          "tree_id": "ded5d0772a5ab8f1ac44151d342632a6b26bd64c",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/8ee9b3d90e5aa4eefebd0718532584b3a4d3a780"
+        },
+        "date": 1790200844327,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 213.23,
+            "unit": "ms",
+            "range": 6.81
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 224.36,
+            "unit": "ms",
+            "range": 22.58
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 263.17,
+            "unit": "ms",
+            "range": 20.46
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 50.34,
+            "unit": "ms",
+            "range": 1.69
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 181.99,
+            "unit": "ms",
+            "range": 5.55
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 207.61,
+            "unit": "ms",
+            "range": 6.19
           }
         ]
       }
