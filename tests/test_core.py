@@ -14,6 +14,7 @@ from padwan_ai.grok.client import GrokClient, is_grok_model
 from padwan_ai.mistral.client import MistralClient, is_mistral_model
 from padwan_ai.models import ChatResponse, ToolCall, ToolCallFunction, UsageToken
 from padwan_ai.openai.client import OpenAIClient, is_openai_model
+from padwan_ai.openai.realtime import OpenAIRealtimeClient
 from padwan_ai.voyage.client import VoyageClient, is_voyage_model
 
 # ConversationState
@@ -341,6 +342,61 @@ def test_gateway_without_token_uses_no_key_not_openai_env(
 
 
 @pytest.mark.parametrize(
+    "cls, base_url, padwan_key, expected",
+    [
+        pytest.param(OpenAIClient, None, "gw-secret", "real-openai-key", id="default"),
+        pytest.param(
+            OpenAIClient,
+            "https://3rd.example/v1",
+            "gw-secret",
+            "gw-secret",
+            id="custom-padwan",
+        ),
+        pytest.param(
+            OpenAIClient,
+            "http://localhost:8080/v1/",
+            None,
+            "no-key-required",
+            id="custom-no-key",
+        ),
+        pytest.param(
+            OpenAIRealtimeClient, None, None, "real-openai-key", id="realtime-default"
+        ),
+        pytest.param(
+            OpenAIRealtimeClient,
+            "wss://3rd.example/v1/realtime",
+            None,
+            "no-key-required",
+            id="realtime-custom",
+        ),
+        pytest.param(
+            MistralClient,
+            "https://3rd.example/v1",
+            "gw-secret",
+            "real-mistral-key",
+            id="mistral-unaffected",
+        ),
+    ],
+)
+def test_default_api_key_scoped_to_endpoint(
+    cls: type,
+    base_url: str | None,
+    padwan_key: str | None,
+    expected: str,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Regression: a custom base_url used to receive OPENAI_API_KEY."""
+    monkeypatch.setenv("OPENAI_API_KEY", "real-openai-key")
+    monkeypatch.setenv("MISTRAL_API_KEY", "real-mistral-key")
+    if padwan_key is None:
+        monkeypatch.delenv("PADWAN_API_KEY", raising=False)
+    else:
+        monkeypatch.setenv("PADWAN_API_KEY", padwan_key)
+    client = cls(**({"base_url": base_url} if base_url else {}))
+    assert client._api_key == expected
+
+
+@pytest.mark.parametrize(
     "cls, kwargs",
     [
         pytest.param(OpenAIClient, {"api_key": "k"}, id="openai"),
@@ -378,12 +434,6 @@ def test_on_thought_lifted_to_base(cls: type, kwargs: dict):
         pytest.param(GeminiClient, "GEMINI_API_KEY", {}, id="gemini"),
         pytest.param(MistralClient, "MISTRAL_API_KEY", {}, id="mistral"),
         pytest.param(GrokClient, "GROK_API_KEY", {}, id="grok"),
-        pytest.param(
-            OpenAIClient,
-            "OPENAI_API_KEY",
-            {"base_url": "http://localhost:8080/v1/"},
-            id="openai-no-key",
-        ),
     ],
 )
 def test_missing_api_key(

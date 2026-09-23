@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import os
 import typing
 from collections.abc import AsyncIterator, Callable, Sequence
 from contextlib import aclosing
@@ -8,11 +9,18 @@ from dataclasses import field
 from functools import partial
 from http import HTTPStatus
 from typing import TYPE_CHECKING, ClassVar, Literal, cast, get_args
+from urllib.parse import urlparse
 
 import niquests
 from urllib3.util.retry import Retry
 
-from .._base import ChatStream, LLMClientBase, Provider, env_api_key
+from .._base import (
+    PADWAN_API_KEY_ENV,
+    ChatStream,
+    LLMClientBase,
+    Provider,
+    env_api_key,
+)
 from .._json import dumps as _json_dumps, loads as _json_loads
 from ..conversation import ChatMessage
 from ..errors import LLMError, QuotaExceededError, TooManyRequestsError
@@ -218,8 +226,12 @@ class _OpenAIAuth:
     """OpenAI provider identity, shared by the chat and realtime clients."""
 
     provider: ClassVar[Provider] = "openai"
+    base_url: str
 
     def _get_default_api_key(self) -> str:
+        # Never leak OPENAI_API_KEY to a third-party endpoint.
+        if urlparse(self.base_url).hostname != "api.openai.com":
+            return os.environ.get(PADWAN_API_KEY_ENV) or "no-key-required"
         return env_api_key(self.provider, "OPENAI_API_KEY")
 
 
