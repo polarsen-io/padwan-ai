@@ -233,7 +233,7 @@ async def _cancel_on_abort(
     request_id: str,
     method: _RpcMethod,
 ) -> AsyncIterator[None]:
-    """Best-effort `notifications/cancelled` if the awaiting task is cancelled."""
+    """On task cancel, send `notifications/cancelled` (best-effort, 1s cap), then re-raise."""
     try:
         yield
     except asyncio.CancelledError:
