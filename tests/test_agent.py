@@ -931,13 +931,20 @@ class _PingFailTransport(_FakeTransport):
         ),
     ],
 )
-async def test_on_mcp_connect(transports, expected_count) -> None:
+@pytest.mark.parametrize(
+    "is_async", [pytest.param(False, id="sync"), pytest.param(True, id="async")]
+)
+async def test_on_mcp_connect(transports, expected_count, is_async) -> None:
     connected: list[object] = []
+
+    async def on_connect_async(t: object) -> None:
+        connected.append(t)
+
     fake = FakeClient(responses=[FakeChatStream(chunks=["hi"])])
     async with AgentSession(
         client=fake,
         mcp_tools=cast(Sequence[McpTool], transports()),
-        on_mcp_connect=connected.append,
+        on_mcp_connect=on_connect_async if is_async else connected.append,
     ):
         pass
     assert len(connected) == expected_count

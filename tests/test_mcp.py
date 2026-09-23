@@ -707,7 +707,7 @@ class TestMcpStreamable:
         # No exception means the keep-alive was skipped before json().
         keepalive.json.assert_not_called()
 
-    async def test_listen_stops_after_max_retries(self, mock_http):
+    async def test_listen_stops_after_max_retries(self, mock_http, caplog):
         """_listen gives up after _MAX_LISTEN_RETRIES consecutive failures."""
         mock_http.get = AsyncMock(side_effect=ConnectionError("down"))
         client = McpStreamable(url="https://example.com/mcp")
@@ -716,6 +716,87 @@ class TestMcpStreamable:
         # Run _listen directly (not via __aenter__)
         await client._listen()
         assert mock_http.get.call_count == 5  # _MAX_LISTEN_RETRIES
+        assert "listener stopped" in caplog.text
+
+    @pytest.mark.parametrize(
+        "with_callback",
+        [pytest.param(True, id="callback"), pytest.param(False, id="no-callback")],
+    )
+    async def test_call_requests_and_dispatches_progress(
+        self, mock_http, with_callback
+    ):
+        progress = _make_sse_event(
+            json.dumps(
+                {
+                    "jsonrpc": "2.0",
+                    "method": "notifications/progress",
+                    "params": {"progressToken": "t", "progress": 1},
+                }
+            )
+        )
+        self._setup_post_responses(
+            mock_http,
+            _make_response(_INIT_RESULT),
+            _make_response({}),
+            _make_response(_TOOLS_RESULT),
+            _make_sse_response([progress, _make_sse_event(json.dumps(_CALL_RESULT))]),
+        )
+        events: list[dict] = []
+        client = McpStreamable(
+            url="https://example.com/mcp",
+            on_progress=events.append if with_callback else None,
+        )
+        client._http = mock_http
+        async with client:
+            await client.tools[0].handler({"query": "q"})
+        params = mock_http.post.call_args_list[3].kwargs["json"]["params"]
+        assert ("_meta" in params) is with_callback
+        if with_callback:
+            assert params["_meta"]["progressToken"]
+            assert events == [{"progressToken": "t", "progress": 1}]
+
+    @pytest.mark.parametrize(
+        "cancel_error",
+        [
+            pytest.param(None, id="cancel-sent"),
+            pytest.param(ConnectionError("down"), id="cancel-send-fails"),
+        ],
+    )
+    async def test_cancelled_call_sends_cancel_notification(
+        self, mock_http, cancel_error
+    ):
+        started = asyncio.Event()
+        self._setup_post_responses(
+            mock_http,
+            _make_response(_INIT_RESULT),
+            _make_response({}),
+            _make_response(_TOOLS_RESULT),
+        )
+        client = McpStreamable(url="https://example.com/mcp")
+        client._http = mock_http
+        async with client:
+            cancel_resp = cancel_error or _make_response({})
+            responses = iter([None, cancel_resp])
+
+            async def post(*_a, **_kw):
+                resp = next(responses)
+                if resp is None:  # tools/call hangs until cancelled
+                    started.set()
+                    await asyncio.Event().wait()
+                if isinstance(resp, Exception):
+                    raise resp
+                return resp
+
+            mock_http.post = AsyncMock(side_effect=post)
+            task = asyncio.create_task(client.tools[0].handler({"query": "q"}))
+            await started.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        call_body = mock_http.post.call_args_list[0].kwargs["json"]
+        cancel_body = mock_http.post.call_args_list[1].kwargs["json"]
+        assert cancel_body["method"] == "notifications/cancelled"
+        assert cancel_body["params"]["requestId"] == call_body["id"]
 
     @pytest.mark.parametrize(
         "reason, expected_params",
@@ -1000,7 +1081,54 @@ if __name__ == "__main__":
 """
 
 
+_STDIO_PROGRESS_SERVER_SCRIPT = """\
+from mcp.server.mcpserver import Context, MCPServer
+
+server = MCPServer("progress-stdio")
+
+@server.tool()
+async def work(ctx: Context) -> str:
+    \"\"\"Report progress, then return.\"\"\"
+    await ctx.report_progress(1, 2, "half")
+    return "done"
+
+if __name__ == "__main__":
+    server.run(transport="stdio")
+"""
+
+
 class TestMcpStdio:
+    async def test_progress_reaches_callback(self):
+        """Regression: no progressToken was sent, so servers never reported progress."""
+        events: list[dict] = []
+        async with McpStdio(
+            command=sys.executable,
+            args=["-c", _STDIO_PROGRESS_SERVER_SCRIPT],
+            on_progress=events.append,
+        ) as client:
+            await client.tools[0].handler({})
+        assert len(events) == 1
+        assert events[0]["progress"] == 1
+        assert events[0]["total"] == 2
+
+    async def test_cancelled_rpc_sends_cancel_notification(self):
+        client = McpStdio(command="anything")
+        client._loop = asyncio.get_running_loop()
+        sent: list[dict] = []
+
+        async def fake_send(msg):
+            sent.append(dict(msg))
+
+        client._send = fake_send  # type: ignore[method-assign]
+        task = asyncio.create_task(client._rpc("tools/call", {"name": "x"}))
+        await asyncio.sleep(0)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert [m["method"] for m in sent] == ["tools/call", "notifications/cancelled"]
+        assert sent[1]["params"]["requestId"] == sent[0]["id"]
+        assert not client._pending
+
     async def test_list_tools_and_tool_defs(self):
         async with McpStdio(
             command=sys.executable,
