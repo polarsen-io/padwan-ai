@@ -16,7 +16,7 @@ class CreateBatchBody(TypedDict, total=False):
 
 
 class ChatGetCompletion(TypedDict):
-    """Inner completion request wrapped in a batch request item."""
+    """Inner completion request; other chat-completion fields pass through as-is."""
 
     model: str
     messages: Any

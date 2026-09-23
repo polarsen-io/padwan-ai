@@ -10,7 +10,6 @@ from .types import (
     BatchRequestItem,
     BatchRequestPayload,
     BatchResponse,
-    ChatGetCompletion,
     CreateBatchBody,
     ListBatchesResponse,
     ListBatchResultsResponse,
@@ -137,9 +136,7 @@ class GrokClient(_GrokAuth, _OpenAIBase):
                 BatchRequestItem(
                     batch_request_id=req.custom_id or f"request-{idx}",
                     batch_request=BatchRequestPayload(
-                        chat_get_completion=ChatGetCompletion(
-                            model=_model, messages=req.body.get("messages", [])
-                        )
+                        chat_get_completion={**req.body, "model": _model}
                     ),
                 )
             )
