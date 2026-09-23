@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790193980465,
+  "lastUpdate": 1790197318183,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -1968,6 +1968,66 @@ window.BENCHMARK_DATA = {
             "value": 226.97,
             "unit": "ms",
             "range": 6.45
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "june.bug4@proton.me",
+            "name": "JwinPBE",
+            "username": "jwinpbe"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9de04963903d49795811f8fd41d5d7506bee6a92",
+          "message": "Expand reasoning_content check to accept vllm reasoning deltas (#94)\n\n* Expand reasoning_content check to accept vllm reasoning deltas\n\n* test: add vLLM e2e test for reasoning deltas\n\nAdds just e2e-vllm / vllm-up / vllm-down to run it against a local vLLM server.\n\n* ci: run vLLM e2e as its own job, skipped unless VLLM_BASE_URL is set\n\n* test: run vLLM e2e server in Docker, simplify thought payload docstring\n\n* test: run vLLM e2e server via docker compose with healthcheck\n\n* ci: drop vLLM e2e job, run it locally with just e2e-vllm\n\n* chore: add --full to just e2e to also run vLLM tests\n\n* docs: document vLLM reasoning via on_thought\n\n---------\n\nCo-authored-by: Julien Brayere <julien.brayere@obitrain.com>",
+          "timestamp": "2026-09-23T23:01:07+02:00",
+          "tree_id": "88d93eb1eaafa99de532ad65e512ec7b817faa0e",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/9de04963903d49795811f8fd41d5d7506bee6a92"
+        },
+        "date": 1790197317258,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 210.71,
+            "unit": "ms",
+            "range": 1.26
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 210.53,
+            "unit": "ms",
+            "range": 1.96
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 224.5,
+            "unit": "ms",
+            "range": 1.43
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 51.57,
+            "unit": "ms",
+            "range": 0.81
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 185.12,
+            "unit": "ms",
+            "range": 3.5
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 221.55,
+            "unit": "ms",
+            "range": 2.81
           }
         ]
       }
