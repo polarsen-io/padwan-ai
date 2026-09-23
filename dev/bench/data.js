@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790197318183,
+  "lastUpdate": 1790199705930,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -2028,6 +2028,66 @@ window.BENCHMARK_DATA = {
             "value": 221.55,
             "unit": "ms",
             "range": 2.81
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "33b1987cf610b31c96c2e8b15c752e3260cef870",
+          "message": "feat(gemini): add text-to-speech via generate_speech (#95)\n\n* feat(gemini): add text-to-speech via generate_speech\n\nSupports Gemini 3.8 TTS models, single and multi-speaker (per-line speechMetadata).\n\n* docs: list Gemini text-to-speech in feature overviews\n\n* feat(drift): track Gemini TTS models and speech TypedDict fields\n\n* style: format TTS docs example\n\n* test: compare full Gemini Live speechConfig",
+          "timestamp": "2026-09-23T23:40:54+02:00",
+          "tree_id": "93c063e4f41843eb7ade535653afb31b48005963",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/33b1987cf610b31c96c2e8b15c752e3260cef870"
+        },
+        "date": 1790199704555,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 226.76,
+            "unit": "ms",
+            "range": 5.13
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 223.89,
+            "unit": "ms",
+            "range": 2.58
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 245.16,
+            "unit": "ms",
+            "range": 8.92
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 51.44,
+            "unit": "ms",
+            "range": 0.7
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 206.39,
+            "unit": "ms",
+            "range": 5.79
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 247.56,
+            "unit": "ms",
+            "range": 5.46
           }
         ]
       }
