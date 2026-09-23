@@ -17,6 +17,8 @@ from .client import (
     GeminiClient,
     GeminiEmbeddingModel,
     GeminiModel,
+    GeminiSpeech,
+    GeminiTTSModel,
     is_gemini_model,
 )
 from .realtime import (
@@ -35,6 +37,8 @@ __all__ = (
     "GeminiClient",
     "GeminiEmbeddingModel",
     "GeminiModel",
+    "GeminiSpeech",
+    "GeminiTTSModel",
     "GEMINI_MODELS",
     "GEMINI_ENDPOINT",
     "is_gemini_model",

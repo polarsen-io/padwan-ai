@@ -308,8 +308,9 @@ def test_gemini_setup_payload(
     assert setup["model"] == f"models/{DEFAULT_LIVE_MODEL}"
     config = setup["generationConfig"]
     assert config["responseModalities"] == ["AUDIO"]
-    voice_name = config["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]
-    assert voice_name == {"voiceName": "Kore"}
+    assert config["speechConfig"] == {
+        "voiceConfig": {"prebuiltVoiceConfig": {"voiceName": "Kore"}}
+    }
     vad = setup.get("realtimeInputConfig", {}).get("automaticActivityDetection")
     assert vad == expected_vad
     assert ("inputAudioTranscription" in setup) is has_transcription

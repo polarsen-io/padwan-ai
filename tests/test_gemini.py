@@ -8,7 +8,11 @@ import pytest
 from google.genai.types import (
     ContentDict,
     GenerationConfigDict,
+    MultiSpeakerVoiceConfigDict,
     PartDict,
+    SpeakerVoiceConfigDict,
+    SpeechConfigDict,
+    SpeechMetadataDict,
     ThinkingConfigDict,
 )
 from urllib3 import AsyncHTTPResponse
@@ -20,6 +24,7 @@ from padwan_ai.gemini.client import (
     GeminiChatStream,
     GeminiClient,
     GeminiRetry,
+    GeminiSpeech,
     _check_resp,
     _parse_retry_delay,
 )
@@ -28,7 +33,11 @@ from padwan_ai.gemini.models import (
     Content,
     GenerationConfig,
     InlinedResponse,
+    MultiSpeakerVoiceConfig,
     Part,
+    SpeakerVoiceConfig,
+    SpeechConfig,
+    SpeechMetadata,
     ThinkingConfig,
 )
 
@@ -399,6 +408,89 @@ class TestGenConfig:
         assert thoughts == ["thinking out loud..."]
 
 
+# Speech
+
+
+def _voice(name: str) -> dict:
+    return {"prebuiltVoiceConfig": {"voiceName": name}}
+
+
+_LINES = [
+    {"text": "Hi Bob!", "speechMetadata": {"speaker": "Alice", "style": "excited"}},
+    {"text": "Hey Alice.", "speechMetadata": {"speaker": "Bob"}},
+]
+
+
+@pytest.mark.parametrize(
+    "text, kwargs, sent_parts, speech_config, parts, ctx",
+    [
+        pytest.param(
+            "Hello",
+            {"voice": "Puck", "language_code": "fr-FR"},
+            [{"text": "Hello"}],
+            {"voiceConfig": _voice("Puck"), "languageCode": "fr-FR"},
+            [{"inlineData": {"mimeType": "audio/wav", "data": "UklGRg=="}}],
+            nullcontext(GeminiSpeech(b"RIFF", "audio/wav")),
+            id="single-voice",
+        ),
+        pytest.param(
+            _LINES,
+            {"voice": {"Alice": "Leda", "Bob": "Kore"}},
+            _LINES,
+            {
+                "multiSpeakerVoiceConfig": {
+                    "speakerVoiceConfigs": [
+                        {"speaker": "Alice", "voiceConfig": _voice("Leda")},
+                        {"speaker": "Bob", "voiceConfig": _voice("Kore")},
+                    ]
+                }
+            },
+            [
+                {
+                    "inlineData": {
+                        "mimeType": "audio/L16;codec=pcm;rate=24000",
+                        "data": "AAA=",
+                    }
+                }
+            ],
+            nullcontext(GeminiSpeech(b"\x00\x00", "audio/L16;codec=pcm;rate=24000")),
+            id="multi-speaker-lines",
+        ),
+        pytest.param(
+            "Hello",
+            {},
+            [{"text": "Hello"}],
+            {"voiceConfig": _voice("Kore")},
+            [{"text": "I cannot say that"}],
+            pytest.raises(LLMError, match="No audio"),
+            id="no-audio",
+        ),
+    ],
+)
+async def test_generate_speech(
+    text, kwargs: dict, sent_parts: list, speech_config: dict, parts: list, ctx
+):
+    client = GeminiClient(api_key="test")
+    client.complete = AsyncMock(  # type: ignore[method-assign]
+        return_value=(
+            {"candidates": [{"content": {"parts": parts}}]},
+            {"total": 0, "input": 0, "output": 0},
+        )
+    )
+    with ctx as expected:
+        speech, _ = await client.generate_speech(
+            text, model="gemini-3.8-flash-tts", **kwargs
+        )
+        assert speech == expected
+    body, model = client.complete.call_args.args
+    assert model == "gemini-3.8-flash-tts"
+    assert body["contents"] == [{"role": "user", "parts": sent_parts}]
+    assert body["generationConfig"] == {
+        "responseModalities": ["AUDIO"],
+        "speechConfig": speech_config,
+    }
+
+
 # Batch
 
 
@@ -475,6 +567,16 @@ def _camel_to_snake(name: str) -> str:
         pytest.param(Content, ContentDict, id="Content"),
         pytest.param(ThinkingConfig, ThinkingConfigDict, id="ThinkingConfig"),
         pytest.param(GenerationConfig, GenerationConfigDict, id="GenerationConfig"),
+        pytest.param(SpeechConfig, SpeechConfigDict, id="SpeechConfig"),
+        pytest.param(
+            MultiSpeakerVoiceConfig,
+            MultiSpeakerVoiceConfigDict,
+            id="MultiSpeakerVoiceConfig",
+        ),
+        pytest.param(
+            SpeakerVoiceConfig, SpeakerVoiceConfigDict, id="SpeakerVoiceConfig"
+        ),
+        pytest.param(SpeechMetadata, SpeechMetadataDict, id="SpeechMetadata"),
     ],
 )
 def test_sdk_compat(local_type: type, sdk_type: type):

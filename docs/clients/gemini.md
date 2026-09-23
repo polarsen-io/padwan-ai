@@ -80,6 +80,31 @@ async with GeminiClient(model="gemini-embedding-001") as client:
 
 Uses `batchEmbedContents`; the response holds one `values` vector per input, in order.
 
+## Text-to-speech
+
+```python
+async with GeminiClient(model="gemini-3.8-flash-tts") as client:
+    speech, usage = await client.generate_speech(
+        "Say cheerfully: have a nice day!", "Kore"
+    )
+    # speech.audio: bytes, speech.mime_type: "audio/wav"
+
+    # Two speakers: tag each line; speaker names must match the voice mapping.
+    speech, _ = await client.generate_speech(
+        [
+            {
+                "text": "Hi Bob!",
+                "speechMetadata": {"speaker": "Alice", "style": "excited"},
+            },
+            {"text": "<laughs> Hey Alice.", "speechMetadata": {"speaker": "Bob"}},
+        ],
+        {"Alice": "Leda", "Bob": "Puck"},
+    )
+```
+
+3.8 models return WAV and need tagged lines for multi-speaker. 2.5 models return raw 24 kHz PCM
+(`audio/L16`) and reject `speechMetadata`, so pass them a plain `Alice: ...` script instead.
+
 ## Batch Processing
 
 Gemini supports batch processing for large-scale requests via methods on `GeminiClient`.
