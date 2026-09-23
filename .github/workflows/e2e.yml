@@ -18,8 +18,9 @@ jobs:
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
+      # test_vllm.py needs a GPU; run it locally with `just e2e-vllm`
       - id: files
-        run: echo "files=$(ls tests/e2e/test_*.py | jq -Rsc 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+        run: echo "files=$(ls tests/e2e/test_*.py | grep -v test_vllm.py | jq -Rsc 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
 
   e2e:
     name: E2E (${{ matrix.file }})

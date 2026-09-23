@@ -117,14 +117,18 @@ async with OpenAIClient(
 
 ```python
 async with OpenAIClient(
-    model="meta-llama/Llama-3-8b-chat-hf",
+    model="Qwen/Qwen3-0.6B",
     base_url="http://localhost:8000/v1/",
     api_key="token-abc123",
+    on_thought=lambda t: print(f"[thinking] {t}"),
 ) as client:
     response, usage = await client.complete_chat(
         [{"role": "user", "content": "Hello!"}]
     )
 ```
+
+Start vLLM with a `--reasoning-parser` (e.g. `vllm serve Qwen/Qwen3-0.6B --reasoning-parser qwen3`) so
+reasoning arrives in the `reasoning` field and is forwarded to `on_thought` instead of the answer text.
 
 ## Subclassing
 

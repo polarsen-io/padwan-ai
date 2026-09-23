@@ -15,13 +15,31 @@ test *args:
 test-min *args:
     uv run --python 3.13 pytest {{ args }}
 
-# Run e2e tests (copy env.template to .env first, then fill in keys)
+# Run e2e tests (copy env.template to .env first, then fill in keys); --full also starts vLLM; pytest flags go after --
 [group('dev')]
-e2e env=".env" *args:
-    uv run pytest tests/e2e/ -m e2e --env-file {{ env }} {{ args }}
+[arg("full", long="full", value="true")]
+e2e env=".env" full="false" *args:
+    {{ if full == "true" { "just vllm-up && VLLM_BASE_URL=http://localhost:8100/v1 " } else { "" } }}uv run pytest tests/e2e/ -m e2e --env-file {{ env }} {{ args }}
 
 # Local observability stacks (OTel, Langfuse): just obs::<tab>
 mod obs "bin/observability"
+
+vllm_compose := "docker compose -p padwan-vllm -f bin/vllm/docker-compose.yml"
+
+# Start a local vLLM server on :8100 (Docker, NVIDIA GPU; model via VLLM_MODEL)
+[group('vllm')]
+vllm-up:
+    {{ vllm_compose }} up -d --wait
+
+# Stop the local vLLM server
+[group('vllm')]
+vllm-down:
+    {{ vllm_compose }} down
+
+# Run vLLM e2e tests against the local server
+[group('vllm')]
+e2e-vllm *args: vllm-up
+    VLLM_BASE_URL=http://localhost:8100/v1 uv run pytest tests/e2e/test_vllm.py -m e2e {{ args }}
 
 # Type check
 [group('dev')]
