@@ -20,7 +20,7 @@ Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock 
 - **Conversation management** - Built-in conversation history handling
 - **Agentic loop** - `AgentSession` drives multi-turn conversations with tool dispatch, parallel execution, approval hooks, and snapshot persistence
 - **MCP support** - Streamable HTTP and stdio transports for [Model Context Protocol](https://modelcontextprotocol.io/) tool servers
-- **Thinking models** - Stream Gemini and Claude thought tokens separately via an `on_thought` callback
+- **Thinking models** - Stream Gemini, Claude, Mistral, Grok and vLLM thought tokens separately via an `on_thought` callback
 - **Realtime voice** - Speech-to-speech WebSocket sessions (OpenAI Realtime, Gemini Live, Grok Voice) via `RealtimeClient`
 - **Text-to-speech** - Single and two-speaker Gemini TTS via `GeminiClient.generate_speech` ([details](clients/gemini.md#text-to-speech))
 

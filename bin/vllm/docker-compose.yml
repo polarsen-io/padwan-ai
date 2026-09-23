@@ -1,0 +1,28 @@
+# Local vLLM OpenAI-compatible server for tests/e2e/test_vllm.py (NVIDIA GPU + container toolkit).
+# Drive it through `just vllm-up` / `just e2e-vllm`; override the model with VLLM_MODEL.
+
+services:
+  vllm:
+    image: vllm/vllm-openai:${VLLM_VERSION:-v0.30.0}
+    ipc: host
+    ports:
+      - 8100:8000
+    environment:
+      - HF_TOKEN
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    # eager mode avoids CUDA graph capture hangs; 0.7 leaves room on 8 GB GPUs
+    command: >-
+      --model ${VLLM_MODEL:-Qwen/Qwen3-0.6B} --reasoning-parser qwen3
+      --max-model-len 4096 --gpu-memory-utilization 0.7 --enforce-eager
+    healthcheck:
+      test: [CMD, curl, -sf, http://localhost:8000/health]
+      interval: 5s
+      start_period: 10m
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

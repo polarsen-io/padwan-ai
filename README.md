@@ -125,5 +125,6 @@ Thinking tokens stream separately through an `on_thought` callback on every clie
 uv sync --all-extras --all-groups
 just ci          # ruff + pyright + pytest
 just e2e         # live provider tests, keys from .env (see env.template)
+just e2e --full  # same, plus a local vLLM server (Docker + NVIDIA GPU)
 just docs        # serve the docs site locally
 ```
