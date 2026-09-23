@@ -78,7 +78,7 @@ def _extract_thought_payload(payload: dict[str, typing.Any]) -> str | None:
     Returns the concatenated thought text, or `None` if neither shape
     carries any reasoning content.
     """
-    if rc := payload.get("reasoning_content"):
+    if rc := payload.get("reasoning_content") or payload.get("reasoning"):
         return rc if isinstance(rc, str) else None
     content = payload.get("content")
     if isinstance(content, list):
