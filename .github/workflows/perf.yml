@@ -7,6 +7,7 @@ on:
     tags-ignore:
       - '**'
   pull_request:
+    types: [opened, reopened, synchronize, labeled]
 
 permissions:
   contents: write
@@ -18,6 +19,11 @@ env:
 jobs:
   benchmark:
     name: Import time benchmark
+    # PRs: only with the import-bench label (re-runs on push while it stays)
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'import-bench') ||
+      (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'import-bench'))
     runs-on: ubuntu-latest
 
     steps:
