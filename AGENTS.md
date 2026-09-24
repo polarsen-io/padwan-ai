@@ -39,7 +39,8 @@ changes, run e2e with `--otel`: it fails on span attributes the docs don't name.
 - Generated, never hand-edit: `padwan_ai/openai/types.py`, `padwan_ai/mistral/types.py` (`just gen-all`) and
   `padwan_ai/mistral/_deprecations.py` (`bin/drift/check_model_drift.py`). Put custom TypedDicts in the relevant
   module (e.g. `padwan_ai/openai/batch.py`).
-- Annotate `_check_resp()` results and `json=` payloads with their TypedDict (`data: BatchResponse = _check_resp(resp)`).
+- Annotate `_check_resp()` results and `json=` payloads with their TypedDict
+  (`data: BatchResponse = _check_resp(resp)`).
 - No `assert` for runtime checks. Provider/API failures raise from `padwan_ai/errors.py`; keep existing `ValueError`
   (bad arguments) and `RuntimeError` (lifecycle misuse) contracts.
 - Tests: `pytest.param(..., id="...")` for every parametrized case; mock HTTP in unit tests, real calls only under
