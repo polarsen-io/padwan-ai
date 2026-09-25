@@ -7,6 +7,7 @@ __all__ = (
     "Content",
     "FunctionCall",
     "FunctionCallPart",
+    "FunctionCallingConfig",
     "FunctionDeclaration",
     "FunctionResponse",
     "FunctionResponsePart",
@@ -19,6 +20,7 @@ __all__ = (
     "SystemInstruction",
     "GenerationConfig",
     "ThinkingConfig",
+    "ToolConfig",
     # Batch types
     "BatchState",
     "BatchStats",
@@ -178,6 +180,7 @@ class FunctionCallPart(TypedDict):
 
 
 class FunctionResponse(TypedDict):
+    id: NotRequired[str]
     name: str
     response: dict[str, Any]
 
@@ -219,27 +222,45 @@ class GeminiTool(TypedDict):
     function_declarations: list[FunctionDeclaration]
 
 
+class FunctionCallingConfig(TypedDict, total=False):
+    mode: Literal["AUTO", "ANY", "NONE"]
+    allowed_function_names: list[str]
+
+
+class ToolConfig(TypedDict, total=False):
+    function_calling_config: FunctionCallingConfig
+
+
 class GenerationConfig(TypedDict, total=False):
     responseMimeType: Literal["application/json"]
     responseSchema: dict[str, Any]
     temperature: float
+    topP: float
+    topK: int
+    stopSequences: list[str]
+    maxOutputTokens: int
     thinkingConfig: ThinkingConfig
     responseModalities: list[Literal["TEXT", "AUDIO"]]
     speechConfig: SpeechConfig
 
 
 class StreamBody(TypedDict):
+    model: NotRequired[str]
     contents: list[Content]
     temperature: NotRequired[float]
     systemInstruction: NotRequired[SystemInstruction]
     tools: NotRequired[list[GeminiTool]]
+    toolConfig: NotRequired[ToolConfig]
+    generationConfig: NotRequired[GenerationConfig]
 
 
 class CompletionBody(TypedDict):
+    model: NotRequired[str]
     contents: list[Content]
     systemInstruction: NotRequired[SystemInstruction]
     generationConfig: NotRequired[GenerationConfig]
     tools: NotRequired[list[GeminiTool]]
+    toolConfig: NotRequired[ToolConfig]
 
 
 # Live (realtime) wire shapes of BidiGenerateContentSetup; camelCase keys as

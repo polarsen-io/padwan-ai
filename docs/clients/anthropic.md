@@ -136,3 +136,45 @@ async for chunk in stream:
 usage = stream.usage
 tool_calls = stream.tool_calls
 ```
+
+## Messages compatibility over Gemini
+
+Like `anthropic.compat.messages_to_openai` and `anthropic.events`, the
+`anthropic.gemini_compat` module translates Messages requests and responses
+without running an HTTP server.
+
+```python
+from padwan_ai.anthropic.gemini_compat import (
+    gemini_response_to_anthropic,
+    gemini_stream_to_anthropic,
+    messages_to_gemini,
+)
+from padwan_ai.anthropic.models import AnthropicCompatBody
+from padwan_ai.gemini import GeminiClient
+
+body: AnthropicCompatBody = {
+    "model": "claude-sonnet-5",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "Hello!"}],
+}
+request = messages_to_gemini(body, model="gemini-2.5-flash")
+async with GeminiClient() as client:
+    data, usage = await client.complete(request)
+    response = gemini_response_to_anthropic(data, model=body["model"])
+
+    async for event_name, payload in gemini_stream_to_anthropic(
+        client.stream(request), model=body["model"]
+    ):
+        ...  # The server serializes these pairs as SSE frames.
+```
+
+The converted `model` selects the client endpoint and is removed from the
+HTTP body. An explicit `complete(..., model=...)` or `stream(..., model=...)`
+argument takes precedence.
+
+Keep returned tool IDs unchanged when replaying assistant calls and user
+results: signed Gemini function calls carry their signatures in those opaque
+IDs. Parallel results stay together in one user turn; unmatched results raise
+`ValueError`. Anthropic thinking blocks and thinking configuration are not
+replayed. Signatures attached to non-function parts are not preserved. Remote
+image URLs, server tools, and non-text tool-result content are not translated.
