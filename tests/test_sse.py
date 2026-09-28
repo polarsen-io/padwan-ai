@@ -32,8 +32,7 @@ def test_sse_scheme_resolves_to_padwan_extension():
             True, False, pytest.raises(asyncio.CancelledError), id="cancelled"
         ),
         pytest.param(False, False, nullcontext(), id="eof"),
-        # cancel request pending before the read must not trigger CancelledError
-        pytest.param(False, True, nullcontext(), id="eof-after-leaked-cancel"),
+        pytest.param(False, True, nullcontext(), id="eof-with-pending-cancel"),
     ],
 )
 async def test_sse_extension_propagates_cancellation(cancel, leaked, expectation):
