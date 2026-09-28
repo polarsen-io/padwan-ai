@@ -74,7 +74,7 @@ class _SseExtension(AsyncServerSideEventExtensionFromHTTP):
 
     async def next_payload(self, *, raw: bool = False) -> Any:
         task = asyncio.current_task()
-        # compare to the count before: urllib3-future's Timeout leaks cancel requests
+        # compare to the count before: the caller may already have pending cancel requests
         before = task.cancelling() if task else 0
         event = await super().next_payload(raw=raw)
         # upstream swallows CancelledError, see https://github.com/jawah/urllib3.future/issues/419

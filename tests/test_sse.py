@@ -32,7 +32,7 @@ def test_sse_scheme_resolves_to_padwan_extension():
             True, False, pytest.raises(asyncio.CancelledError), id="cancelled"
         ),
         pytest.param(False, False, nullcontext(), id="eof"),
-        # urllib3-future's Timeout cancels the task without uncancel()
+        # cancel request pending before the read must not trigger CancelledError
         pytest.param(False, True, nullcontext(), id="eof-after-leaked-cancel"),
     ],
 )
