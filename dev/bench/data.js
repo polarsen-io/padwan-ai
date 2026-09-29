@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790709748851,
+  "lastUpdate": 1790710886780,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -2568,6 +2568,66 @@ window.BENCHMARK_DATA = {
             "value": 217.34,
             "unit": "ms",
             "range": 1.05
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bot@polarsen.io",
+            "name": "Polarsen-bot",
+            "username": "Polarsen-bot"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "685fb9deec60e05dbedf59e6bf2cc2c240e3cae7",
+          "message": "chore: weekly LLM SDK refresh (#107)\n\n* chore: weekly LLM SDK refresh\n\n- Bump openai, google-genai, xai-sdk, mcp to latest\n- Regenerate OpenAI/Mistral OpenAPI TypedDicts\n- Include provider model drift report\n\n* chore: add drifted model literals\n\nCo-authored-by: Andarius <5070712+Andarius@users.noreply.github.com>\n\n* fix(embeddings): decode base64 embeddings in vectors()\n\nThe regenerated OpenAI types allow a base64 string per item (encoding_format=\"base64\");\nvectors() now decodes it to floats instead of returning the string.\n\n---------\n\nCo-authored-by: Polarsen-bot <248777799+Polarsen-bot@users.noreply.github.com>\nCo-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>\nCo-authored-by: Andarius <5070712+Andarius@users.noreply.github.com>\nCo-authored-by: julien <julien.brayere@obitrain.com>",
+          "timestamp": "2026-09-29T21:40:23+02:00",
+          "tree_id": "c6dfc5f4ff6113825e4f5c8b39ee1069b722021e",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/685fb9deec60e05dbedf59e6bf2cc2c240e3cae7"
+        },
+        "date": 1790710886219,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 210.23,
+            "unit": "ms",
+            "range": 3.61
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 211.34,
+            "unit": "ms",
+            "range": 6.24
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 222.7,
+            "unit": "ms",
+            "range": 4.57
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 50.78,
+            "unit": "ms",
+            "range": 0.93
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 178.94,
+            "unit": "ms",
+            "range": 2.83
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 225.61,
+            "unit": "ms",
+            "range": 3.6
           }
         ]
       }
