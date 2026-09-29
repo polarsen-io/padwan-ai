@@ -103,6 +103,25 @@ telemetry = instrument(capture_content=True, mask_otel_spans=redact_inputs)
 
 `instrument()` accepts Langfuse credentials and routing (`public_key`, `secret_key`, `base_url`), trace metadata (`environment`, `release`), delivery controls (`sample_rate`, `timeout`, `flush_at`, `flush_interval`), `debug`, an existing `tracer_provider`, and `should_export_span`. For tests, `span_exporter` (e.g. an `InMemorySpanExporter`) and `httpx_client` (e.g. `httpx.Client(transport=httpx.MockTransport(...))`) are handed to the Langfuse client as-is, so a test can assert on every attribute the integration would send without opening a socket. The credential arguments fall back to the standard Langfuse environment variables. A custom span filter is applied after the adapter includes Padwan spans.
 
+To send some traces to a second Langfuse project, build another `Langfuse` client on the same tracer provider with the two hooks `instrument()` uses, `SpanAdapter` (the mapping above, after an optional user mask) and `SpanFilter` (Padwan spans plus Langfuse's default selection, narrowed by an optional user filter):
+
+```python
+from langfuse import Langfuse
+
+from padwan_ai.langfuse import SpanAdapter, SpanFilter, instrument
+
+telemetry = instrument(should_export_span=lambda span: not is_billing(span))
+billing = Langfuse(
+    public_key="pk-billing",
+    secret_key="sk-billing",
+    tracer_provider=telemetry.tracer_provider,
+    mask_otel_spans=SpanAdapter(),
+    should_export_span=SpanFilter(is_billing),
+)
+```
+
+`is_billing` stands for your own routing rule. The second client flushes at interpreter exit like any Langfuse client; call `billing.flush()` to send its spans earlier, since closing `telemetry` flushes only its own client.
+
 The integration exports traces only. Padwan metrics and exception log events still require separately configured OpenTelemetry meter and logger providers. Start the Langfuse integration before using Padwan; if `padwan_ai.otel.instrument()` is already active, the adapter raises instead of silently attaching to a different provider. See the [Langfuse OpenTelemetry integration](https://langfuse.com/integrations/native/opentelemetry) for backend configuration and troubleshooting.
 
 ## Chat spans

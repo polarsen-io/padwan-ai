@@ -47,7 +47,7 @@ def _span_params(
 def test_span_adapter_maps_observation_type(operation: str, expected: str):
     identifier, params = _span_params({"gen_ai.operation.name": operation})
 
-    result = langfuse_integration._SpanAdapter()(params=params)
+    result = langfuse_integration.SpanAdapter()(params=params)
 
     assert result is not None
     patch = result.span_patches[identifier]
@@ -111,7 +111,7 @@ def test_span_adapter_maps_content(
 ):
     identifier, params = _span_params(attributes)
 
-    result = langfuse_integration._SpanAdapter()(params=params)
+    result = langfuse_integration.SpanAdapter()(params=params)
 
     assert result is not None
     patch = result.span_patches[identifier]
@@ -136,7 +136,7 @@ def test_span_adapter_applies_mask_before_mapping():
             }
         )
 
-    result = langfuse_integration._SpanAdapter(mask)(params=params)
+    result = langfuse_integration.SpanAdapter(mask)(params=params)
 
     assert result is not None
     patch = result.span_patches[identifier]
@@ -150,7 +150,7 @@ def test_span_adapter_ignores_other_instrumentation_scopes():
         {"gen_ai.operation.name": "chat"}, scope="other.instrumentation"
     )
 
-    assert langfuse_integration._SpanAdapter()(params=params) is None
+    assert langfuse_integration.SpanAdapter()(params=params) is None
 
 
 @pytest.mark.parametrize(
@@ -165,7 +165,7 @@ def test_span_filter(user_filter, expected: bool):
     span.instrumentation_scope = InstrumentationScope("padwan_ai")
     span.attributes = {"mcp.method.name": "initialize"}
 
-    assert langfuse_integration._SpanFilter(user_filter)(span) is expected
+    assert langfuse_integration.SpanFilter(user_filter)(span) is expected
 
 
 def test_instrument_owns_lifecycle(monkeypatch):
@@ -197,8 +197,8 @@ def test_instrument_owns_lifecycle(monkeypatch):
     uninstrument_otel.assert_called_once_with()
     client.shutdown.assert_called_once_with()
     options = langfuse.call_args.kwargs
-    assert isinstance(options["mask_otel_spans"], langfuse_integration._SpanAdapter)
-    assert isinstance(options["should_export_span"], langfuse_integration._SpanFilter)
+    assert isinstance(options["mask_otel_spans"], langfuse_integration.SpanAdapter)
+    assert isinstance(options["should_export_span"], langfuse_integration.SpanFilter)
 
 
 def test_instrument_rejects_active_otel(monkeypatch):

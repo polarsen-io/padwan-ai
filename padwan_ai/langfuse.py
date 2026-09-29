@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 from . import otel
 from ._json import dumps as _json_dumps, loads as _json_loads
 
-__all__ = ("LangfuseIntegration", "instrument")
+__all__ = ("LangfuseIntegration", "SpanAdapter", "SpanFilter", "instrument")
 
 _PADWAN_SCOPE = "padwan_ai"
 _OBSERVATION_TYPES = {
@@ -133,7 +133,7 @@ def _apply_patch(
 
 
 @dataclass(frozen=True)
-class _SpanAdapter:
+class SpanAdapter:
     """Langfuse `mask_otel_spans` hook enriching Padwan spans after the user mask."""
 
     user_mask: MaskOtelSpansFunction | None = None
@@ -167,7 +167,7 @@ class _SpanAdapter:
 
 
 @dataclass(frozen=True)
-class _SpanFilter:
+class SpanFilter:
     """Langfuse `should_export_span` hook also accepting Padwan spans."""
 
     user_filter: Callable[[ReadableSpan], bool] | None = None
@@ -256,8 +256,8 @@ def instrument(
         flush_at=flush_at,
         flush_interval=flush_interval,
         debug=debug,
-        mask_otel_spans=_SpanAdapter(mask_otel_spans),
-        should_export_span=_SpanFilter(should_export_span),
+        mask_otel_spans=SpanAdapter(mask_otel_spans),
+        should_export_span=SpanFilter(should_export_span),
         span_exporter=span_exporter,
         httpx_client=httpx_client,
     )
