@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790710931351,
+  "lastUpdate": 1790711376833,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -2688,6 +2688,66 @@ window.BENCHMARK_DATA = {
             "value": 232.02,
             "unit": "ms",
             "range": 4.97
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "carlo.abichahine@gmail.com",
+            "name": "Carlo Abi Chahine",
+            "username": "cabichahine"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bfc6571b50d2df582fdb81d1af70f97d142df651",
+          "message": "feat(agent): say why a run ended: OutputError.reason and AgentSession.stop_reason (#103)\n\n* feat(agent): say why a run ended: OutputError.reason and AgentSession.stop_reason\n\nA typed run's OutputError now carries reason (invalid_answer, text_answer,\nround_limit), so callers stop matching on its message. A text run records\nstop_reason (answer, empty, round_limit), since it yields a placeholder for\nan empty answer and for the round limit instead of raising.\n\n* fix(agent): leave stop_reason None when a typed run raises OutputError\n\nA text answer without submit left stop_reason at \"answer\" and the round limit at\n\"round_limit\" although the run failed; the failure is on OutputError.reason.\n\n---------\n\nCo-authored-by: julien <julien.brayere@obitrain.com>",
+          "timestamp": "2026-09-29T21:48:41+02:00",
+          "tree_id": "798bbcf4ddbe1d9d7322c534b467c8eba33067d1",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/bfc6571b50d2df582fdb81d1af70f97d142df651"
+        },
+        "date": 1790711375778,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 208.32,
+            "unit": "ms",
+            "range": 1.15
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 207.55,
+            "unit": "ms",
+            "range": 0.9
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 221.98,
+            "unit": "ms",
+            "range": 1.24
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 51.22,
+            "unit": "ms",
+            "range": 0.32
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 182.57,
+            "unit": "ms",
+            "range": 2.85
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 217.78,
+            "unit": "ms",
+            "range": 1.37
           }
         ]
       }
