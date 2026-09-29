@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790625500587,
+  "lastUpdate": 1790709748851,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -2508,6 +2508,66 @@ window.BENCHMARK_DATA = {
             "value": 224.96,
             "unit": "ms",
             "range": 3.81
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "carlo.abichahine@gmail.com",
+            "name": "Carlo Abi Chahine",
+            "username": "cabichahine"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b61e1a58e6a3a250885f0854442badd7b653c0c4",
+          "message": "feat(langfuse): export SpanAdapter and SpanFilter (#105)\n\n* feat(langfuse): export SpanAdapter and SpanFilter\n\nA second Langfuse client on the same tracer provider (another project, its\nown exporter) needs the same mapping and span selection instrument() uses;\nboth were private, so callers imported _SpanAdapter or re-coded the filter.\n\n* docs(langfuse): the second client flushes at exit; flush() sends earlier\n\n---------\n\nCo-authored-by: julien <julien.brayere@obitrain.com>",
+          "timestamp": "2026-09-29T21:21:25+02:00",
+          "tree_id": "9d042d078b528b597e9f33d6a1e86835cf70d7ee",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/b61e1a58e6a3a250885f0854442badd7b653c0c4"
+        },
+        "date": 1790709747622,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 205.2,
+            "unit": "ms",
+            "range": 0.78
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 206.01,
+            "unit": "ms",
+            "range": 1.33
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 219.41,
+            "unit": "ms",
+            "range": 1.08
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 51.14,
+            "unit": "ms",
+            "range": 0.33
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 181.23,
+            "unit": "ms",
+            "range": 0.9
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 217.34,
+            "unit": "ms",
+            "range": 1.05
           }
         ]
       }
