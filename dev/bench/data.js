@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790710886780,
+  "lastUpdate": 1790710931351,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -2628,6 +2628,66 @@ window.BENCHMARK_DATA = {
             "value": 225.61,
             "unit": "ms",
             "range": 3.6
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "carlo.abichahine@gmail.com",
+            "name": "Carlo Abi Chahine",
+            "username": "cabichahine"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8270b31bed8d2a00734b40e4090263f473ff0755",
+          "message": "fix(agent): log a tool failure's traceback only on DEBUG (#106)\n\n* fix(agent): log a tool failure's traceback only on DEBUG\n\nThe model already gets the error as the tool result and usually recovers,\nso a full traceback at WARNING for every tool error floods the logs. The\nfailure stays one WARNING line; the traceback is attached when the\npadwan_ai logger is enabled for DEBUG.\n\n* test(agent): fold the tool-failure log check into test_tool_failure_modes\n\n---------\n\nCo-authored-by: julien <julien.brayere@obitrain.com>",
+          "timestamp": "2026-09-29T21:41:12+02:00",
+          "tree_id": "060602c7ebdb6d410286fb21cbbfa03fd886ad6f",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/8270b31bed8d2a00734b40e4090263f473ff0755"
+        },
+        "date": 1790710929930,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 219.22,
+            "unit": "ms",
+            "range": 5.38
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 217.13,
+            "unit": "ms",
+            "range": 3.65
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 233.32,
+            "unit": "ms",
+            "range": 10.6
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 52.9,
+            "unit": "ms",
+            "range": 1.89
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 189.41,
+            "unit": "ms",
+            "range": 3.77
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 232.02,
+            "unit": "ms",
+            "range": 4.97
           }
         ]
       }
