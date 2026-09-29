@@ -251,7 +251,7 @@ session = AgentSession(
 
 ### Error handling
 
-By default, exceptions raised inside a tool handler are caught, formatted as JSON `{"error": str(exc)}`, and appended as the tool result so the model can recover. Override `on_tool_error` to customize:
+By default, exceptions raised inside a tool handler are caught, formatted as JSON `{"error": str(exc)}`, and appended as the tool result so the model can recover. Each failure is logged as one WARNING line on the `padwan_ai` logger; its traceback is attached only when that logger is enabled for DEBUG. Override `on_tool_error` to customize:
 
 ```python
 def format_error(tool, args, exc):

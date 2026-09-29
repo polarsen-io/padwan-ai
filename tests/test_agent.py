@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -167,14 +168,21 @@ async def test_tool_call_round_trip() -> None:
 
 
 @pytest.mark.parametrize(
-    "scenario",
+    "scenario, level",
     [
-        pytest.param("unknown", id="unknown_tool"),
-        pytest.param("raise_default", id="handler_raises_default_error"),
-        pytest.param("raise_override", id="handler_raises_with_on_tool_error"),
+        pytest.param("unknown", logging.INFO, id="unknown_tool"),
+        pytest.param("raise_default", logging.INFO, id="handler_raises_default_error"),
+        pytest.param(
+            "raise_default", logging.DEBUG, id="handler_raises_traceback_on_debug"
+        ),
+        pytest.param(
+            "raise_override", logging.INFO, id="handler_raises_with_on_tool_error"
+        ),
     ],
 )
-async def test_tool_failure_modes(scenario: str) -> None:
+async def test_tool_failure_modes(
+    caplog: pytest.LogCaptureFixture, scenario: str, level: int
+) -> None:
     seen_errors: list[tuple[str, Exception]] = []
 
     async def boom(_args: dict[str, Any]) -> str:
@@ -208,8 +216,17 @@ async def test_tool_failure_modes(scenario: str) -> None:
         mcp_tools=tools,
         on_tool_error=on_tool_error,
     )
-    out = await session.send("go")
+    with caplog.at_level(level, logger="padwan_ai"):
+        out = await session.send("go")
     assert out == "done"
+    # one WARNING per raising tool; the traceback only on DEBUG
+    raised = [
+        r for r in caplog.records if r.getMessage() == "Tool 'boom' raised: kaboom"
+    ]
+    expected = (
+        [] if scenario == "unknown" else [(logging.WARNING, level == logging.DEBUG)]
+    )
+    assert [(r.levelno, bool(r.exc_info)) for r in raised] == expected
 
     second_messages = client.calls[1][0]
     tool_msg = next(m for m in second_messages if m.get("role") == "tool")

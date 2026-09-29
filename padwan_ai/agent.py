@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import inspect
+import logging
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from contextlib import AbstractContextManager, nullcontext
@@ -548,7 +549,14 @@ class AgentSession[T: Answer = Answer]:
             if inspect.isawaitable(result):
                 result = await result
         except Exception as exc:
-            log.warning("Tool %r raised: %s", name, exc, exc_info=True)
+            # one line by default: the model gets the error as the tool result and
+            # usually recovers, so the traceback is for whoever enabled DEBUG
+            log.warning(
+                "Tool %r raised: %s",
+                name,
+                exc,
+                exc_info=log.isEnabledFor(logging.DEBUG),
+            )
             if self.on_tool_error is not None:
                 return self.on_tool_error(tool, args, exc)
             return _json_dumps({"error": str(exc)})
