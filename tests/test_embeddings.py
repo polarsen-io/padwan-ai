@@ -162,6 +162,16 @@ async def test_fetch_embeddings_input_and_model_guard(
             [[0.1], [0.2]],
             id="openai-shape-sorted-by-index",
         ),
+        pytest.param(
+            {
+                "data": [
+                    {"object": "embedding", "embedding": "AAAAPwAAgL4=", "index": 0},
+                ]
+            },
+            "openai",
+            [[0.5, -0.25]],
+            id="openai-shape-base64-decoded",
+        ),
     ],
 )
 def test_vectors(resp: dict, provider: str, expected: list[list[float]]):

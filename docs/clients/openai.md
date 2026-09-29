@@ -79,7 +79,7 @@ async with OpenAIClient(model="text-embedding-3-small") as client:
     vecs = vectors(resp)  # one list[float] per input, matched by index
 ```
 
-`padwan_ai.vectors(resp, provider)` returns the vectors in input order for any provider's payload; `provider` defaults to the OpenAI shape, pass `"gemini"` for Gemini. `fetch_embeddings` is available on every OpenAI-compatible client (Mistral, Grok, custom `base_url` endpoints). Pass `model=` to reuse a chat client; provider-only body fields go through `extra_params`.
+`padwan_ai.vectors(resp, provider)` returns the vectors in input order for any provider's payload; `provider` defaults to the OpenAI shape, pass `"gemini"` for Gemini. `fetch_embeddings` is available on every OpenAI-compatible client (Mistral, Grok, custom `base_url` endpoints). Pass `model=` to reuse a chat client; provider-only body fields go through `extra_params`. With `extra_params={"encoding_format": "base64"}` (about 4× smaller responses), `vectors()` decodes the float32 payload back to floats.
 
 `complete_chat`/`stream_chat` also accept `extra_params` for provider-only body fields. For raw request bodies, `complete`/`stream` bypass the `ChatMessage` shaping.
 
