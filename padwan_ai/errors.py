@@ -13,6 +13,7 @@ Provider = Literal[
 __all__ = (
     "LLMError",
     "OutputError",
+    "OutputFailure",
     "Provider",
     "QuotaExceededError",
     "TooManyRequestsError",
@@ -45,10 +46,27 @@ class QuotaExceededError(Exception):
     body: dict
 
 
-class OutputError(Exception):
-    """An `AgentSession` run with `output=` ended without a valid answer."""
+OutputFailure = Literal["invalid_answer", "text_answer", "round_limit"]
+"""Why a typed run failed: `submit` was called but never validated, the model
+answered in text without calling it, or `max_tool_rounds` ran out first."""
 
-    def __init__(self, message: str, *, attempts: int = 0, details: str | None = None):
+
+class OutputError(Exception):
+    """An `AgentSession` run with `output=` ended without a valid answer.
+
+    `reason` says which failure it was, so callers can branch on it rather
+    than on the message; it is `None` only on errors raised outside padwan.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        reason: OutputFailure | None = None,
+        attempts: int = 0,
+        details: str | None = None,
+    ):
+        self.reason = reason
         self.attempts = attempts
         self.details = details
         super().__init__(message)

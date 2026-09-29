@@ -129,6 +129,7 @@ class _OutputRun[T: Answer]:
             # stored, not raised: _dispatch_one would turn the exception into a tool result
             self.failure = OutputError(
                 f"invalid {self.spec.tool} answer after {self.attempts} attempt(s): {reason}",
+                reason="invalid_answer",
                 attempts=self.attempts,
                 details=reason,
             )
@@ -208,6 +209,12 @@ def _extract_text(result: Any) -> str:
     return _json_dumps(result)
 
 
+StopReason = Literal["answer", "empty", "round_limit"]
+"""How the last `stream()` / `send()` / `run()` ended: a text answer or an
+accepted `submit` (``answer``), a round with neither text nor tool calls
+(``empty``), or `max_tool_rounds` spent on tool calls (``round_limit``)."""
+
+
 @dataclass
 class AgentSession[T: Answer = Answer]:
     """Multi-turn conversation runner with streaming and tool dispatch.
@@ -254,6 +261,10 @@ class AgentSession[T: Answer = Answer]:
     store: ConversationStore | None = None
     output: AgentOutput[T] | None = None
     """Typed final answer; enables `run()`."""
+    stop_reason: StopReason | None = field(init=False, default=None)
+    """How the last run ended; None before the first one, while one is in flight, or if it raised.
+    Tells an empty answer or the round limit apart from real text, since a
+    text run yields a placeholder for both rather than raising."""
     _output: _OutputRun[T] | None = field(init=False, default=None, repr=False)
     _state: ConversationState = field(init=False)
     _exit_stack: contextlib.AsyncExitStack = field(init=False)
@@ -637,6 +648,7 @@ class AgentSession[T: Answer = Answer]:
         have been made (in which case a final limit-reached message is yielded).
         """
         self._state.add_user_message(user_input)
+        self.stop_reason = None
         if self._output is not None:
             self._output.reset()
         calls_remaining = self.max_tool_rounds
@@ -663,6 +675,7 @@ class AgentSession[T: Answer = Answer]:
 
             if not chat_stream.tool_calls:
                 text = "".join(chunks)
+                stop_reason: StopReason = "answer" if text else "empty"
                 if not text:
                     text = "(no response)"
                     yield text
@@ -671,9 +684,11 @@ class AgentSession[T: Answer = Answer]:
                     raise OutputError(
                         f"the model answered in text without calling "
                         f"{self._output.spec.tool}: {text[:200]!r}",
+                        reason="text_answer",
                         attempts=self._output.attempts,
                         details=text,
                     )
+                self.stop_reason = stop_reason
                 return
 
             self._state.messages.append(
@@ -687,6 +702,7 @@ class AgentSession[T: Answer = Answer]:
             if self._output is not None and self._output.done:
                 if self._output.failure is not None:
                     raise self._output.failure
+                self.stop_reason = "answer"
                 return  # a valid answer is in hand: no further round
 
         msg = (
@@ -697,8 +713,10 @@ class AgentSession[T: Answer = Answer]:
         if self._output is not None:
             raise OutputError(
                 f"no {self._output.spec.tool} call within {self.max_tool_rounds} round(s)",
+                reason="round_limit",
                 attempts=self._output.attempts,
             )
+        self.stop_reason = "round_limit"
         yield msg
 
     async def send(self, user_input: str | list[ContentPart]) -> str:

@@ -17,6 +17,8 @@ from padwan_ai import (
     ConversationState,
     McpTool,
     OutputError,
+    OutputFailure,
+    StopReason,
     ToolCall,
     ToolCallFunction,
     ToolDefinition,
@@ -120,16 +122,20 @@ class FakeStore:
 
 
 @pytest.mark.parametrize(
-    "chunks, expected",
+    "chunks, expected, stop_reason",
     [
-        pytest.param(["Hello", " world"], "Hello world", id="text_response"),
-        pytest.param([], "(no response)", id="empty_response"),
+        pytest.param(["Hello", " world"], "Hello world", "answer", id="text_response"),
+        pytest.param([], "(no response)", "empty", id="empty_response"),
     ],
 )
-async def test_single_round_response(chunks: list[str], expected: str) -> None:
+async def test_single_round_response(
+    chunks: list[str], expected: str, stop_reason: StopReason
+) -> None:
     session, client = make_session([FakeChatStream(chunks=chunks)])
+    assert session.stop_reason is None
     out = await session.send("hi")
     assert out == expected
+    assert session.stop_reason == stop_reason
     assert len(client.calls) == 1
     assert session.messages[-1] == {"role": "assistant", "content": expected}
 
@@ -266,6 +272,7 @@ async def test_max_tool_rounds_limits_llm_calls() -> None:
     session, client = make_session(responses, mcp_tools=[tool], max_tool_rounds=1)
     out = await session.send("go")
     assert "reached tool call limit of 1 rounds" in out
+    assert session.stop_reason == "round_limit"
     assert len(client.calls) == 1
 
 
@@ -1036,6 +1043,7 @@ async def test_run_ends_on_a_valid_submit(verdict: type) -> None:
     async with session:
         answer = await session.run("triage this")
     assert answer == verdict(decision="match", article_id=12)  # "12" coerced
+    assert session.stop_reason == "answer"
     assert len(client.calls) == 2  # no third round after submit
     # the model sees submit from round one, with the answer's schema and no title
     submit_def = next(t for t in client.calls[0][1] if t["name"] == "submit")
@@ -1083,15 +1091,18 @@ async def test_too_many_invalid_submits_fail_the_run(
     async with session:
         with pytest.raises(OutputError, match="invalid submit answer") as exc:
             await session.run("go")
+    assert exc.value.reason == "invalid_answer"
     assert exc.value.attempts == invalid_rounds
+    assert session.stop_reason is None  # the failure is on the error
     assert len(client.calls) == invalid_rounds  # no round after the failure
 
 
 @pytest.mark.parametrize(
-    "responses, match, details",
+    "responses, reason, match, details",
     [
         pytest.param(
             [FakeChatStream(chunks=["I think 12."])],
+            "text_answer",
             "without calling submit",
             "I think 12.",
             id="text_answer",
@@ -1103,6 +1114,7 @@ async def test_too_many_invalid_submits_fail_the_run(
                 )
                 for i in range(3)
             ],
+            "round_limit",
             "within 2 round",
             None,
             id="round_limit",
@@ -1110,7 +1122,11 @@ async def test_too_many_invalid_submits_fail_the_run(
     ],
 )
 async def test_a_run_without_submit_fails(
-    verdict: type, responses: list[FakeChatStream], match: str, details: str | None
+    verdict: type,
+    responses: list[FakeChatStream],
+    reason: OutputFailure,
+    match: str,
+    details: str | None,
 ) -> None:
     session, _ = make_session(
         responses, mcp_tools=[SEARCH], output=AgentOutput(verdict), max_tool_rounds=2
@@ -1118,7 +1134,9 @@ async def test_a_run_without_submit_fails(
     async with session:
         with pytest.raises(OutputError, match=match) as exc:
             await session.run("go")
+    assert exc.value.reason == reason
     assert exc.value.details == details
+    assert session.stop_reason is None
 
 
 async def test_the_output_tool_can_be_renamed(verdict: type) -> None:

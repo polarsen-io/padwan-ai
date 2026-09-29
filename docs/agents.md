@@ -24,6 +24,8 @@ Each iteration of the loop is called a **round**. Tool lists are re-read at the 
 
 With `output=` set (see [Typed answers](#typed-answers)), the round limit and a text answer without a tool call both raise `OutputError` instead of yielding a limit-reached message. `Dispatch` above runs each handler wrapped by the `on_tool` context manager, if set.
 
+A text run never raises on those: an empty answer yields `"(no response)"` and the round limit a limit-reached message, both as text. `session.stop_reason` tells them apart from a real answer once the run is over: `"answer"`, `"empty"` or `"round_limit"` (`None` before the first run, while one is in flight, and after a run that raised, such as a typed run's `OutputError`).
+
 ## Quick start
 
 ```python
@@ -194,7 +196,7 @@ async with AgentSession(
 
 The answer class is a `msgspec.Struct` or a `pydantic.BaseModel`, validated by its own library through the same backends as `tool()`.
 
-An invalid `submit` (a failed validation, or arguments that are not JSON) goes back to the model as the tool result, with the error, up to `AgentOutput(max_repairs=)` times (1 by default); one more failure raises `OutputError`. A text answer without `submit`, or the round limit, raise `OutputError` too: a typed run never returns prose. `OutputError.attempts` and `.details` say what happened.
+An invalid `submit` (a failed validation, or arguments that are not JSON) goes back to the model as the tool result, with the error, up to `AgentOutput(max_repairs=)` times (1 by default); one more failure raises `OutputError`. A text answer without `submit`, or the round limit, raise `OutputError` too: a typed run never returns prose. `OutputError.reason` says which of the three it was (`"invalid_answer"`, `"text_answer"` or `"round_limit"`), `.attempts` how many invalid `submit` calls were made, and `.details` the validation error or the model's text.
 
 The first accepted answer, or the exhausted repair budget, settles the run: a second `submit` in the same round is answered with an error and ignored. Other tools called alongside `submit` still run (their results are recorded, the model just gets no further round). `submit` is dispatched like any tool, so `approve_tool` and `on_tool` see it; a denial doesn't consume a repair — the model may call `submit` again in a later round, and the run only hits the round limit if every attempt is denied.
 

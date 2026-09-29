@@ -32,6 +32,7 @@ from .agent import (
     AgentSession,
     ConversationStore,
     OnMcpConnect,
+    StopReason,
     ToolCallContext,
 )
 from .anthropic import (
@@ -63,7 +64,7 @@ from .conversation import (
     ToolResultMessage,
 )
 from .embeddings import vectors
-from .errors import LLMError, OutputError, Provider
+from .errors import LLMError, OutputError, OutputFailure, Provider
 from .gemini import (
     GEMINI_MODELS,
     GeminiClient,
@@ -170,6 +171,7 @@ __all__ = (
     "NoulCriteria",
     "NoulQuestion",
     "OutputError",
+    "OutputFailure",
     "ProgressEvent",
     "Provider",
     "RealtimeClient",
@@ -178,6 +180,7 @@ __all__ = (
     "RealtimeServerEvent",
     "ScoreAnswer",
     "ScoreQuestion",
+    "StopReason",
     "SystemOneResponse",
     "ToolCall",
     "ToolCallContext",
