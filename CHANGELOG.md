@@ -1,3 +1,36 @@
+## 0.14.0 (2026-09-29)
+
+Agent runs say why they ended, public Langfuse hooks for multi-project routing, quieter tool errors, and base64 embeddings.
+
+### Features
+
+- **Why a run ended**: `OutputError.reason` (`"invalid_answer"`, `"text_answer"`, `"round_limit"`) and `AgentSession.stop_reason` (`"answer"`, `"empty"`, `"round_limit"`) replace parsing messages or comparing against `"(no response)"`. `stop_reason` stays `None` when a typed run raises. `OutputFailure` and `StopReason` are exported from `padwan_ai`. (#103)
+
+```python
+out = await session.send("go")
+if session.stop_reason == "round_limit":
+    ...
+```
+
+- **Langfuse `SpanAdapter` and `SpanFilter`** are public in `padwan_ai.langfuse`, so a second `Langfuse` client on the same tracer provider (e.g. another project) gets the same span mapping and selection as `instrument()`. The private `_SpanAdapter`/`_SpanFilter` names are gone. (#105)
+- **Base64 embeddings**: `vectors()` decodes `encoding_format="base64"` items to floats, for about 4× smaller embedding responses. (#107)
+- **Models**: `gpt-6-luna`, `gpt-6-sol`, `claude-opus-5-5`. (#107)
+
+### Fixes
+
+- **Tool errors** log one WARNING line; the traceback is attached only when the `padwan_ai` logger is enabled for DEBUG. (#106)
+- **urllib3-future >= 2.25.901** is required. (#108)
+
+### Docs
+
+- `AGENTS.md` and `CONTRIBUTING.md`. (#101)
+- TTS column in the provider matrices. (#100)
+
+### Dev
+
+- Import benchmark runs on PRs only with the `import-bench` label. (#102)
+- Weekly LLM SDK refresh. (#107)
+
 ## 0.13.0 (2026-09-24)
 
 Gemini text-to-speech, MCP progress and cancellation that actually reach the server, and docs re-checked against the code.
