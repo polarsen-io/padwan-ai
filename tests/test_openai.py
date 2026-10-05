@@ -7,6 +7,7 @@ import pytest
 from padwan_ai.errors import LLMError, QuotaExceededError, TooManyRequestsError
 from padwan_ai.openai.batch import BatchJob, BatchResult
 from padwan_ai.openai.client import (
+    OPENAI_MODELS,
     OpenAIChatStream,
     OpenAIClient,
     _check_resp,
@@ -14,6 +15,10 @@ from padwan_ai.openai.client import (
     _extract_thought_payload,
 )
 from padwan_ai.openai.types import CreateChatCompletionStreamResponse
+
+
+def test_openai_model_literal_includes_stable_drift_addition() -> None:
+    assert "gpt-6.1-sol" in OPENAI_MODELS
 
 
 @pytest.mark.parametrize(
