@@ -18,6 +18,7 @@ from anthropic.types import (
 from anthropic.types.message_create_params import MessageCreateParamsStreaming
 
 from padwan_ai.anthropic.client import (
+    ANTHROPIC_MODELS,
     AnthropicClient,
     _check_resp,
     _usage_from_anthropic,
@@ -34,6 +35,11 @@ from padwan_ai.anthropic.models import (
 from padwan_ai.client import LLMClient
 from padwan_ai.errors import LLMError, TooManyRequestsError
 from padwan_ai.models import ToolDefinition
+
+
+def test_anthropic_model_literal_includes_stable_drift_addition() -> None:
+    assert "claude-sonnet-5-5" in ANTHROPIC_MODELS
+
 
 WEATHER_TOOL: ToolDefinition = {
     "name": "get_weather",
