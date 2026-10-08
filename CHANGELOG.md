@@ -1,3 +1,14 @@
+## 0.14.1 (2026-10-08)
+
+Three fixes on the Anthropic ↔ OpenAI bridge that padwan-proxy serves to Claude Code: cached tokens were counted twice, parallel tool results carrying images produced a message order backends reject, and content capture crashed on Mistral's structured output.
+
+### Fixes
+
+- **Gemini default model** is `gemini-3.8-flash`; Google no longer serves `gemini-2.5-flash` to new projects.
+- **Anthropic usage no longer double-counts cache reads**: `input_tokens` in `response_to_anthropic` / `stream_to_anthropic` now excludes `prompt_tokens_details.cached_tokens`, matching Anthropic's semantics where `cache_read_input_tokens` is reported separately. Claude Code's context and cost figures were inflated by the cached share.
+- **Tool-result images keep tool messages contiguous**: `messages_to_openai` held images from a `tool_result` as a `role: user` message that landed between two `role: tool` messages when several tool results followed each other (parallel screenshot tools). They now lead the next user turn instead.
+- **OpenTelemetry content capture accepts structured content**: raw OpenAI-compatible chat and stream capture read `content` through the shared text extractor, so Mistral's `list[ContentChunk]` no longer breaks `gen_ai.output.messages`.
+
 ## 0.14.0 (2026-09-29)
 
 Agent runs say why they ended, public Langfuse hooks for multi-project routing, quieter tool errors, and base64 embeddings.

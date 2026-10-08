@@ -2069,7 +2069,7 @@ wheels = [
 
 [[package]]
 name = "padwan-ai"
-version = "0.14.0"
+version = "0.14.1"
 source = { editable = "." }
 dependencies = [
     { name = "niquests" },
