@@ -13,7 +13,7 @@ from padwan_ai.gemini import GeminiClient
 
 client = GeminiClient(
     api_key="...",  # or set GEMINI_API_KEY env var
-    model="gemini-2.5-flash",  # default model
+    model="gemini-3.8-flash",  # default model
 )
 ```
 
@@ -59,7 +59,7 @@ from padwan_ai import GeminiClient
 thoughts: list[str] = []
 
 async with GeminiClient(
-    model="gemini-2.5-flash",
+    model="gemini-3.8-flash",
     on_thought=thoughts.append,
     thinking_config={"thinkingBudget": 2048, "includeThoughts": True},
 ) as client:
