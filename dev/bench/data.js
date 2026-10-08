@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791225290719,
+  "lastUpdate": 1791488436995,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -2928,6 +2928,66 @@ window.BENCHMARK_DATA = {
             "value": 242.73,
             "unit": "ms",
             "range": 4.34
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "16805fea270d61ca58fd586d182ef536a9391b76",
+          "message": "fix: Anthropic bridge usage, tool-result images, otel content capture, Gemini default (#112)\n\n* fix(anthropic): exclude cache reads from input_tokens, keep tool messages contiguous, capture structured content\n\n* fix(gemini): default to gemini-3.8-flash",
+          "timestamp": "2026-10-08T21:39:31+02:00",
+          "tree_id": "347177fdef1f4cb2a493a486aa298aadf4d53b68",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/16805fea270d61ca58fd586d182ef536a9391b76"
+        },
+        "date": 1791488435886,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 213.95,
+            "unit": "ms",
+            "range": 3.84
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 215.17,
+            "unit": "ms",
+            "range": 7.08
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 228.52,
+            "unit": "ms",
+            "range": 3.44
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 51.8,
+            "unit": "ms",
+            "range": 0.83
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 185.72,
+            "unit": "ms",
+            "range": 2.68
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 226.02,
+            "unit": "ms",
+            "range": 2.95
           }
         ]
       }
