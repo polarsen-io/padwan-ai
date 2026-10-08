@@ -107,6 +107,9 @@ def _user_blocks_to_messages(
     """
     messages: list[OpenAIRequestMessage] = []
     parts: list[UserContentPart] = []
+    # Images from a run of tool_results: a user message between two tool
+    # messages is rejected, so they lead the next user turn instead.
+    held: list[UserContentPart] = []
 
     def flush_parts() -> None:
         if not parts:
@@ -119,7 +122,11 @@ def _user_blocks_to_messages(
         parts.clear()
 
     for block in blocks:
-        match block.get("type"):
+        kind = block.get("type")
+        if kind != "tool_result":
+            parts.extend(held)
+            held.clear()
+        match kind:
             case "text":
                 if text := block.get("text"):
                     parts.append({"type": "text", "text": text})
@@ -136,9 +143,10 @@ def _user_blocks_to_messages(
                         "content": text,
                     }
                 )
-                parts.extend(images)
+                held.extend(images)
             case unknown:
                 log.debug("anthropic compat: skipping user block type %r", unknown)
+    parts.extend(held)
     flush_parts()
     return messages
 

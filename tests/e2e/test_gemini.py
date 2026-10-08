@@ -13,7 +13,7 @@ async def test_stream_thought_callback() -> None:
     """on_thought callback fires and thoughts are accumulated on the stream."""
     received: list[str] = []
     async with GeminiClient(
-        model="gemini-2.5-flash",
+        model="gemini-3.8-flash",
         on_thought=received.append,
         thinking_config={"thinkingBudget": 2048, "includeThoughts": True},
     ) as client:
@@ -35,7 +35,7 @@ async def test_complete_chat_thought_callback() -> None:
     """
     received: list[str] = []
     async with GeminiClient(
-        model="gemini-2.5-flash",
+        model="gemini-3.8-flash",
         on_thought=received.append,
         thinking_config={"thinkingBudget": 2048, "includeThoughts": True},
     ) as client:
@@ -55,7 +55,7 @@ async def test_batch_lifecycle() -> None:
             key="e2e-gemini-1",
         )
         job = await client.create_batch(
-            [req], model="gemini-2.5-flash", display_name="e2e-test"
+            [req], model="gemini-3.8-flash", display_name="e2e-test"
         )
         assert job.name
         assert job.state

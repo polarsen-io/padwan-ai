@@ -35,7 +35,7 @@ def _make_weather_tool(call_log: list[dict[str, Any]]) -> McpTool:
 @pytest.mark.parametrize(
     "model",
     [
-        pytest.param("gemini-2.5-flash", id="gemini", marks=skip_no_gemini),
+        pytest.param("gemini-3.8-flash", id="gemini", marks=skip_no_gemini),
         pytest.param("gpt-4o-mini", id="openai", marks=skip_no_openai),
         pytest.param("mistral-small-latest", id="mistral", marks=skip_no_mistral),
         pytest.param("grok-4-1-fast-non-reasoning", id="grok", marks=skip_no_grok),
@@ -64,7 +64,7 @@ async def test_agent_session_tool_round_trip(model: str) -> None:
 @pytest.mark.parametrize(
     "model",
     [
-        pytest.param("gemini-2.5-flash", id="gemini", marks=skip_no_gemini),
+        pytest.param("gemini-3.8-flash", id="gemini", marks=skip_no_gemini),
         pytest.param("gpt-4o-mini", id="openai", marks=skip_no_openai),
         pytest.param("mistral-small-latest", id="mistral", marks=skip_no_mistral),
         pytest.param("grok-4-1-fast-non-reasoning", id="grok", marks=skip_no_grok),

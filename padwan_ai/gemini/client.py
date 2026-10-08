@@ -259,7 +259,7 @@ class _GeminiAuth:
 class GeminiClient(_GeminiAuth, LLMClientBase[GeminiRetry], GeminiToolMixin):
     """Gemini API client with structured output support."""
 
-    model: str | None = "gemini-2.5-flash"
+    model: str | None = "gemini-3.8-flash"
     base_url: str = GEMINI_ENDPOINT
     thinking_config: ThinkingConfig | None = None
     _retry: GeminiRetry = field(

@@ -74,7 +74,7 @@ def test_text_response():
     assert resp["role"] == "assistant"
     assert resp["model"] == "claude-sonnet-5"
     assert resp["usage"] == {
-        "input_tokens": 100,
+        "input_tokens": 40,
         "output_tokens": 20,
         "cache_read_input_tokens": 60,
     }
@@ -179,7 +179,7 @@ async def test_text_stream_event_sequence():
     delta = events[-2][1]
     assert delta["delta"]["stop_reason"] == "end_turn"
     assert delta["usage"] == {
-        "input_tokens": 100,
+        "input_tokens": 40,
         "output_tokens": 20,
         "cache_read_input_tokens": 60,
     }

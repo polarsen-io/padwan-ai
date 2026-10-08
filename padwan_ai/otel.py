@@ -31,7 +31,7 @@ from .mcp import _PROTOCOL_VERSION, McpStdio, McpStreamable
 from .mistral import MistralClient
 from .models import ToolCall, ToolCallFunction, ToolDefinition, UsageToken
 from .openai import OpenAIClient
-from .openai.client import _OpenAIBase
+from .openai.client import _extract_text_payload, _OpenAIBase
 from .openai.types import ChatCompletionMessageCustomToolCall
 
 __all__ = ("instrument", "is_instrumented", "uninstrument")
@@ -916,7 +916,7 @@ def _wrap_openai_complete(original: Any, inst: _Instruments) -> Any:
             output = _json_dumps(
                 [
                     _output_message(
-                        (choice.get("message") or {}).get("content"),
+                        _extract_text_payload(choice.get("message") or {}),
                         (choice.get("message") or {}).get("tool_calls"),
                         choice.get("finish_reason"),
                     )
@@ -1016,8 +1016,10 @@ def _wrap_openai_stream(original: Any, inst: _Instruments) -> Any:
                             if reason := choice.get("finish_reason"):
                                 captured.finish_reason = reason
                             delta = choice.get("delta") or {}
-                            if inst.capture_content and delta.get("content"):
-                                captured.text.append(delta["content"])
+                            if inst.capture_content and (
+                                text := _extract_text_payload(delta)
+                            ):
+                                captured.text.append(text)
                             for call in delta.get("tool_calls") or ():
                                 _merge_tool_call_delta(
                                     captured.calls,
