@@ -199,6 +199,22 @@ def test_tool_result_image_forwarded_as_user_message():
     ]
 
 
+def test_tool_result_images_wait_for_the_last_tool_message():
+    image = {
+        "type": "image",
+        "source": {"type": "base64", "media_type": "image/png", "data": BASE64_PNG},
+    }
+    blocks = [
+        {"type": "tool_result", "tool_use_id": "toolu_1", "content": [image]},
+        {"type": "tool_result", "tool_use_id": "toolu_2", "content": [image]},
+    ]
+    request = _to_openai(
+        _body(messages=[{"role": "user", "content": blocks}]), model="glm-4.6"
+    )
+    assert [m["role"] for m in request["messages"]] == ["tool", "tool", "user"]
+    assert len(request["messages"][-1]["content"]) == 2
+
+
 def test_assistant_blocks_with_tool_use_and_thinking():
     messages = [
         {"role": "user", "content": "weather in Paris?"},

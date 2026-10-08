@@ -895,8 +895,15 @@ async def test_raw_call_instrumented_on_openai_compatible_client(otel_setup, mak
 @pytest.mark.parametrize(
     "streaming", [pytest.param(False, id="complete"), pytest.param(True, id="stream")]
 )
+@pytest.mark.parametrize(
+    "content",
+    [
+        pytest.param("Sure", id="string"),
+        pytest.param([{"type": "text", "text": "Sure"}], id="mistral_chunks"),
+    ],
+)
 async def test_raw_openai_call_captures_content(
-    otel_logging, client, make_resp, make_sse_event, make_sse_resp, streaming
+    otel_logging, client, make_resp, make_sse_event, make_sse_resp, streaming, content
 ):
     span_exporter, log_exporter = otel_logging()
     tool = {
@@ -918,7 +925,7 @@ async def test_raw_openai_call_captures_content(
     }
     if streaming:
         chunks = [
-            {"choices": [{"delta": {"content": "Sure"}}]},
+            {"choices": [{"delta": {"content": content}}]},
             {
                 "choices": [
                     {
@@ -959,7 +966,7 @@ async def test_raw_openai_call_captures_content(
         payload = {
             "choices": [
                 {
-                    "message": {"content": "Sure", "tool_calls": [tool_call]},
+                    "message": {"content": content, "tool_calls": [tool_call]},
                     "finish_reason": "tool_calls",
                 }
             ],

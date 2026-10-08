@@ -43,13 +43,14 @@ def _new_message_id() -> str:
 def _usage_to_anthropic(usage: CompletionUsage | None) -> AnthropicUsage:
     if usage is None:
         return {"input_tokens": 0, "output_tokens": 0}
+    cached = (usage.get("prompt_tokens_details") or {}).get("cached_tokens")
+    # OpenAI's prompt_tokens includes cache reads; Anthropic's input_tokens does not.
     token: AnthropicUsage = {
-        "input_tokens": usage.get("prompt_tokens", 0),
+        "input_tokens": usage.get("prompt_tokens", 0) - (cached or 0),
         "output_tokens": usage.get("completion_tokens", 0),
     }
-    if details := usage.get("prompt_tokens_details"):
-        if (cached := details.get("cached_tokens")) is not None:
-            token["cache_read_input_tokens"] = cached
+    if cached is not None:
+        token["cache_read_input_tokens"] = cached
     return token
 
 
