@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
 MistralModel = Literal[
     "mistral-large-latest",
+    "mistral-large-4",
+    "mistral-large-4-0",
     "pixtral-large-latest",
     "mistral-medium-latest",
     "mistral-medium-3-5",
