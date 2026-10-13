@@ -34,6 +34,7 @@ import niquests
 from openai.types import ChatModel, EmbeddingModel
 
 from padwan_ai.anthropic.client import ANTHROPIC_MODELS, ANTHROPIC_VERSION
+from padwan_ai.elevenlabs.client import ElevenLabsTTSModel
 from padwan_ai.gemini import models as gemini_models
 from padwan_ai.gemini.client import GEMINI_MODELS, GeminiEmbeddingModel, GeminiTTSModel
 from padwan_ai.gemini.realtime import DEFAULT_LIVE_MODEL, GeminiLiveModel
@@ -563,6 +564,31 @@ def _typesafe_live_models() -> RemoteModels:
     return RemoteModels(models)
 
 
+def _elevenlabs_tts_models() -> RemoteModels:
+    """Fetch ElevenLabs text-to-speech model ids, minus the deprecated turbo family."""
+    api_key = os.environ.get("ELEVENLABS_API_KEY")
+    if not api_key:
+        return RemoteModels(set(), skipped="ELEVENLABS_API_KEY is not configured")
+    try:
+        data = _json_get(
+            "https://api.elevenlabs.io/v1/models", headers={"xi-api-key": api_key}
+        )
+    except FetchError as e:
+        return RemoteModels(set(), error=str(e))
+    if not isinstance(data, list):
+        return RemoteModels(set(), error="response is not a model list")
+    models: set[str] = set()
+    for item in data:
+        if not isinstance(item, dict) or not item.get("can_do_text_to_speech"):
+            continue
+        model_id = _string(item.get("model_id"))
+        if model_id is None:
+            return RemoteModels(set(), error="response contains an invalid model id")
+        if not model_id.startswith("eleven_turbo_"):
+            models.add(model_id)
+    return RemoteModels(models)
+
+
 def _diff(live: set[str], known: set[str]) -> Diff:
     return Diff(added=live - known, removed=known - live)
 
@@ -947,6 +973,20 @@ def check(out: Path | None = None) -> None:
             notes=(
                 "The endpoint currently lists aliases; pinned version IDs may "
                 "remain valid without appearing here. Absence is not a retirement notice.",
+            ),
+        ),
+        _live_check(
+            "ElevenLabs TTS",
+            "GET https://api.elevenlabs.io/v1/models",
+            "padwan_ai/elevenlabs/client.py::ElevenLabsTTSModel",
+            "https://elevenlabs.io/docs/models",
+            _elevenlabs_tts_models(),
+            set(typing.get_args(ElevenLabsTTSModel)),
+            notes=(
+                "Only models with `can_do_text_to_speech` are considered; the "
+                "deprecated `eleven_turbo_*` family is filtered.",
+                "Scribe (speech-to-text) models cannot be checked: the endpoint "
+                "does not list them; `ElevenLabsSTTModel` is curated from the docs.",
             ),
         ),
     ]

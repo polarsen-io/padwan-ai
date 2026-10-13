@@ -7,7 +7,14 @@ if TYPE_CHECKING:
     import niquests
 
 Provider = Literal[
-    "openai", "gemini", "mistral", "grok", "anthropic", "typesafe", "voyage"
+    "openai",
+    "gemini",
+    "mistral",
+    "grok",
+    "anthropic",
+    "typesafe",
+    "voyage",
+    "elevenlabs",
 ]
 
 __all__ = (
@@ -18,6 +25,26 @@ __all__ = (
     "QuotaExceededError",
     "TooManyRequestsError",
 )
+
+
+def _error_message(data: object) -> str:
+    """Extract a human-readable message from a JSON error body (`error`/`message`/`detail`)."""
+    if not isinstance(data, dict):
+        return ""
+    for value in (data.get("error"), data.get("message"), data.get("detail")):
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict) and isinstance(value.get("message"), str):
+            return value["message"]
+        if isinstance(value, list):
+            messages = [
+                item["msg"]
+                for item in value
+                if isinstance(item, dict) and isinstance(item.get("msg"), str)
+            ]
+            if messages:
+                return "; ".join(messages)
+    return ""
 
 
 class LLMError(Exception):

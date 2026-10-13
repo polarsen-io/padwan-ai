@@ -84,7 +84,15 @@ def test_typesafe_drift_report(
     failure: str | None,
     expected: tuple[str, ...],
 ) -> None:
-    for provider in ("OPENAI", "GEMINI", "MISTRAL", "GROK", "ANTHROPIC", "TYPESAFE"):
+    for provider in (
+        "OPENAI",
+        "GEMINI",
+        "MISTRAL",
+        "GROK",
+        "ANTHROPIC",
+        "TYPESAFE",
+        "ELEVENLABS",
+    ):
         monkeypatch.delenv(f"{provider}_API_KEY", raising=False)
     if has_key:
         monkeypatch.setenv("TYPESAFE_API_KEY", "test-typesafe-key")
@@ -107,6 +115,59 @@ def test_typesafe_drift_report(
         )
     else:
         fetch.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "has_key, payload, expected",
+    [
+        pytest.param(
+            True,
+            [
+                {"model_id": "eleven_v3", "can_do_text_to_speech": True},
+                {"model_id": "eleven_turbo_v2_5", "can_do_text_to_speech": True},
+                {"model_id": "eleven_english_sts_v2", "can_do_text_to_speech": False},
+            ],
+            {"models": {"eleven_v3"}},
+            id="tts-only-without-turbo",
+        ),
+        pytest.param(
+            False,
+            None,
+            {"skipped": "ELEVENLABS_API_KEY is not configured"},
+            id="no-key",
+        ),
+        pytest.param(
+            True,
+            {"detail": "x"},
+            {"error": "response is not a model list"},
+            id="not-list",
+        ),
+        pytest.param(
+            True,
+            [{"model_id": 1, "can_do_text_to_speech": True}],
+            {"error": "response contains an invalid model id"},
+            id="bad-id",
+        ),
+    ],
+)
+def test_elevenlabs_tts_models(
+    model_drift: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    has_key: bool,
+    payload: object,
+    expected: dict,
+) -> None:
+    if has_key:
+        monkeypatch.setenv("ELEVENLABS_API_KEY", "k")
+    else:
+        monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+    monkeypatch.setattr(model_drift, "_json_get", Mock(return_value=payload))
+
+    remote = model_drift._elevenlabs_tts_models()
+
+    assert remote.models == expected.get("models", set())
+    assert remote.skipped == expected.get("skipped")
+    assert remote.error == expected.get("error")
 
 
 @pytest.mark.parametrize(
