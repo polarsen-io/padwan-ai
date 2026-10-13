@@ -1,6 +1,6 @@
 import dataclasses
 import json
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from dataclasses import field
 from functools import partial
 from pathlib import Path
@@ -287,7 +287,7 @@ class GradiumClient(StandaloneClientMixin):
         output_format: GradiumOutputFormat = "wav",
         config: GradiumTTSConfig | None = None,
         chunk_size: int = 4096,
-    ) -> AsyncIterator[bytes]:
+    ) -> AsyncGenerator[bytes]:
         """Like `generate_speech`, but yield audio chunks as the API produces them."""
         body = self._speech_body(text, voice_id, model, output_format, config)
         resp = await self.session.post("post/speech/tts", json=body, stream=True)

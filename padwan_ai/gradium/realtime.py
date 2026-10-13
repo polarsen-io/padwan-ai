@@ -1,7 +1,7 @@
-import asyncio
 import base64
 import re
 from collections.abc import (
+    AsyncGenerator,
     AsyncIterable,
     AsyncIterator,
     Awaitable,
@@ -9,7 +9,7 @@ from collections.abc import (
     Iterable,
     Mapping,
 )
-from contextlib import asynccontextmanager
+from contextlib import aclosing, asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, Literal, NotRequired, TypedDict
 
@@ -179,32 +179,20 @@ class _GradiumConnection(WsConnection):
         """Text of a `text` message (spoken text for TTS, transcription for STT and S2S)."""
         return message.get("text") if message.get("type") == "text" else None
 
-    async def _pump[T](
+    def _pump[T](
         self,
         inputs: AsyncIterable[T] | Iterable[T],
         send: Callable[[T], Awaitable[None]],
-    ) -> AsyncIterator[dict[str, Any]]:
-        """Send `inputs` in a background task while yielding messages until `end_of_stream`."""
+    ) -> AsyncGenerator[dict[str, Any]]:
+        """Send `inputs`, then `end_of_stream`, while yielding messages until the server's `end_of_stream`."""
 
         async def send_all() -> None:
-            try:
-                items = inputs if isinstance(inputs, AsyncIterable) else _aiter(inputs)
-                async for item in items:
-                    await send(item)
-                await self.end_input()
-            except BaseException:
-                await self.close()
-                raise
+            items = inputs if isinstance(inputs, AsyncIterable) else _aiter(inputs)
+            async for item in items:
+                await send(item)
+            await self.end_input()
 
-        sender = asyncio.create_task(send_all())
-        try:
-            async for message in self:
-                if self.is_final(message):
-                    break
-                yield message
-            await sender
-        finally:
-            sender.cancel()
+        return self.pump("gradium", send_all, self.is_final)
 
 
 @dataclass
@@ -218,11 +206,14 @@ class GradiumTTSConnection(_GradiumConnection):
 
     async def stream(
         self, texts: AsyncIterable[str] | Iterable[str]
-    ) -> AsyncIterator[bytes]:
+    ) -> AsyncGenerator[bytes]:
         """Send `texts` (regrouped on word boundaries) while yielding audio chunks."""
-        async for message in self._pump(_word_chunks(texts), self.send_text):
-            if audio := self.audio_bytes(message):
-                yield audio
+        async with aclosing(
+            self._pump(_word_chunks(texts), self.send_text)
+        ) as messages:
+            async for message in messages:
+                if audio := self.audio_bytes(message):
+                    yield audio
 
 
 @dataclass
@@ -237,10 +228,11 @@ class _AudioInputConnection(_GradiumConnection):
 
     async def stream(
         self, chunks: AsyncIterable[bytes] | Iterable[bytes]
-    ) -> AsyncIterator[dict[str, Any]]:
+    ) -> AsyncGenerator[dict[str, Any]]:
         """Send audio `chunks` while yielding server messages until `end_of_stream`."""
-        async for message in self._pump(chunks, self.send_audio):
-            yield message
+        async with aclosing(self._pump(chunks, self.send_audio)) as messages:
+            async for message in messages:
+                yield message
 
 
 @dataclass

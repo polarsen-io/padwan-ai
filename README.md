@@ -110,6 +110,7 @@ For an interactive chat TUI use [`padwan-cli`](https://github.com/polarsen-io/pa
 
 - ❌ = the provider offers it, not implemented yet.
 - ➖ = the provider has no such API.
+- Realtime: Gradium's is speech-to-speech translation, not a voice-agent session; ElevenLabs and Gradium also stream TTS and STT over WebSocket.
 
 Thinking tokens stream separately through an `on_thought` callback on every client that exposes them. Per-provider details, multimodal input (images, audio, files) and embeddings: [docs/clients](docs/clients/), [docs/multimodal.md](docs/multimodal.md).
 

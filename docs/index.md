@@ -41,6 +41,7 @@ Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock 
 - ❌ = the provider offers it, Padwan does not implement it yet.
 - ➖ = the provider has no such API (Gemini transcribes through chat audio input; Anthropic recommends Voyage AI for embeddings).
 - ➕ = depends on the endpoint: the request is sent in OpenAI's wire format; support is up to the server.
+- Realtime: Gradium's is speech-to-speech translation, not a voice-agent session; ElevenLabs and Gradium also stream TTS and STT over WebSocket.
 
 ## Quick Example
 

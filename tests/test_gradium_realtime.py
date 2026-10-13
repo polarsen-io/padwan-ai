@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 from contextlib import nullcontext
@@ -25,6 +26,28 @@ def _audio(data: bytes) -> str:
     return json.dumps({"type": "audio", "audio": base64.b64encode(data).decode()})
 
 
+class ReplyOnEnd(FakeExt):
+    """Deliver `first` at once, then `replies` only after the client's `end_of_stream`, like the server."""
+
+    def __init__(
+        self, replies: list[str], first: str | None = None, *, handshake=False
+    ):
+        super().__init__([first] if handshake else [])
+        self.replies = replies
+        self.ended = asyncio.Event()
+
+    async def send_payload(self, buf: str | bytes) -> None:
+        await super().send_payload(buf)
+        if json.loads(buf) == {"type": "end_of_stream"}:
+            self._incoming.extend(self.replies)
+            self.ended.set()
+
+    async def next_payload(self) -> str | bytes | None:
+        if not self._incoming:
+            await self.ended.wait()
+        return await super().next_payload()
+
+
 def _session(ext: FakeExt | None, status: int = 101) -> AsyncMock:
     resp = MagicMock(status_code=status, extension=ext)
     return AsyncMock(get=AsyncMock(return_value=resp))
@@ -46,7 +69,7 @@ async def _async_tokens():
     ],
 )
 async def test_tts_stream(texts):
-    ext = FakeExt(
+    ext = ReplyOnEnd(
         [
             _audio(b"a1"),
             json.dumps({"type": "text", "text": "Hello"}),
@@ -149,13 +172,14 @@ async def test_connect_setup(client, route, setup):
     ],
 )
 async def test_stt_stream(first, status, ctx):
-    ext = FakeExt(
+    ext = ReplyOnEnd(
         [
-            first,
             json.dumps({"type": "text", "text": "Hello", "start_s": 0.5}),
             json.dumps({"type": "step", "vad": []}),
             EOS,
-        ]
+        ],
+        first,
+        handshake=True,
     )
     client = GradiumRealtimeSTTClient(api_key="k")
     client._session = _session(ext if status == 101 else None, status)
