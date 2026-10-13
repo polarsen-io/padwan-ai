@@ -1,10 +1,11 @@
 # AGENTS.md
 
-Padwan AI: lightweight async client library for OpenAI, Gemini, Mistral, Grok, Anthropic, Voyage and any
+Padwan AI: lightweight async client library for OpenAI, Gemini, Mistral, Grok, Anthropic, Voyage, ElevenLabs and any
 OpenAI-compatible API. `LLMClient` (`padwan_ai/client.py`) is the facade that dispatches on model name to a provider
 client (`padwan_ai/<provider>/client.py`, subclassing `LLMClientBase` in `padwan_ai/_base.py`). `AgentSession`
 (`padwan_ai/agent.py`) is the tool-calling loop on top. `TypeSafeClient` (`padwan_ai/typesafe/`, experimental) is
-standalone: not a `LLMClientBase` subclass and not routed by `LLMClient`.
+standalone: not a `LLMClientBase` subclass and not routed by `LLMClient`; so is `ElevenLabsClient`
+(`padwan_ai/elevenlabs/`, TTS and STT only).
 
 Setup, workflow, PR and release conventions: see `CONTRIBUTING.md`.
 

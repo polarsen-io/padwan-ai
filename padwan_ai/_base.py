@@ -31,6 +31,7 @@ __all__ = (
     "OnThought",
     "Provider",
     "RealtimeClientBase",
+    "StandaloneClientMixin",
 )
 
 OnThought = Callable[[str], None]
@@ -382,3 +383,50 @@ class RealtimeClientBase[ConnT](abc.ABC):
     def _connect(self) -> AbstractAsyncContextManager[ConnT]:
         """Open the provider handshake over the client's session."""
         ...
+
+
+class StandaloneClientMixin:
+    """Session lifecycle for HTTP clients outside `LLMClientBase` (TypeSafe, speech providers).
+
+    Dataclass fields stay on each client; it supplies them and `_set_auth_headers`.
+    """
+
+    provider: ClassVar[Provider]
+    timeout: float
+    base_url: str
+    _retry: Retry
+    _session: niquests.AsyncSession | None
+
+    def _set_auth_headers(self, session: niquests.AsyncSession) -> None:
+        raise NotImplementedError
+
+    @property
+    def session(self) -> niquests.AsyncSession:
+        """Return the active session."""
+        if self._session is None:
+            raise LLMError(
+                self.provider, "Client not initialized. Use async context manager."
+            )
+        return self._session
+
+    async def __aenter__(self) -> Self:
+        if self._session is not None:
+            raise RuntimeError(f"{type(self).__name__} is already open")
+        session = niquests.AsyncSession(
+            timeout=self.timeout, retries=self._retry, base_url=self.base_url
+        )
+        self._set_auth_headers(session)
+        self._session = session
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        if self._session is not None:
+            try:
+                await self._session.close()
+            finally:
+                self._session = None

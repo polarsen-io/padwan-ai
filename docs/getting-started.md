@@ -74,6 +74,7 @@ Each provider looks for its API key in environment variables:
 | Grok     | `GROK_API_KEY`      |
 | Anthropic | `ANTHROPIC_API_KEY` |
 | Voyage AI | `VOYAGE_API_KEY` |
+| ElevenLabs | `ELEVENLABS_API_KEY` |
 | TypeSafe (JEV) | `TYPESAFE_API_KEY` |
 
 Gateway mode routes every model through one OpenAI-compatible endpoint instead: set `PADWAN_BASE_URL` and `PADWAN_API_KEY` — see [openai-compatible.md](clients/openai-compatible.md).
