@@ -83,7 +83,12 @@ from .gemini import (
     GeminiRealtimeConnection,
     is_gemini_model,
 )
-from .gradium import GradiumClient
+from .gradium import (
+    GradiumClient,
+    GradiumRealtimeS2SClient,
+    GradiumRealtimeSTTClient,
+    GradiumRealtimeTTSClient,
+)
 from .grok import GROK_MODELS, GrokClient, GrokModel, GrokRealtimeClient, is_grok_model
 from .mcp import McpStdio, McpStreamable, McpTool, McpTransport, OnAuth, ProgressEvent
 from .mistral import MISTRAL_MODELS, MistralClient, MistralModel, is_mistral_model
@@ -162,6 +167,9 @@ __all__ = (
     "GeminiRealtimeClient",
     "GeminiRealtimeConnection",
     "GradiumClient",
+    "GradiumRealtimeS2SClient",
+    "GradiumRealtimeSTTClient",
+    "GradiumRealtimeTTSClient",
     "GrokClient",
     "GrokModel",
     "GrokRealtimeClient",

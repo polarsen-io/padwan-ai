@@ -105,7 +105,7 @@ For an interactive chat TUI use [`padwan-cli`](https://github.com/polarsen-io/pa
 | Grok | ✅ | ✅ | ✅ | ➖ | ❌ | ➖ |
 | Voyage AI | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ |
 | ElevenLabs (experimental) | ➖ | ➖ | ❌ | ✅ | ✅ | ➖ |
-| Gradium | ➖ | ➖ | ❌ | ✅ | ✅ | ➖ |
+| Gradium (experimental) | ➖ | ➖ | ✅ | ✅ | ✅ | ➖ |
 | OpenAI-compatible (`base_url=`) | ✅ | depends on the server | depends on the server | depends on the server | ❌ | depends on the server |
 
 - ❌ = the provider offers it, not implemented yet.

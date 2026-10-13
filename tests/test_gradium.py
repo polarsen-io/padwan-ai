@@ -1,9 +1,11 @@
+import inspect
 import json
 from contextlib import nullcontext
 from typing import get_type_hints
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from gradium import voices
 from gradium.speech import TTSSetup
 
 from padwan_ai import GradiumClient
@@ -195,3 +197,147 @@ def test_sdk_compat(local_type: type, sdk_keys: set[str]):
     """Every field in our request TypedDicts exists in the gradium SDK setup."""
     for key in get_type_hints(local_type):
         assert key in sdk_keys, f"{local_type.__name__}.{key} not in SDK type"
+
+
+def _awaitable(value):
+    async def get():
+        return value
+
+    return get()
+
+
+@pytest.mark.parametrize(
+    "status, chunks, ctx",
+    [
+        pytest.param(200, [b"RI", b"FF"], nullcontext(), id="ok"),
+        pytest.param(
+            500,
+            None,
+            pytest.raises(LLMError, match=r"500 error from server 1008: revoked"),
+            id="plain-text-error",
+        ),
+    ],
+)
+async def test_stream_speech(status, chunks, ctx, make_resp):
+    resp = make_resp(status, {})
+    resp.close = AsyncMock()
+    if status >= 400:
+        resp.content = _awaitable(b"error from server 1008: revoked")
+
+    async def iter_content(_size):
+        async def gen():
+            for chunk in chunks or ():
+                yield chunk
+
+        return gen()
+
+    resp.iter_content = iter_content
+    client, session = _client(resp, voice_id="v")
+
+    with ctx:
+        assert [c async for c in client.stream_speech("Hi")] == chunks
+    session.post.assert_awaited_once_with(
+        "post/speech/tts",
+        json={
+            "text": "Hi",
+            "voice_id": "v",
+            "output_format": "wav",
+            "only_audio": True,
+            "model_name": "default",
+        },
+        stream=True,
+    )
+    resp.close.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "file_name, kwargs, payload, expected, ctx",
+    [
+        pytest.param(
+            "me.wav",
+            {"description": "Narrator", "start_s": 1.5},
+            {"uid": "new"},
+            [
+                ("audio_file", ("me.wav", b"RIFF", "audio/wav")),
+                ("name", (None, "Me")),
+                ("language", (None, "fr")),
+                ("input_format", (None, "wav")),
+                ("description", (None, "Narrator")),
+                ("start_s", (None, "1.5")),
+            ],
+            nullcontext(),
+            id="path",
+        ),
+        pytest.param(
+            None,
+            {"input_format": "mp3"},
+            {"uid": "new"},
+            [
+                ("audio_file", ("audio.mp3", b"RIFF", "audio/mp3")),
+                ("name", (None, "Me")),
+                ("language", (None, "fr")),
+                ("input_format", (None, "mp3")),
+            ],
+            nullcontext(),
+            id="bytes",
+        ),
+        pytest.param(None, {}, None, None, pytest.raises(ValueError), id="no-format"),
+        pytest.param(
+            "me.wav",
+            {},
+            {"uid": None, "error": "audio too short"},
+            None,
+            pytest.raises(LLMError, match="audio too short"),
+            id="error-in-body",
+        ),
+    ],
+)
+async def test_clone_voice(
+    file_name, kwargs, payload, expected, ctx, tmp_path, make_resp
+):
+    client, session = _client(make_resp(201, payload))
+    file = b"RIFF"
+    if file_name:
+        file = tmp_path / file_name
+        file.write_bytes(b"RIFF")
+
+    with ctx:
+        assert await client.clone_voice("Me", file, language="fr", **kwargs) == "new"
+    if expected is not None:
+        session.post.assert_awaited_once_with("voices/", files=expected)
+
+
+@pytest.mark.parametrize(
+    "kwargs, body, ctx",
+    [
+        pytest.param(
+            {"name": "New", "start_s": 0.0},
+            {"name": "New", "start_s": 0.0},
+            nullcontext(),
+            id="partial",
+        ),
+        pytest.param({}, None, pytest.raises(ValueError), id="nothing-to-update"),
+    ],
+)
+async def test_update_voice(kwargs, body, ctx, make_resp):
+    client, session = _client(MagicMock())
+    session.put.return_value = make_resp(200, {"uid": "v1", "name": "New"})
+
+    with ctx:
+        assert (await client.update_voice("v1", **kwargs))["name"] == "New"
+        session.put.assert_awaited_once_with("voices/v1", json=body)
+
+
+@pytest.mark.parametrize(
+    "method, sdk_fn",
+    [
+        pytest.param(GradiumClient.clone_voice, voices.create, id="clone"),
+        pytest.param(GradiumClient.update_voice, voices.update, id="update"),
+        pytest.param(GradiumClient.list_voices, voices.get, id="list"),
+    ],
+)
+def test_params_sdk_compat(method, sdk_fn):
+    """Our parameters are SDK params (`voice_id` is `voice_uid`, the sample `audio_file`)."""
+    renames = {"voice_id": "voice_uid", "file": "audio_file"}
+    ours = {renames.get(p, p) for p in inspect.signature(method).parameters}
+    assert ours - {"self"} <= set(inspect.signature(sdk_fn).parameters)
