@@ -10,6 +10,7 @@ __lazy_modules__ = frozenset(
         "padwan_ai.content",
         "padwan_ai.embeddings",
         "padwan_ai.conversation",
+        "padwan_ai.elevenlabs",
         "padwan_ai.errors",
         "padwan_ai.gemini",
         "padwan_ai.grok",
@@ -63,6 +64,7 @@ from .conversation import (
     Message,
     ToolResultMessage,
 )
+from .elevenlabs import ELEVENLABS_MODELS, ElevenLabsClient, ElevenLabsModel
 from .embeddings import vectors
 from .errors import LLMError, OutputError, OutputFailure, Provider
 from .gemini import (
@@ -115,6 +117,7 @@ from .voyage import VOYAGE_MODELS, VoyageClient, VoyageModel, is_voyage_model
 
 __all__ = (
     "ANTHROPIC_MODELS",
+    "ELEVENLABS_MODELS",
     "GEMINI_MODELS",
     "GROK_MODELS",
     "MISTRAL_MODELS",
@@ -132,6 +135,8 @@ __all__ = (
     "ChatResponse",
     "ChatStream",
     "ChoiceAnswer",
+    "ElevenLabsClient",
+    "ElevenLabsModel",
     "ChoiceQuestion",
     "ContentAudioPart",
     "ContentImagePart",

@@ -38,6 +38,7 @@ skip_no_mistral = _skip_no_key("MISTRAL_API_KEY")
 skip_no_grok = _skip_no_key("GROK_API_KEY")
 skip_no_anthropic = _skip_no_key("ANTHROPIC_API_KEY")
 skip_no_voyage = _skip_no_key("VOYAGE_API_KEY")
+skip_no_elevenlabs = _skip_no_key("ELEVENLABS_API_KEY")
 
 pytestmark = pytest.mark.e2e
 

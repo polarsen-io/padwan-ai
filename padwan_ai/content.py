@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import mimetypes
 from pathlib import Path
@@ -117,6 +118,19 @@ def audio_part(path: str | Path, *, fmt: AudioFormat | None = None) -> ContentAu
             )
     data = base64.b64encode(path.read_bytes()).decode("ascii")
     return {"type": "input_audio", "input_audio": {"data": data, "format": fmt}}
+
+
+async def _read_audio(file: str | Path | bytes) -> tuple[str, bytes, str]:
+    """Load an upload source as `(filename, data, mime)` off the event loop; raw bytes get generic values."""
+    if isinstance(file, bytes):
+        return "audio", file, "application/octet-stream"
+    path = Path(file)
+    data = await asyncio.to_thread(path.read_bytes)
+    return (
+        path.name,
+        data,
+        mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+    )
 
 
 def text_file_part(path: str | Path, *, encoding: str = "utf-8") -> ContentTextPart:

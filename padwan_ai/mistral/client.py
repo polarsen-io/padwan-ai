@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
-import mimetypes
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast, get_args
 
 from .._base import Provider, env_api_key
+from ..content import _read_audio
 from ..errors import LLMError
 from ..openai.client import _check_resp, _OpenAIBase
 from ._deprecations import DEPRECATED
@@ -162,12 +162,7 @@ class MistralClient(_OpenAIBase):
             )
 
         if file is not None:
-            if isinstance(file, bytes):
-                file_tuple = ("audio", file, "application/octet-stream")
-            else:
-                path = Path(file)
-                mime = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
-                file_tuple = (path.name, path.read_bytes(), mime)
+            file_tuple = await _read_audio(file)
 
             data: list[tuple[str, str]] = [("model", model)]
             if language is not None:
