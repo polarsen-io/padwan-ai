@@ -163,7 +163,7 @@ def test_elevenlabs_tts_models(
         monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
     monkeypatch.setattr(model_drift, "_json_get", Mock(return_value=payload))
 
-    remote = model_drift._elevenlabs_tts_models()
+    remote = model_drift._elevenlabs_models("can_do_text_to_speech")
 
     assert remote.models == expected.get("models", set())
     assert remote.skipped == expected.get("skipped")

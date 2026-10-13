@@ -21,7 +21,7 @@ nav = [
     { "Grok" = "clients/grok.md" },
     { "Anthropic" = "clients/anthropic.md" },
     { "Voyage AI" = "clients/voyage.md" },
-    { "ElevenLabs" = "clients/elevenlabs.md" },
+    { "ElevenLabs (experimental)" = "clients/elevenlabs.md" },
     { "Gradium" = "clients/gradium.md" },
     { "TypeSafe (JEV, experimental)" = "clients/typesafe.md" },
   ] },

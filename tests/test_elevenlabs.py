@@ -6,28 +6,41 @@ from unittest.mock import AsyncMock, MagicMock
 
 import niquests
 import pytest
+from elevenlabs.music.client import AsyncMusicClient
+from elevenlabs.speech_to_speech.client import AsyncSpeechToSpeechClient
+from elevenlabs.speech_to_speech.types import SpeechToSpeechRequestFileFormat
 from elevenlabs.speech_to_text.client import AsyncSpeechToTextClient
 from elevenlabs.speech_to_text.types import (
     SpeechToTextConvertRequestTimestampsGranularity,
 )
+from elevenlabs.text_to_sound_effects.client import AsyncTextToSoundEffectsClient
 from elevenlabs.text_to_speech.client import AsyncTextToSpeechClient
 from elevenlabs.text_to_speech.types import TextToSpeechConvertRequestOutputFormat
 from elevenlabs.types import (
     SpeechToTextCharacterResponseModel,
     SpeechToTextChunkResponseModel,
     SpeechToTextWordResponseModel,
+    Voice as SdkVoice,
     VoiceSettings as SdkVoiceSettings,
 )
+from elevenlabs.voices.ivc.client import AsyncIvcClient
 
 from padwan_ai import ElevenLabsClient
 from padwan_ai.elevenlabs import (
     ElevenLabsOutputFormat,
     ElevenLabsSpeech,
     ElevenLabsTranscription,
+    ElevenLabsVoice,
     ElevenLabsWord,
+    SpeechToSpeechOptions,
     VoiceSettings,
 )
-from padwan_ai.elevenlabs.client import ElevenLabsCharacter, _SpeechBody
+from padwan_ai.elevenlabs.client import (
+    ElevenLabsCharacter,
+    _MusicBody,
+    _SoundBody,
+    _SpeechBody,
+)
 from padwan_ai.errors import LLMError, QuotaExceededError, TooManyRequestsError
 
 TRANSCRIPTION = {
@@ -206,6 +219,240 @@ async def test_errors(status, payload, headers, ctx, make_resp):
         assert exc.value.retry_delay == 3
 
 
+@pytest.mark.parametrize(
+    "method, kwargs, path, body, params, ctx",
+    [
+        pytest.param(
+            "generate_sound_effect",
+            {"text": "door knock"},
+            "sound-generation",
+            {"text": "door knock", "model_id": "eleven_text_to_sound_v2"},
+            None,
+            nullcontext(),
+            id="sound-defaults",
+        ),
+        pytest.param(
+            "generate_sound_effect",
+            {
+                "text": "rain",
+                "duration_seconds": 2.5,
+                "prompt_influence": 0.7,
+                "loop": True,
+                "output_format": "pcm_24000",
+            },
+            "sound-generation",
+            {
+                "text": "rain",
+                "model_id": "eleven_text_to_sound_v2",
+                "duration_seconds": 2.5,
+                "prompt_influence": 0.7,
+                "loop": True,
+            },
+            {"output_format": "pcm_24000"},
+            nullcontext(),
+            id="sound-options",
+        ),
+        pytest.param(
+            "compose_music",
+            {"prompt": "calm piano", "music_length_ms": 10_000, "seed": 1},
+            "music",
+            {
+                "model_id": "music_v1",
+                "prompt": "calm piano",
+                "music_length_ms": 10_000,
+                "seed": 1,
+            },
+            None,
+            nullcontext(),
+            id="music-prompt",
+        ),
+        pytest.param(
+            "compose_music",
+            {"composition_plan": {"sections": []}, "force_instrumental": True},
+            "music",
+            {
+                "model_id": "music_v1",
+                "composition_plan": {"sections": []},
+                "force_instrumental": True,
+            },
+            None,
+            nullcontext(),
+            id="music-plan",
+        ),
+        pytest.param(
+            "compose_music",
+            {},
+            None,
+            None,
+            None,
+            pytest.raises(ValueError),
+            id="music-no-input",
+        ),
+        pytest.param(
+            "compose_music",
+            {"prompt": "x", "composition_plan": {}},
+            None,
+            None,
+            None,
+            pytest.raises(ValueError),
+            id="music-two-inputs",
+        ),
+    ],
+)
+async def test_generate_audio(method, kwargs, path, body, params, ctx, make_resp):
+    resp = make_resp(200, {}, {"content-type": "audio/mpeg"})
+    resp.content = b"ID3"
+    client, session = _client(resp)
+
+    with ctx:
+        assert await getattr(client, method)(**kwargs) == ElevenLabsSpeech(
+            b"ID3", "audio/mpeg"
+        )
+        session.post.assert_awaited_once_with(path, json=body, params=params)
+
+
+@pytest.mark.parametrize(
+    "status, chunks, ctx",
+    [
+        pytest.param(200, [b"ab", b"cd"], nullcontext(), id="ok"),
+        pytest.param(
+            401,
+            None,
+            pytest.raises(LLMError, match="401 Invalid key"),
+            id="error-body",
+        ),
+    ],
+)
+async def test_stream_speech(status, chunks, ctx, make_resp):
+    resp = make_resp(status, {})
+    resp.close = AsyncMock()
+    if status >= 400:
+        resp.content = _awaitable(
+            b'{"detail": {"status": "invalid_api_key", "message": "Invalid key"}}'
+        )
+
+    async def iter_content(_size):
+        async def gen():
+            for chunk in chunks or ():
+                yield chunk
+
+        return gen()
+
+    resp.iter_content = iter_content
+    client, session = _client(resp, voice_id="v")
+
+    with ctx:
+        assert [c async for c in client.stream_speech("Hi", seed=3)] == chunks
+    session.post.assert_awaited_once_with(
+        "text-to-speech/v/stream",
+        json={"text": "Hi", "model_id": "eleven_multilingual_v2", "seed": 3},
+        params=None,
+        stream=True,
+    )
+    resp.close.assert_awaited_once()
+
+
+def _awaitable(value):
+    async def get():
+        return value
+
+    return get()
+
+
+@pytest.mark.parametrize(
+    "files, kwargs, expected, ctx",
+    [
+        pytest.param(
+            [b"RIFF", b"OggS"],
+            {"description": "Narrator", "labels": {"accent": "fr"}},
+            [
+                ("name", (None, "Me")),
+                ("description", (None, "Narrator")),
+                ("labels", (None, '{"accent": "fr"}')),
+                ("files", ("audio", b"RIFF", "application/octet-stream")),
+                ("files", ("audio", b"OggS", "application/octet-stream")),
+            ],
+            nullcontext(),
+            id="samples",
+        ),
+        pytest.param([], {}, None, pytest.raises(ValueError), id="no-samples"),
+    ],
+)
+async def test_clone_voice(files, kwargs, expected, ctx, make_resp):
+    client, session = _client(make_resp(200, {"voice_id": "new"}))
+
+    with ctx:
+        assert await client.clone_voice("Me", files, **kwargs) == "new"
+        session.post.assert_awaited_once_with("voices/add", files=expected)
+
+
+@pytest.mark.parametrize(
+    "stream, kwargs, expected, ctx",
+    [
+        pytest.param(
+            False,
+            {},
+            [
+                ("model_id", (None, "eleven_multilingual_sts_v2")),
+                ("audio", ("audio", b"RIFF", "application/octet-stream")),
+            ],
+            nullcontext(),
+            id="defaults",
+        ),
+        pytest.param(
+            True,
+            {
+                "voice_settings": {"stability": 0.5},
+                "seed": 4,
+                "remove_background_noise": True,
+                "file_format": "pcm_s16le_16",
+            },
+            [
+                ("model_id", (None, "eleven_multilingual_sts_v2")),
+                ("voice_settings", (None, '{"stability": 0.5}')),
+                ("seed", (None, "4")),
+                ("remove_background_noise", (None, "true")),
+                ("file_format", (None, "pcm_s16le_16")),
+                ("audio", ("audio", b"RIFF", "application/octet-stream")),
+            ],
+            nullcontext(),
+            id="stream-options",
+        ),
+        pytest.param(
+            False, {"voice_id": None}, None, pytest.raises(ValueError), id="no-voice"
+        ),
+    ],
+)
+async def test_speech_to_speech(stream, kwargs, expected, ctx, make_resp):
+    resp = make_resp(200, {}, {"content-type": "audio/mpeg"})
+    resp.content = b"ID3"
+    resp.close = AsyncMock()
+
+    async def iter_content(_size):
+        async def gen():
+            yield b"ID3"
+
+        return gen()
+
+    resp.iter_content = iter_content
+    client, session = _client(resp, voice_id=None if "voice_id" in kwargs else "v")
+    kwargs.pop("voice_id", None)
+
+    with ctx:
+        if stream:
+            out = b"".join(
+                [c async for c in client.stream_speech_to_speech(b"RIFF", **kwargs)]
+            )
+            path, extra = "speech-to-speech/v/stream", {"stream": True}
+        else:
+            out = (await client.speech_to_speech(b"RIFF", **kwargs)).audio
+            path, extra = "speech-to-speech/v", {}
+        assert out == b"ID3"
+        session.post.assert_awaited_once_with(
+            path, files=expected, params=None, **extra
+        )
+
+
 async def test_multipart_wire_format():
     """`None` filenames must encode as plain form fields, not file parts."""
     client = ElevenLabsClient(api_key="secret")
@@ -233,7 +480,9 @@ def _literal_values(tp: object) -> set[str]:
 
 
 def _sdk_params(method: Callable[..., object]) -> set[str]:
-    return set(inspect.signature(method).parameters) - {"self", "request_options"}
+    params = inspect.signature(method).parameters.values()
+    names = {p.name for p in params if p.kind is not p.VAR_KEYWORD}
+    return names - {"self", "request_options"}
 
 
 @pytest.mark.parametrize(
@@ -260,6 +509,18 @@ def _sdk_params(method: Callable[..., object]) -> set[str]:
             set(SpeechToTextCharacterResponseModel.model_fields),
             id="Character",
         ),
+        pytest.param(ElevenLabsVoice, set(SdkVoice.model_fields), id="Voice"),
+        pytest.param(
+            _SoundBody,
+            _sdk_params(AsyncTextToSoundEffectsClient.convert),
+            id="SoundBody",
+        ),
+        pytest.param(_MusicBody, _sdk_params(AsyncMusicClient.compose), id="MusicBody"),
+        pytest.param(
+            SpeechToSpeechOptions,
+            _sdk_params(AsyncSpeechToSpeechClient.convert),
+            id="SpeechToSpeechOptions",
+        ),
     ],
 )
 def test_sdk_compat(local_type: type, sdk_keys: set[str]):
@@ -268,10 +529,26 @@ def test_sdk_compat(local_type: type, sdk_keys: set[str]):
         assert key in sdk_keys, f"{local_type.__name__}.{key} not in SDK type"
 
 
-def test_transcribe_params_sdk_compat():
-    """`transcribe` options are SDK speech-to-text params (`model` maps to `model_id`)."""
-    ours = _sdk_params(ElevenLabsClient.transcribe) - {"model"} | {"model_id"}
-    assert ours <= _sdk_params(AsyncSpeechToTextClient.convert)
+@pytest.mark.parametrize(
+    "method, sdk_method",
+    [
+        pytest.param(
+            ElevenLabsClient.transcribe,
+            AsyncSpeechToTextClient.convert,
+            id="transcribe",
+        ),
+        pytest.param(ElevenLabsClient.clone_voice, AsyncIvcClient.create, id="clone"),
+        pytest.param(
+            ElevenLabsClient.speech_to_speech,
+            AsyncSpeechToSpeechClient.convert,
+            id="speech-to-speech",
+        ),
+    ],
+)
+def test_params_sdk_compat(method, sdk_method):
+    """Our keyword options are SDK params (`model` maps to `model_id`)."""
+    ours = {"model_id" if p == "model" else p for p in _sdk_params(method)}
+    assert ours <= _sdk_params(sdk_method)
 
 
 @pytest.mark.parametrize(
@@ -286,6 +563,11 @@ def test_transcribe_params_sdk_compat():
             get_type_hints(ElevenLabsClient.transcribe)["timestamps_granularity"],
             SpeechToTextConvertRequestTimestampsGranularity,
             id="timestamps-granularity",
+        ),
+        pytest.param(
+            get_type_hints(SpeechToSpeechOptions)["file_format"],
+            SpeechToSpeechRequestFileFormat,
+            id="sts-file-format",
         ),
     ],
 )

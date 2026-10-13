@@ -34,7 +34,7 @@ import niquests
 from openai.types import ChatModel, EmbeddingModel
 
 from padwan_ai.anthropic.client import ANTHROPIC_MODELS, ANTHROPIC_VERSION
-from padwan_ai.elevenlabs.client import ElevenLabsTTSModel
+from padwan_ai.elevenlabs.client import ElevenLabsSTSModel, ElevenLabsTTSModel
 from padwan_ai.gemini import models as gemini_models
 from padwan_ai.gemini.client import GEMINI_MODELS, GeminiEmbeddingModel, GeminiTTSModel
 from padwan_ai.gemini.realtime import DEFAULT_LIVE_MODEL, GeminiLiveModel
@@ -564,8 +564,8 @@ def _typesafe_live_models() -> RemoteModels:
     return RemoteModels(models)
 
 
-def _elevenlabs_tts_models() -> RemoteModels:
-    """Fetch ElevenLabs text-to-speech model ids, minus the deprecated turbo family."""
+def _elevenlabs_models(capability: str) -> RemoteModels:
+    """Fetch ElevenLabs model ids flagged with `capability`, minus the deprecated turbo family."""
     api_key = os.environ.get("ELEVENLABS_API_KEY")
     if not api_key:
         return RemoteModels(set(), skipped="ELEVENLABS_API_KEY is not configured")
@@ -579,7 +579,7 @@ def _elevenlabs_tts_models() -> RemoteModels:
         return RemoteModels(set(), error="response is not a model list")
     models: set[str] = set()
     for item in data:
-        if not isinstance(item, dict) or not item.get("can_do_text_to_speech"):
+        if not isinstance(item, dict) or not item.get(capability):
             continue
         model_id = _string(item.get("model_id"))
         if model_id is None:
@@ -980,7 +980,7 @@ def check(out: Path | None = None) -> None:
             "GET https://api.elevenlabs.io/v1/models",
             "padwan_ai/elevenlabs/client.py::ElevenLabsTTSModel",
             "https://elevenlabs.io/docs/models",
-            _elevenlabs_tts_models(),
+            _elevenlabs_models("can_do_text_to_speech"),
             set(typing.get_args(ElevenLabsTTSModel)),
             notes=(
                 "Only models with `can_do_text_to_speech` are considered; the "
@@ -988,6 +988,15 @@ def check(out: Path | None = None) -> None:
                 "Scribe (speech-to-text) models cannot be checked: the endpoint "
                 "does not list them; `ElevenLabsSTTModel` is curated from the docs.",
             ),
+        ),
+        _live_check(
+            "ElevenLabs speech-to-speech",
+            "GET https://api.elevenlabs.io/v1/models",
+            "padwan_ai/elevenlabs/client.py::ElevenLabsSTSModel",
+            "https://elevenlabs.io/docs/models",
+            _elevenlabs_models("can_do_voice_conversion"),
+            set(typing.get_args(ElevenLabsSTSModel)),
+            notes=("Only models with `can_do_voice_conversion` are considered.",),
         ),
     ]
 
