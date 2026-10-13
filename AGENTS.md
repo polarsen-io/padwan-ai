@@ -5,7 +5,7 @@ OpenAI-compatible API. `LLMClient` (`padwan_ai/client.py`) is the facade that di
 client (`padwan_ai/<provider>/client.py`, subclassing `LLMClientBase` in `padwan_ai/_base.py`). `AgentSession`
 (`padwan_ai/agent.py`) is the tool-calling loop on top. `TypeSafeClient` (`padwan_ai/typesafe/`, experimental) is
 standalone: not a `LLMClientBase` subclass and not routed by `LLMClient`; so are the speech clients
-`ElevenLabsClient` (experimental) and `GradiumClient` (audio only), which share `StandaloneClientMixin`
+`ElevenLabsClient` and `GradiumClient` (audio only, experimental), which share `StandaloneClientMixin`
 (`padwan_ai/_base.py`).
 
 Setup, workflow, PR and release conventions: see `CONTRIBUTING.md`.

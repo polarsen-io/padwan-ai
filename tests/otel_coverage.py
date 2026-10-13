@@ -13,7 +13,16 @@ DOC_PATH = Path(__file__).parents[1] / "docs" / "observability.md"
 
 # semconv well-known values, mirroring otel._PROVIDER_NAMES
 KNOWN_PROVIDERS = frozenset(
-    {"openai", "gcp.gemini", "mistral_ai", "x_ai", "anthropic", "voyage", "elevenlabs"}
+    {
+        "openai",
+        "gcp.gemini",
+        "mistral_ai",
+        "x_ai",
+        "anthropic",
+        "voyage",
+        "elevenlabs",
+        "gradium",
+    }
 )
 
 # operations built from _request_attrs(): they always carry provider, model and endpoint

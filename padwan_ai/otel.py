@@ -48,6 +48,7 @@ _PROVIDER_NAMES: dict[Provider, str] = {
     "anthropic": "anthropic",
     "voyage": "voyage",  # no semconv well-known value
     "elevenlabs": "elevenlabs",  # no semconv well-known value
+    "gradium": "gradium",  # no semconv well-known value
 }
 
 # semconv advised bucket boundaries; the SDK default ladder starts at 5s and
