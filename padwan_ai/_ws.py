@@ -1,10 +1,12 @@
-from collections.abc import AsyncIterator, Mapping
+import asyncio
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
 import niquests
 
 from ._json import dumps as _json_dumps, loads as _json_loads
+from .errors import LLMError, Provider
 from .logs import log
 
 __all__ = ("WsConnection",)
@@ -35,6 +37,41 @@ class WsConnection:
                 yield _json_loads(payload)
             except ValueError:
                 log.debug("skipping non-JSON ws frame: %.100r", payload)
+
+    async def pump(
+        self,
+        provider: Provider,
+        send_all: Callable[[], Awaitable[None]],
+        is_final: Callable[[Mapping[str, Any]], bool],
+    ) -> AsyncGenerator[dict[str, Any]]:
+        """Run `send_all` in a background task, yielding messages until the final one (not yielded).
+
+        The sender is always cancelled and awaited on exit; a send error is re-raised, and a server
+        close before the final message raises `LLMError`.
+        """
+
+        async def run() -> None:
+            try:
+                await send_all()
+            except Exception:
+                await self.close()  # unblock the reader
+                raise
+
+        sender = asyncio.create_task(run())
+        final = False
+        try:
+            async for message in self:
+                if is_final(message):
+                    final = True
+                    break
+                yield message
+        finally:
+            sender.cancel()
+            (outcome,) = await asyncio.gather(sender, return_exceptions=True)
+        if isinstance(outcome, Exception):
+            raise outcome
+        if not final:
+            raise LLMError(provider, "connection closed before the end of the stream")
 
     async def close(self) -> None:
         """Close the underlying websocket (idempotent)."""
