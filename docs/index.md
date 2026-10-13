@@ -22,7 +22,7 @@ Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock 
 - **MCP support** - Streamable HTTP and stdio transports for [Model Context Protocol](https://modelcontextprotocol.io/) tool servers
 - **Thinking models** - Stream Gemini, Claude, Mistral, Grok and vLLM thought tokens separately via an `on_thought` callback
 - **Realtime voice** - Speech-to-speech WebSocket sessions (OpenAI Realtime, Gemini Live, Grok Voice) via `RealtimeClient`
-- **Text-to-speech** - Single and two-speaker Gemini TTS via `GeminiClient.generate_speech` ([details](clients/gemini.md#text-to-speech)), ElevenLabs TTS and transcription via [`ElevenLabsClient`](clients/elevenlabs.md)
+- **Text-to-speech** - Single and two-speaker Gemini TTS via `GeminiClient.generate_speech` ([details](clients/gemini.md#text-to-speech)), ElevenLabs and Gradium TTS and transcription via [`ElevenLabsClient`](clients/elevenlabs.md) and [`GradiumClient`](clients/gradium.md)
 
 ## Supported Providers
 
@@ -35,6 +35,7 @@ Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock 
 | Anthropic | ✅  | ✅        | ❌    | ➖       | ➖            | ➖  | ➖         |
 | [Voyage AI](clients/voyage.md) | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ | ✅ |
 | [ElevenLabs](clients/elevenlabs.md) | ➖ | ➖ | ➖ | ❌ | ✅ | ✅ | ➖ |
+| [Gradium](clients/gradium.md) | ➖ | ➖ | ➖ | ❌ | ✅ | ✅ | ➖ |
 | [OpenAI-Compatible](clients/openai-compatible.md) | ✅ | ✅ | ➕ | ➕ | ➕ | ❌ | ➕ |
 
 - ❌ = the provider offers it, Padwan does not implement it yet.
