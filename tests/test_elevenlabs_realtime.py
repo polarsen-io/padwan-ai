@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 from contextlib import nullcontext
@@ -17,6 +18,25 @@ from padwan_ai.elevenlabs import (
 from padwan_ai.elevenlabs.realtime import _STTChunk, _TTSInit, _TTSText
 from padwan_ai.errors import LLMError, QuotaExceededError
 from tests.test_realtime import FakeExt
+
+
+class ReplyOnEnd(FakeExt):
+    """Release the queued replies only once the client ends its input, like the server."""
+
+    def __init__(self, replies: list[str | bytes | None]):
+        super().__init__()
+        self.replies = replies
+        self.ended = asyncio.Event()
+
+    async def send_payload(self, buf: str | bytes) -> None:
+        await super().send_payload(buf)
+        if json.loads(buf) == {"text": ""}:
+            self._incoming = list(self.replies)
+            self.ended.set()
+
+    async def next_payload(self) -> str | bytes | None:
+        await self.ended.wait()
+        return await super().next_payload()
 
 
 def _audio(data: bytes) -> str:
@@ -44,7 +64,7 @@ async def _async_tokens():
     ],
 )
 async def test_tts_stream(texts):
-    ext = FakeExt([_audio(b"a1"), _audio(b"a2"), json.dumps({"isFinal": True})])
+    ext = ReplyOnEnd([_audio(b"a1"), _audio(b"a2"), json.dumps({"isFinal": True})])
     conn = ElevenLabsTTSConnection(ext)
 
     assert [a async for a in conn.stream(texts())] == [b"a1", b"a2"]

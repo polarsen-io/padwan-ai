@@ -1,6 +1,8 @@
 import asyncio
 import base64
+import json
 import re
+from contextlib import aclosing, nullcontext
 from typing import get_type_hints
 
 import pytest
@@ -20,6 +22,7 @@ from padwan_ai import (
     RealtimeClient,
 )
 from padwan_ai._json import loads as _json_loads
+from padwan_ai._ws import WsConnection
 from padwan_ai.errors import LLMError
 from padwan_ai.gemini.models import (
     AutomaticActivityDetection,
@@ -61,6 +64,65 @@ class ConcurrentExt(FakeExt):
 
     async def next_payload(self) -> str | bytes | None:
         return await self.queue.get()
+
+
+class PumpExt(ConcurrentExt):
+    """Closing the socket ends the read side, as the real transport does."""
+
+    async def close(self) -> None:
+        await super().close()
+        self.queue.put_nowait(None)
+
+
+@pytest.mark.parametrize(
+    "scenario, expected, ctx",
+    [
+        pytest.param("final", ["m1"], nullcontext(), id="final"),
+        pytest.param(
+            "server-eof",
+            ["m1"],
+            pytest.raises(LLMError, match="closed before the end"),
+            id="server-eof-with-pending-input",
+        ),
+        pytest.param(
+            "send-error", [], pytest.raises(ValueError, match="boom"), id="send-error"
+        ),
+        pytest.param("early-exit", ["m1"], nullcontext(), id="consumer-exits-early"),
+    ],
+)
+async def test_pump(scenario, expected, ctx) -> None:
+    ext = PumpExt()
+    conn = WsConnection(ext)
+    sender_done = asyncio.Event()
+    input_blocked = asyncio.Event()
+
+    async def send_all() -> None:
+        try:
+            await conn.send_event({"t": "in"})
+            if scenario == "send-error":
+                raise ValueError("boom")
+            if scenario == "final":
+                for reply in ({"t": "m1"}, {"t": "end"}):
+                    ext.queue.put_nowait(json.dumps(reply))
+                return
+            ext.queue.put_nowait(json.dumps({"t": "m1"}))
+            if scenario == "server-eof":
+                ext.queue.put_nowait(None)
+            await input_blocked.wait()  # an input source that never yields again
+        finally:
+            sender_done.set()
+
+    received: list[str] = []
+    with ctx:
+        async with asyncio.timeout(1):
+            pump = conn.pump("openai", send_all, lambda m: m["t"] == "end")
+            async with aclosing(pump) as messages:
+                async for message in messages:
+                    received.append(message["t"])
+                    if scenario == "early-exit":
+                        break
+    assert received == expected
+    assert sender_done.is_set()
 
 
 async def test_send_progresses_while_read_is_parked() -> None:

@@ -1,6 +1,6 @@
 import inspect
 from collections.abc import Callable
-from contextlib import nullcontext
+from contextlib import aclosing, nullcontext
 from typing import get_args, get_type_hints
 from unittest.mock import AsyncMock, MagicMock
 
@@ -27,8 +27,8 @@ from elevenlabs.voices.ivc.client import AsyncIvcClient
 
 from padwan_ai import ElevenLabsClient
 from padwan_ai.elevenlabs import (
+    ElevenLabsAudio,
     ElevenLabsOutputFormat,
-    ElevenLabsSpeech,
     ElevenLabsTranscription,
     ElevenLabsVoice,
     ElevenLabsWord,
@@ -111,7 +111,7 @@ async def test_generate_speech(
 
     with ctx:
         speech = await client.generate_speech("Hi", **kwargs)
-        assert speech == ElevenLabsSpeech(b"\x00\x01", "audio/pcm", "req-1")
+        assert speech == ElevenLabsAudio(b"\x00\x01", "audio/pcm", "req-1")
         session.post.assert_awaited_once_with(path, json=body, params=params)
 
 
@@ -305,25 +305,27 @@ async def test_generate_audio(method, kwargs, path, body, params, ctx, make_resp
     client, session = _client(resp)
 
     with ctx:
-        assert await getattr(client, method)(**kwargs) == ElevenLabsSpeech(
+        assert await getattr(client, method)(**kwargs) == ElevenLabsAudio(
             b"ID3", "audio/mpeg"
         )
         session.post.assert_awaited_once_with(path, json=body, params=params)
 
 
 @pytest.mark.parametrize(
-    "status, chunks, ctx",
+    "status, chunks, early, ctx",
     [
-        pytest.param(200, [b"ab", b"cd"], nullcontext(), id="ok"),
+        pytest.param(200, [b"ab", b"cd"], False, nullcontext(), id="ok"),
+        pytest.param(200, [b"ab", b"cd"], True, nullcontext(), id="early-close"),
         pytest.param(
             401,
             None,
+            False,
             pytest.raises(LLMError, match="401 Invalid key"),
             id="error-body",
         ),
     ],
 )
-async def test_stream_speech(status, chunks, ctx, make_resp):
+async def test_stream_speech(status, chunks, early, ctx, make_resp):
     resp = make_resp(status, {})
     resp.close = AsyncMock()
     if status >= 400:
@@ -342,7 +344,13 @@ async def test_stream_speech(status, chunks, ctx, make_resp):
     client, session = _client(resp, voice_id="v")
 
     with ctx:
-        assert [c async for c in client.stream_speech("Hi", seed=3)] == chunks
+        got = []
+        async with aclosing(client.stream_speech("Hi", seed=3)) as stream:
+            async for chunk in stream:
+                got.append(chunk)
+                if early:
+                    break
+        assert got == (chunks[:1] if early else chunks)
     session.post.assert_awaited_once_with(
         "text-to-speech/v/stream",
         json={"text": "Hi", "model_id": "eleven_multilingual_v2", "seed": 3},

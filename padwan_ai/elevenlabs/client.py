@@ -1,6 +1,7 @@
 import dataclasses
 import json
-from collections.abc import AsyncIterator, Mapping, Sequence
+from collections.abc import AsyncGenerator, Mapping, Sequence
+from contextlib import aclosing
 from dataclasses import field
 from functools import partial
 from http import HTTPStatus
@@ -90,7 +91,7 @@ __all__ = (
     "ElevenLabsOutputFormat",
     "ElevenLabsSTSModel",
     "ElevenLabsSTTModel",
-    "ElevenLabsSpeech",
+    "ElevenLabsAudio",
     "ElevenLabsTTSModel",
     "ElevenLabsTranscription",
     "ElevenLabsVoice",
@@ -199,7 +200,7 @@ class ElevenLabsTranscription(TypedDict):
 
 
 @dataclasses.dataclass(frozen=True, slots=True)
-class ElevenLabsSpeech:
+class ElevenLabsAudio:
     """Generated audio; for speech, pass `request_id` as `previous_request_ids` to stitch the next chunk."""
 
     audio: bytes
@@ -336,12 +337,12 @@ class ElevenLabsClient(StandaloneClientMixin):
 
     async def _post_audio(
         self, path: str, output_format: str | None, **request: Any
-    ) -> ElevenLabsSpeech:
+    ) -> ElevenLabsAudio:
         params = {"output_format": output_format} if output_format else None
         resp = _check_resp_status(
             await self.session.post(path, params=params, **request)
         )
-        return ElevenLabsSpeech(
+        return ElevenLabsAudio(
             audio=resp.content or b"",
             mime_type=resp.headers.get("content-type", "audio/mpeg"),
             request_id=resp.headers.get("request-id"),
@@ -355,7 +356,7 @@ class ElevenLabsClient(StandaloneClientMixin):
         model: str = "eleven_multilingual_v2",
         output_format: ElevenLabsOutputFormat | None = None,
         **options: Unpack[SpeechOptions],
-    ) -> ElevenLabsSpeech:
+    ) -> ElevenLabsAudio:
         """Synthesize `text` with `voice_id` (else the client's default); the API defaults to 128 kbps MP3."""
         voice = self._voice(voice_id)
         body = _speech_body(text, model, options)
@@ -372,17 +373,16 @@ class ElevenLabsClient(StandaloneClientMixin):
         output_format: ElevenLabsOutputFormat | None = None,
         chunk_size: int = 4096,
         **options: Unpack[SpeechOptions],
-    ) -> AsyncIterator[bytes]:
+    ) -> AsyncGenerator[bytes]:
         """Like `generate_speech`, but yield audio chunks as the API produces them."""
         voice = self._voice(voice_id)
         body = _speech_body(text, model, options)
-        async for chunk in self._stream_audio(
-            f"text-to-speech/{voice}/stream",
-            output_format,
-            chunk_size,
-            json=body,
-        ):
-            yield chunk
+        stream = self._stream_audio(
+            f"text-to-speech/{voice}/stream", output_format, chunk_size, json=body
+        )
+        async with aclosing(stream) as chunks:
+            async for chunk in chunks:
+                yield chunk
 
     async def _stream_audio(
         self,
@@ -390,7 +390,7 @@ class ElevenLabsClient(StandaloneClientMixin):
         output_format: str | None,
         chunk_size: int,
         **request: Any,
-    ) -> AsyncIterator[bytes]:
+    ) -> AsyncGenerator[bytes]:
         params = {"output_format": output_format} if output_format else None
         resp = await self.session.post(path, params=params, stream=True, **request)
         try:
@@ -408,7 +408,7 @@ class ElevenLabsClient(StandaloneClientMixin):
         model: str = "eleven_multilingual_sts_v2",
         output_format: ElevenLabsOutputFormat | None = None,
         **options: Unpack[SpeechToSpeechOptions],
-    ) -> ElevenLabsSpeech:
+    ) -> ElevenLabsAudio:
         """Re-voice recorded speech (path or bytes) with `voice_id`, keeping its delivery and timing."""
         voice = self._voice(voice_id)
         files = await _sts_parts(audio, model, options)
@@ -425,14 +425,16 @@ class ElevenLabsClient(StandaloneClientMixin):
         output_format: ElevenLabsOutputFormat | None = None,
         chunk_size: int = 4096,
         **options: Unpack[SpeechToSpeechOptions],
-    ) -> AsyncIterator[bytes]:
+    ) -> AsyncGenerator[bytes]:
         """Like `speech_to_speech`, but yield audio chunks as the API produces them."""
         voice = self._voice(voice_id)
         files = await _sts_parts(audio, model, options)
-        async for chunk in self._stream_audio(
+        stream = self._stream_audio(
             f"speech-to-speech/{voice}/stream", output_format, chunk_size, files=files
-        ):
-            yield chunk
+        )
+        async with aclosing(stream) as chunks:
+            async for chunk in chunks:
+                yield chunk
 
     async def generate_sound_effect(
         self,
@@ -443,7 +445,7 @@ class ElevenLabsClient(StandaloneClientMixin):
         prompt_influence: float | None = None,
         loop: bool | None = None,
         output_format: ElevenLabsOutputFormat | None = None,
-    ) -> ElevenLabsSpeech:
+    ) -> ElevenLabsAudio:
         """Generate a sound effect from a text prompt; the API picks the duration unless set (0.5 to 30 s)."""
         body: _SoundBody = {"text": text, "model_id": model}
         if duration_seconds is not None:
@@ -464,7 +466,7 @@ class ElevenLabsClient(StandaloneClientMixin):
         force_instrumental: bool | None = None,
         seed: int | None = None,
         output_format: ElevenLabsOutputFormat | None = None,
-    ) -> ElevenLabsSpeech:
+    ) -> ElevenLabsAudio:
         """Compose music from a `prompt` or a `composition_plan` (exactly one).
 
         See https://elevenlabs.io/docs/api-reference/music/compose for the plan schema.

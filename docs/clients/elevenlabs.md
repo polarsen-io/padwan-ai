@@ -44,7 +44,7 @@ async with ElevenLabsClient(voice_id="JBFqnCBsd6RMkjVDRZzb") as client:
     Path("hello.mp3").write_bytes(speech.audio)
 ```
 
-`generate_speech` returns an `ElevenLabsSpeech` with the raw `audio` bytes, its `mime_type` and the ElevenLabs
+`generate_speech` returns an `ElevenLabsAudio` with the raw `audio` bytes, its `mime_type` and the ElevenLabs
 `request_id`. To keep prosody consistent across chunks of a long text, pass earlier IDs as `previous_request_ids` (or
 the surrounding text as `previous_text` / `next_text`). Voice IDs come from your ElevenLabs voice library; pass one
 per call or set a client default with `voice_id=`.
@@ -130,7 +130,7 @@ Error frames (auth, quota, rate limits, bad input) raise `LLMError` (or `QuotaEx
 ## Speech-to-speech
 
 `speech_to_speech` re-voices a recording with another voice, keeping its delivery, emotion and timing (the ElevenLabs
-voice changer). It takes a path or raw bytes and returns an `ElevenLabsSpeech`; `stream_speech_to_speech` yields the
+voice changer). It takes a path or raw bytes and returns an `ElevenLabsAudio`; `stream_speech_to_speech` yields the
 audio in chunks instead:
 
 ```python
@@ -146,7 +146,7 @@ Pass `file_format="pcm_s16le_16"` for raw 16 kHz mono PCM input to skip decoding
 
 ## Sound effects and music
 
-Both return an `ElevenLabsSpeech` (MP3 unless `output_format` says otherwise):
+Both return an `ElevenLabsAudio` (MP3 unless `output_format` says otherwise):
 
 ```python
 async with ElevenLabsClient() as client:

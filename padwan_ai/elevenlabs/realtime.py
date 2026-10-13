@@ -1,7 +1,13 @@
-import asyncio
 import base64
-from collections.abc import AsyncIterable, AsyncIterator, Iterable, Mapping, Sequence
-from contextlib import asynccontextmanager
+from collections.abc import (
+    AsyncGenerator,
+    AsyncIterable,
+    AsyncIterator,
+    Iterable,
+    Mapping,
+    Sequence,
+)
+from contextlib import aclosing, asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, Literal, NotRequired, TypedDict
 
@@ -198,29 +204,21 @@ class ElevenLabsTTSConnection(WsConnection):
 
     async def stream(
         self, texts: AsyncIterable[str] | Iterable[str]
-    ) -> AsyncIterator[bytes]:
+    ) -> AsyncGenerator[bytes]:
         """Send `texts` while yielding audio chunks until the final message."""
 
         async def send_all() -> None:
-            try:
-                async for chunk in _word_chunks(texts):
-                    if chunk.strip():  # a lone " " is the init message
-                        await self.send_text(chunk)
-                await self.end_input()
-            except BaseException:
-                await self.close()
-                raise
+            async for chunk in _word_chunks(texts):
+                if chunk.strip():  # a lone " " is the init message
+                    await self.send_text(chunk)
+            await self.end_input()
 
-        sender = asyncio.create_task(send_all())
-        try:
-            async for message in self:
+        async with aclosing(
+            self.pump("elevenlabs", send_all, self.is_final)
+        ) as messages:
+            async for message in messages:
                 if audio := self.audio_bytes(message):
                     yield audio
-                if self.is_final(message):
-                    break
-            await sender
-        finally:
-            sender.cancel()
 
     @staticmethod
     def audio_bytes(message: Mapping[str, Any]) -> bytes | None:

@@ -131,7 +131,7 @@ Each chat call emits one `CLIENT` span named `chat <model>` (or `chat` when no m
 | Attribute | Example | Notes |
 |-----------|---------|-------|
 | `gen_ai.operation.name` | `chat` | |
-| `gen_ai.provider.name` | `openai`, `gcp.gemini`, `mistral_ai`, `x_ai`, `anthropic`, `voyage` | semconv well-known values (`voyage` has none); OpenAI-compatible endpoints report `openai`, distinguished by `server.address` |
+| `gen_ai.provider.name` | `openai`, `gcp.gemini`, `mistral_ai`, `x_ai`, `anthropic`, `voyage`, `elevenlabs` | semconv well-known values (`voyage` and `elevenlabs` have none); ElevenLabs reports only its realtime clients; OpenAI-compatible endpoints report `openai`, distinguished by `server.address` |
 | `gen_ai.request.model` | `gpt-4o` | omitted when no model is set |
 | `gen_ai.request.temperature` | `0.7` | only when actually sent on the wire |
 | `gen_ai.request.stream` | `true` | streams only |
