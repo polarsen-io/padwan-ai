@@ -13,6 +13,7 @@ __lazy_modules__ = frozenset(
         "padwan_ai.elevenlabs",
         "padwan_ai.errors",
         "padwan_ai.gemini",
+        "padwan_ai.gradium",
         "padwan_ai.grok",
         "padwan_ai.mcp",
         "padwan_ai.mistral",
@@ -76,6 +77,7 @@ from .gemini import (
     GeminiRealtimeConnection,
     is_gemini_model,
 )
+from .gradium import GradiumClient
 from .grok import GROK_MODELS, GrokClient, GrokModel, GrokRealtimeClient, is_grok_model
 from .mcp import McpStdio, McpStreamable, McpTool, McpTransport, OnAuth, ProgressEvent
 from .mistral import MISTRAL_MODELS, MistralClient, MistralModel, is_mistral_model
@@ -151,6 +153,7 @@ __all__ = (
     "GeminiModel",
     "GeminiRealtimeClient",
     "GeminiRealtimeConnection",
+    "GradiumClient",
     "GrokClient",
     "GrokModel",
     "GrokRealtimeClient",

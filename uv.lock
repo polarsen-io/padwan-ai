@@ -927,6 +927,19 @@ wheels = [
 ]
 
 [[package]]
+name = "gradium"
+version = "0.6.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7a/af/fe31dc88950a0771f182167e4fb2d554b8e663d616223959416bd3a58d8a/gradium-0.6.4.tar.gz", hash = "sha256:b7230de41f6931c46a14cbb6ce3dba74902a29fda5fe09822b786a094158857c", size = 1330277, upload-time = "2026-09-04T14:45:38.407Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f3/f8/d9f8043737636d9f3df7f6693b8b50e77a2b29f6cad245ec0bd8a14db5f9/gradium-0.6.4-py3-none-any.whl", hash = "sha256:0800afc099f990c4f9609485add4700c880c04b6a1b84f9b001f1d1e5128d132", size = 29650, upload-time = "2026-09-04T14:45:36.892Z" },
+]
+
+[[package]]
 name = "grpcio"
 version = "1.83.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2130,6 +2143,7 @@ llms = [
     { name = "anthropic" },
     { name = "elevenlabs" },
     { name = "google-genai" },
+    { name = "gradium" },
     { name = "mcp" },
     { name = "openai" },
     { name = "xai-sdk", marker = "python_full_version < '3.15'" },
@@ -2172,6 +2186,7 @@ llms = [
     { name = "anthropic", specifier = ">=1.0.0" },
     { name = "elevenlabs", specifier = ">=2.72.0" },
     { name = "google-genai", specifier = ">=2.18.1" },
+    { name = "gradium", specifier = ">=0.6.4" },
     { name = "mcp", specifier = ">=2.0.0" },
     { name = "openai", specifier = ">=3.3.0" },
     { name = "xai-sdk", marker = "python_full_version < '3.15'", specifier = ">=1.19.0" },

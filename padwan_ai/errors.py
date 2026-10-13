@@ -15,6 +15,7 @@ Provider = Literal[
     "typesafe",
     "voyage",
     "elevenlabs",
+    "gradium",
 ]
 
 __all__ = (

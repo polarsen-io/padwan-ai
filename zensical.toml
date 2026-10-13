@@ -22,6 +22,7 @@ nav = [
     { "Anthropic" = "clients/anthropic.md" },
     { "Voyage AI" = "clients/voyage.md" },
     { "ElevenLabs" = "clients/elevenlabs.md" },
+    { "Gradium" = "clients/gradium.md" },
     { "TypeSafe (JEV, experimental)" = "clients/typesafe.md" },
   ] },
   { "Multimodal" = "multimodal.md" },
