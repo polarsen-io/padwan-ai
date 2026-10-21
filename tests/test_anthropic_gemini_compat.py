@@ -223,23 +223,30 @@ def test_assistant_tool_use_becomes_function_call():
     }
 
 
-def test_thinking_blocks_dropped_on_replay():
-    body = _body(
-        messages=[
-            {
-                "role": "assistant",
-                "content": [
-                    {"type": "thinking", "thinking": "reasoning here"},
-                    {"type": "text", "text": "answer"},
-                ],
-            },
-        ]
-    )
-    request = _to_gemini(body, model="gemini-2.5-flash")
-    assert request["contents"][0] == {
-        "role": "model",
-        "parts": [{"text": "answer"}],
-    }
+@pytest.mark.parametrize(
+    "blocks, expected",
+    [
+        pytest.param(
+            [
+                {"type": "thinking", "thinking": "reasoning here"},
+                {"type": "text", "text": "answer"},
+            ],
+            [{"role": "model", "parts": [{"text": "answer"}]}],
+            id="thinking_dropped",
+        ),
+        pytest.param(
+            [
+                {"type": "thinking", "thinking": "reasoning here"},
+                {"type": "redacted_thinking"},
+            ],
+            [],
+            id="thinking_only_turn_omitted",
+        ),
+    ],
+)
+def test_thinking_blocks_dropped_on_replay(blocks, expected):
+    body = _body(messages=[{"role": "assistant", "content": blocks}])
+    assert _to_gemini(body, model="gemini-2.5-flash")["contents"] == expected
 
 
 def test_tools_map_to_function_declarations():

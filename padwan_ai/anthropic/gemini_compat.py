@@ -208,8 +208,10 @@ def _decode_tool_id(tool_id: str) -> tuple[str, str | None]:
     return data[0], data[1]
 
 
-def _assistant_blocks_to_content(blocks: list[AnthropicContentBlock]) -> dict[str, Any]:
-    """Convert an assistant message's content blocks to one Gemini `model` content."""
+def _assistant_blocks_to_content(
+    blocks: list[AnthropicContentBlock],
+) -> list[dict[str, Any]]:
+    """Convert an assistant message's blocks to a Gemini `model` content, or none if empty."""
     parts: list[GeminiPart] = []
     for block in blocks:
         match block.get("type"):
@@ -234,7 +236,7 @@ def _assistant_blocks_to_content(blocks: list[AnthropicContentBlock]) -> dict[st
                 log.warning(
                     "anthropic compat: skipping assistant block type %r", unknown
                 )
-    return {"role": "model", "parts": parts or [Part(text="")]}
+    return [{"role": "model", "parts": parts}] if parts else []
 
 
 def _tools_to_gemini(tools: list[AnthropicTool]) -> list[GeminiTool]:
@@ -286,7 +288,7 @@ def messages_to_gemini(
             if isinstance(content, str):
                 contents.append({"role": "model", "parts": [Part(text=content)]})
             else:
-                contents.append(_assistant_blocks_to_content(content))
+                contents.extend(_assistant_blocks_to_content(content))
                 for block in content:
                     if block.get("type") == "tool_use":
                         tool_id, name = block.get("id"), block.get("name")
