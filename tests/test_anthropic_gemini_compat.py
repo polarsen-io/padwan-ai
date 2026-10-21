@@ -423,19 +423,6 @@ def test_thinking_part_becomes_thinking_block():
     ]
 
 
-@pytest.mark.parametrize(
-    "finish_reason, expected",
-    [
-        pytest.param("STOP", "end_turn", id="stop"),
-        pytest.param("MAX_TOKENS", "max_tokens", id="max_tokens"),
-        pytest.param("SAFETY", "refusal", id="safety"),
-    ],
-)
-def test_finish_reason_mapping(finish_reason, expected):
-    data = _completion([{"text": "x"}], finish_reason=finish_reason)
-    assert _to_anthropic(data, model="claude-sonnet-5")["stop_reason"] == expected
-
-
 # gemini_stream_to_anthropic
 
 
@@ -532,6 +519,43 @@ async def test_stream_usage_on_final_chunk():
         "output_tokens": 20,
         "cache_read_input_tokens": 60,
     }
+
+
+WEATHER_CALL = {"functionCall": {"name": "get_weather", "args": {}, "id": "c"}}
+
+
+@pytest.mark.parametrize(
+    "stream", [pytest.param(False, id="complete"), pytest.param(True, id="stream")]
+)
+@pytest.mark.parametrize(
+    "parts, finish_reason, expected, warns",
+    [
+        pytest.param([{"text": "x"}], "STOP", "end_turn", False, id="stop"),
+        pytest.param([{"text": "x"}], None, "end_turn", False, id="missing"),
+        pytest.param([{"text": "x"}], "MAX_TOKENS", "max_tokens", False, id="max"),
+        pytest.param([{"text": "x"}], "SAFETY", "refusal", False, id="safety"),
+        pytest.param([WEATHER_CALL], "STOP", "tool_use", False, id="tool_call"),
+        pytest.param(
+            [WEATHER_CALL], "MAX_TOKENS", "max_tokens", False, id="max_over_tool"
+        ),
+        pytest.param(
+            [], "MALFORMED_FUNCTION_CALL", "end_turn", True, id="malformed_call"
+        ),
+        pytest.param([], "UNEXPECTED_TOOL_CALL", "end_turn", True, id="unexpected"),
+    ],
+)
+async def test_stop_reason_mapping(
+    stream, parts, finish_reason, expected, warns, caplog
+):
+    with caplog.at_level("WARNING", logger="padwan_ai"):
+        if stream:
+            events = await _collect([_chunk(parts=parts, finish_reason=finish_reason)])
+            stop_reason = events[-2][1]["delta"]["stop_reason"]
+        else:
+            data = _completion(parts, finish_reason=finish_reason)
+            stop_reason = _to_anthropic(data)["stop_reason"]
+    assert stop_reason == expected
+    assert any("finishReason" in rec.message for rec in caplog.records) is warns
 
 
 @pytest.mark.parametrize(

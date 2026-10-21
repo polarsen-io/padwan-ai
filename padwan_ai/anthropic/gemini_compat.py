@@ -47,8 +47,28 @@ _GEMINI_TO_STOP: dict[str, StopReason] = {
     "BLOCKLIST": "refusal",
     "PROHIBITED_CONTENT": "refusal",
     "SPII": "refusal",
+    "IMAGE_SAFETY": "refusal",
+    "IMAGE_PROHIBITED_CONTENT": "refusal",
+    "IMAGE_RECITATION": "refusal",
     "OTHER": "end_turn",
 }
+
+
+def _stop_reason(finish_reason: str | None, saw_tool_call: bool) -> StopReason:
+    """Map a Gemini finishReason; truncation wins over tool calls, unknown reasons warn."""
+    reason = finish_reason or "STOP"
+    if reason == "MAX_TOKENS":
+        return "max_tokens"
+    if saw_tool_call:
+        return "tool_use"
+    if (mapped := _GEMINI_TO_STOP.get(reason)) is not None:
+        return mapped
+    log.warning(
+        "anthropic compat: Gemini finishReason %r has no Anthropic equivalent, "
+        "reporting end_turn",
+        reason,
+    )
+    return "end_turn"
 
 
 def _system_text(system: str | list[AnthropicContentBlock]) -> str | None:
@@ -372,24 +392,21 @@ def gemini_response_to_anthropic(
     candidates = data.get("candidates") or []
     blocks: list[AnthropicContentBlock] = []
     saw_tool_call = False
-    raw_reason = "STOP"
+    raw_reason: str | None = None
     if candidates:
         choice = candidates[0]
         content = choice.get("content") or {}
         parts = cast(list[dict[str, Any]], content.get("parts") or [])
         blocks = _parts_to_blocks(parts)
         saw_tool_call = any(b.get("type") == "tool_use" for b in blocks)
-        raw_reason = choice.get("finishReason") or "STOP"
-    stop_reason: StopReason = (
-        "tool_use" if saw_tool_call else _GEMINI_TO_STOP.get(raw_reason, "end_turn")
-    )
+        raw_reason = choice.get("finishReason")
     return {
         "id": data.get("responseId") or _new_message_id(),
         "type": "message",
         "role": "assistant",
         "model": model or data.get("modelVersion", ""),
         "content": blocks,
-        "stop_reason": stop_reason,
+        "stop_reason": _stop_reason(raw_reason, saw_tool_call),
         "stop_sequence": None,
         "usage": _usage_to_anthropic(data.get("usageMetadata")),
     }
@@ -489,11 +506,7 @@ async def gemini_stream_to_anthropic(
     for event in emitter.close():
         yield event
 
-    stop_reason: StopReason = (
-        "tool_use"
-        if saw_tool_call
-        else _GEMINI_TO_STOP.get(finish_reason or "STOP", "end_turn")
-    )
+    stop_reason = _stop_reason(finish_reason, saw_tool_call)
     yield (
         "message_delta",
         {

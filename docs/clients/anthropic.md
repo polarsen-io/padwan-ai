@@ -181,3 +181,9 @@ images and PDF documents become `inlineData` parts; images and documents inside
 a tool result follow its `functionResponse`, and `is_error` results are sent as
 `{"error": <text>}`. Remote URL sources and server tools are dropped with a
 warning.
+
+`MAX_TOKENS` reports `max_tokens` even when the turn has function calls.
+Finish reasons without an Anthropic equivalent (`MALFORMED_FUNCTION_CALL`,
+`UNEXPECTED_TOOL_CALL`, ...) report `end_turn` and log a warning. Gemini does
+not say which stop sequence matched, so those stops report `end_turn` with a
+null `stop_sequence`.
