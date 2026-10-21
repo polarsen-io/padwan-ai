@@ -20,6 +20,7 @@ from ..gemini.models import (
     ToolConfig,
 )
 from ..logs import log
+from .compat import _system_text
 from .events import AnthropicEvent, _BlockEmitter, _new_message_id
 from .models import (
     AnthropicCompatBody,
@@ -73,14 +74,6 @@ def _stop_reason(finish_reason: str | None, saw_tool_call: bool) -> StopReason:
         reason,
     )
     return "end_turn"
-
-
-def _system_text(system: str | list[AnthropicContentBlock]) -> str | None:
-    """Flatten a system prompt (string or text blocks) to a single string."""
-    if isinstance(system, str):
-        return system or None
-    parts = [t for b in system if b.get("type") == "text" and (t := b.get("text"))]
-    return "\n\n".join(parts) or None
 
 
 def _source_to_part(
