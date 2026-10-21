@@ -38,20 +38,39 @@ def _to_gemini(
 # messages_to_gemini
 
 
-def test_model_kept_when_not_overridden():
-    request = _to_gemini(_body())
-    assert request["model"] == "claude-sonnet-5"
-
-
-def test_max_tokens_maps_to_generation_config():
-    request = _to_gemini(_body(), model="gemini-2.5-flash")
-    assert request["generationConfig"]["maxOutputTokens"] == 1024
-    assert request["model"] == "gemini-2.5-flash"
-
-
-def test_plain_text_user_message_becomes_content():
-    request = _to_gemini(_body(), model="gemini-2.5-flash")
+@pytest.mark.parametrize(
+    "model, expected",
+    [
+        pytest.param(None, "claude-sonnet-5", id="kept"),
+        pytest.param("gemini-2.5-flash", "gemini-2.5-flash", id="overridden"),
+    ],
+)
+def test_model_and_plain_text_content(model, expected):
+    request = _to_gemini(_body(), model=model)
+    assert request["model"] == expected
     assert request["contents"] == [{"role": "user", "parts": [{"text": "hello"}]}]
+
+
+@pytest.mark.parametrize(
+    "overrides, expected",
+    [
+        pytest.param({}, {"maxOutputTokens": 1024}, id="max_tokens_only"),
+        pytest.param(
+            {"temperature": 0.7, "top_p": 0.9, "top_k": 40, "stop_sequences": ["END"]},
+            {
+                "maxOutputTokens": 1024,
+                "temperature": 0.7,
+                "topP": 0.9,
+                "topK": 40,
+                "stopSequences": ["END"],
+            },
+            id="sampling",
+        ),
+    ],
+)
+def test_generation_config(overrides, expected):
+    request = _to_gemini(_body(**overrides))
+    assert request["generationConfig"] == expected
 
 
 @pytest.mark.parametrize(
@@ -70,16 +89,15 @@ def test_plain_text_user_message_becomes_content():
             "You are Claude Code.\n\nExtra context.",
             id="blocks_with_cache_control",
         ),
+        pytest.param("", None, id="empty_omitted"),
     ],
 )
 def test_system_maps_to_system_instruction(system, expected):
-    request = _to_gemini(_body(system=system), model="gemini-2.5-flash")
-    assert request["systemInstruction"] == {"parts": [{"text": expected}]}
-
-
-def test_empty_system_omitted():
-    request = _to_gemini(_body(system=""), model="gemini-2.5-flash")
-    assert "systemInstruction" not in request
+    request = _to_gemini(_body(system=system))
+    if expected is None:
+        assert "systemInstruction" not in request
+    else:
+        assert request["systemInstruction"] == {"parts": [{"text": expected}]}
 
 
 PNG_SOURCE = {"type": "base64", "media_type": "image/png", "data": BASE64_PNG}
@@ -191,41 +209,34 @@ def test_unsupported_user_block_warns(block, caplog):
     assert any("anthropic compat" in rec.message for rec in caplog.records)
 
 
-def test_assistant_tool_use_becomes_function_call():
-    body = _body(
-        messages=[
-            {"role": "user", "content": "weather?"},
-            {
-                "role": "assistant",
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "id": "call_1",
-                        "name": "get_weather",
-                        "input": {"city": "Paris"},
-                    }
-                ],
-            },
-        ]
-    )
-    request = _to_gemini(body, model="gemini-2.5-flash")
-    assert request["contents"][1] == {
-        "role": "model",
-        "parts": [
-            {
-                "functionCall": {
-                    "name": "get_weather",
-                    "args": {"city": "Paris"},
-                    "id": "call_1",
-                }
-            }
-        ],
-    }
-
-
 @pytest.mark.parametrize(
     "blocks, expected",
     [
+        pytest.param(
+            [
+                {
+                    "type": "tool_use",
+                    "id": "call_1",
+                    "name": "get_weather",
+                    "input": {"city": "Paris"},
+                }
+            ],
+            [
+                {
+                    "role": "model",
+                    "parts": [
+                        {
+                            "functionCall": {
+                                "name": "get_weather",
+                                "args": {"city": "Paris"},
+                                "id": "call_1",
+                            }
+                        }
+                    ],
+                }
+            ],
+            id="tool_use",
+        ),
         pytest.param(
             [
                 {"type": "thinking", "thinking": "reasoning here"},
@@ -244,9 +255,9 @@ def test_assistant_tool_use_becomes_function_call():
         ),
     ],
 )
-def test_thinking_blocks_dropped_on_replay(blocks, expected):
+def test_assistant_blocks_to_content(blocks, expected):
     body = _body(messages=[{"role": "assistant", "content": blocks}])
-    assert _to_gemini(body, model="gemini-2.5-flash")["contents"] == expected
+    assert _to_gemini(body)["contents"] == expected
 
 
 def test_tools_map_to_function_declarations():
@@ -301,17 +312,7 @@ def test_tool_choice_maps_to_function_calling_config(tool_choice, expected):
     assert request["toolConfig"] == {"function_calling_config": expected}
 
 
-def test_sampling_params_mapped():
-    body = _body(temperature=0.7, top_p=0.9, top_k=40, stop_sequences=["END"])
-    request = _to_gemini(body, model="gemini-2.5-flash")
-    gc = request["generationConfig"]
-    assert gc["temperature"] == 0.7
-    assert gc["topP"] == 0.9
-    assert gc["topK"] == 40
-    assert gc["stopSequences"] == ["END"]
-
-
-# gemini_response_to_anthropic
+# gemini_response_to_anthropic / gemini_stream_to_anthropic
 
 
 USAGE_META = {
@@ -334,18 +335,105 @@ def _to_anthropic(data: dict, *, model: str | None = None) -> dict[str, Any]:
     return cast("dict[str, Any]", gemini_response_to_anthropic(typed, model=model))
 
 
-def test_text_response():
+def _chunk(parts=None, finish_reason=None, usage=None):
+    chunk: dict[str, Any] = {"candidates": []}
+    if parts is not None or finish_reason is not None:
+        content = {"parts": parts} if parts is not None else {}
+        chunk["candidates"] = [{"content": content, "finishReason": finish_reason}]
+    if usage is not None:
+        chunk["usageMetadata"] = usage
+    return chunk
+
+
+async def _stream(chunks):
+    for chunk in chunks:
+        yield chunk
+
+
+async def _collect(chunks, model="claude-sonnet-5"):
+    return [
+        event
+        async for event in gemini_stream_to_anthropic(_stream(chunks), model=model)
+    ]
+
+
+async def _response_blocks(parts, *, stream: bool) -> list[dict[str, Any]]:
+    """Content blocks from either translator; stream deltas are folded back in."""
+    if not stream:
+        return _to_anthropic(_completion(parts))["content"]
+    blocks: list[dict[str, Any]] = []
+    for name, event in await _collect([_chunk(parts=parts)]):
+        if name == "content_block_start":
+            blocks.append(event["content_block"].copy())
+        elif name == "content_block_delta":
+            match event["delta"]:
+                case {"type": "text_delta", "text": text}:
+                    blocks[-1]["text"] += text
+                case {"type": "thinking_delta", "thinking": thinking}:
+                    blocks[-1]["thinking"] += thinking
+                case {"type": "input_json_delta", "partial_json": partial}:
+                    blocks[-1]["input"] = json.loads(partial)
+    return blocks
+
+
+@pytest.mark.parametrize(
+    "stream", [pytest.param(False, id="complete"), pytest.param(True, id="stream")]
+)
+@pytest.mark.parametrize(
+    "parts, expected",
+    [
+        pytest.param(
+            [{"text": "Hello!"}], [{"type": "text", "text": "Hello!"}], id="text"
+        ),
+        pytest.param(
+            [
+                {
+                    "functionCall": {
+                        "name": "get_weather",
+                        "args": {"city": "Paris"},
+                        "id": "call_9",
+                    }
+                }
+            ],
+            [
+                {
+                    "type": "tool_use",
+                    "id": "call_9",
+                    "name": "get_weather",
+                    "input": {"city": "Paris"},
+                }
+            ],
+            id="tool_use",
+        ),
+        pytest.param(
+            [{"functionCall": {"name": "get_weather", "args": {}}}],
+            [{"type": "tool_use", "id": "call_0", "name": "get_weather", "input": {}}],
+            id="synthetic_tool_id",
+        ),
+        pytest.param(
+            [{"text": "reasoning", "thought": True}, {"text": "answer"}],
+            [
+                {"type": "thinking", "thinking": "reasoning"},
+                {"type": "text", "text": "answer"},
+            ],
+            id="thinking_then_text",
+        ),
+    ],
+)
+async def test_response_blocks(stream, parts, expected):
+    assert await _response_blocks(parts, stream=stream) == expected
+
+
+@pytest.mark.parametrize(
+    "model, expected",
+    [
+        pytest.param("claude-sonnet-5", "claude-sonnet-5", id="requested"),
+        pytest.param(None, "", id="backend_default"),
+    ],
+)
+def test_response_model(model, expected):
     data = _completion([{"text": "Hello!"}])
-    resp = _to_anthropic(data, model="claude-sonnet-5")
-    assert resp["content"] == [{"type": "text", "text": "Hello!"}]
-    assert resp["stop_reason"] == "end_turn"
-    assert resp["role"] == "assistant"
-    assert resp["model"] == "claude-sonnet-5"
-    assert resp["usage"] == {
-        "input_tokens": 40,
-        "output_tokens": 20,
-        "cache_read_input_tokens": 60,
-    }
+    assert _to_anthropic(data, model=model)["model"] == expected
 
 
 @pytest.mark.parametrize(
@@ -379,82 +467,14 @@ def test_usage_mapping(usage, expected):
     assert _to_anthropic(data)["usage"] == expected
 
 
-def test_model_defaults_to_backend():
-    data = _completion([{"text": "Hello!"}])
-    assert _to_anthropic(data)["model"] == ""
-
-
-def test_tool_use_response():
-    data = _completion(
+async def test_stream_event_sequence_with_final_usage():
+    events = await _collect(
         [
-            {
-                "functionCall": {
-                    "name": "get_weather",
-                    "args": {"city": "Paris"},
-                    "id": "call_9",
-                }
-            }
+            _chunk(parts=[{"text": "hi"}]),
+            _chunk(finish_reason="STOP", usage=USAGE_META),
         ]
     )
-    resp = _to_anthropic(data, model="claude-sonnet-5")
-    assert resp["content"] == [
-        {
-            "type": "tool_use",
-            "id": "call_9",
-            "name": "get_weather",
-            "input": {"city": "Paris"},
-        }
-    ]
-    assert resp["stop_reason"] == "tool_use"
-
-
-def test_synthetic_tool_id_when_missing():
-    data = _completion([{"functionCall": {"name": "get_weather", "args": {}}}])
-    resp = _to_anthropic(data, model="claude-sonnet-5")
-    assert resp["content"][0]["id"] == "call_0"
-
-
-def test_thinking_part_becomes_thinking_block():
-    data = _completion([{"text": "reasoning", "thought": True}, {"text": "answer"}])
-    resp = _to_anthropic(data, model="claude-sonnet-5")
-    assert resp["content"] == [
-        {"type": "thinking", "thinking": "reasoning"},
-        {"type": "text", "text": "answer"},
-    ]
-
-
-# gemini_stream_to_anthropic
-
-
-def _chunk(parts=None, finish_reason=None, usage=None):
-    chunk: dict[str, Any] = {"candidates": []}
-    if parts is not None or finish_reason is not None:
-        content = {"parts": parts} if parts is not None else {}
-        chunk["candidates"] = [{"content": content, "finishReason": finish_reason}]
-    if usage is not None:
-        chunk["usageMetadata"] = usage
-    return chunk
-
-
-async def _stream(chunks):
-    for chunk in chunks:
-        yield chunk
-
-
-async def _collect(chunks, model="claude-sonnet-5"):
-    return [
-        event
-        async for event in gemini_stream_to_anthropic(_stream(chunks), model=model)
-    ]
-
-
-def _event_names(events):
-    return [name for name, _ in events]
-
-
-async def test_stream_text():
-    events = await _collect([_chunk(parts=[{"text": "Hello"}])])
-    assert _event_names(events) == [
+    assert [name for name, _ in events] == [
         "message_start",
         "content_block_start",
         "content_block_delta",
@@ -462,58 +482,6 @@ async def test_stream_text():
         "message_delta",
         "message_stop",
     ]
-    assert events[2][1]["delta"] == {"type": "text_delta", "text": "Hello"}
-
-
-async def test_stream_tool_call_whole_args():
-    events = await _collect(
-        [
-            _chunk(
-                parts=[
-                    {
-                        "functionCall": {
-                            "name": "get_weather",
-                            "args": {"city": "Paris"},
-                            "id": "call_1",
-                        }
-                    }
-                ]
-            )
-        ]
-    )
-    # Locate the input_json_delta event.
-    deltas = [
-        payload["delta"]
-        for _, payload in events
-        if payload.get("type") == "content_block_delta"
-    ]
-    assert deltas[-1]["type"] == "input_json_delta"
-    assert json.loads(deltas[-1]["partial_json"]) == {"city": "Paris"}
-    start = events[1][1]
-    assert start["content_block"]["type"] == "tool_use"
-    assert start["content_block"]["name"] == "get_weather"
-    assert events[-2][1]["delta"]["stop_reason"] == "tool_use"
-
-
-async def test_stream_thinking_then_text():
-    events = await _collect(
-        [_chunk(parts=[{"text": "thought", "thought": True}, {"text": "answer"}])]
-    )
-    block_starts = [
-        payload["content_block"]["type"]
-        for _, payload in events
-        if payload.get("type") == "content_block_start"
-    ]
-    assert block_starts == ["thinking", "text"]
-
-
-async def test_stream_usage_on_final_chunk():
-    events = await _collect(
-        [
-            _chunk(parts=[{"text": "hi"}]),
-            _chunk(finish_reason="STOP", usage=USAGE_META),
-        ]
-    )
     assert events[-2][1]["usage"] == {
         "input_tokens": 40,
         "output_tokens": 20,
@@ -569,16 +537,7 @@ async def test_signed_parallel_tool_round_trip(stream):
         },
         {"functionCall": {"name": "weather", "args": {"city": "Lyon"}, "id": "b"}},
     ]
-    if stream:
-        events = await _collect([_chunk(parts=parts)])
-        blocks = []
-        for name, event in events:
-            if name == "content_block_start":
-                blocks.append(event["content_block"].copy())
-            elif name == "content_block_delta":
-                blocks[-1]["input"] = json.loads(event["delta"]["partial_json"])
-    else:
-        blocks = _to_anthropic(_completion(parts))["content"]
+    blocks = await _response_blocks(parts, stream=stream)
     request = _to_gemini(
         _body(
             messages=[
@@ -611,60 +570,92 @@ async def test_signed_parallel_tool_round_trip(stream):
 
 
 @pytest.mark.parametrize(
-    "tool_id, expected",
+    "messages, expected",
     [
-        pytest.param("regular", nullcontext(), id="plain"),
         pytest.param(
-            "gemini_signed_!",
+            [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "regular",
+                            "name": "weather",
+                            "input": {},
+                        }
+                    ],
+                }
+            ],
+            nullcontext(),
+            id="plain",
+        ),
+        pytest.param(
+            [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "gemini_signed_!",
+                            "name": "weather",
+                            "input": {},
+                        }
+                    ],
+                }
+            ],
             pytest.raises(ValueError, match="Invalid signed"),
             id="invalid_base64",
         ),
         pytest.param(
-            "gemini_signed_e30",
+            [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "gemini_signed_e30",
+                            "name": "weather",
+                            "input": {},
+                        }
+                    ],
+                }
+            ],
             pytest.raises(ValueError, match="Invalid signed"),
             id="invalid_shape",
         ),
+        pytest.param(
+            [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "tool_use", "id": "", "name": "weather", "input": {}}
+                    ],
+                }
+            ],
+            pytest.raises(ValueError, match="nonempty id and name"),
+            id="empty_id",
+        ),
+        pytest.param(
+            [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "missing",
+                            "content": "sunny",
+                        }
+                    ],
+                }
+            ],
+            pytest.raises(ValueError, match="No preceding tool_use"),
+            id="orphan_tool_result",
+        ),
     ],
 )
-def test_tool_id_validation(tool_id, expected):
+def test_tool_id_validation(messages, expected):
     with expected:
-        _to_gemini(
-            _body(
-                messages=[
-                    {
-                        "role": "assistant",
-                        "content": [
-                            {
-                                "type": "tool_use",
-                                "id": tool_id,
-                                "name": "weather",
-                                "input": {},
-                            }
-                        ],
-                    }
-                ]
-            )
-        )
-
-
-def test_orphan_tool_result_rejected():
-    with pytest.raises(ValueError, match="No preceding tool_use"):
-        _to_gemini(
-            _body(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": "missing",
-                                "content": "sunny",
-                            }
-                        ],
-                    }
-                ]
-            )
-        )
+        _to_gemini(_body(messages=messages))
 
 
 @pytest.mark.parametrize(
