@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from base64 import b64decode, urlsafe_b64encode
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, cast
 
 from .._json import dumps as _json_dumps, loads as _json_loads
 from ..gemini.models import (
+    Content,
     FunctionCallingConfig,
     FunctionCallPart,
     FunctionDeclaration,
     GeminiPart,
     GeminiTool,
+    GenerationConfig,
     InlineDataPart,
     Part,
     StreamBody,
@@ -18,12 +20,14 @@ from ..gemini.models import (
     ToolConfig,
 )
 from ..logs import log
-from .events import _BlockEmitter, _new_message_id
+from .events import AnthropicEvent, _BlockEmitter, _new_message_id
 from .models import (
     AnthropicCompatBody,
     AnthropicContentBlock,
     AnthropicTool,
     AnthropicToolChoice,
+    AnthropicUsage,
+    MessagesResponse,
     StopReason,
 )
 
@@ -152,7 +156,7 @@ def _maybe_json(text: str) -> dict[str, Any]:
 
 def _user_blocks_to_content(
     blocks: list[AnthropicContentBlock], tool_names: Mapping[str, str]
-) -> list[dict[str, Any]]:
+) -> list[Content]:
     """Keep parallel tool results together and resolve their function names."""
     parts: list[GeminiPart] = []
     # Media from a run of tool_results follows the run, after its functionResponses.
@@ -230,7 +234,7 @@ def _decode_tool_id(tool_id: str) -> tuple[str, str | None]:
 
 def _assistant_blocks_to_content(
     blocks: list[AnthropicContentBlock],
-) -> list[dict[str, Any]]:
+) -> list[Content]:
     """Convert an assistant message's blocks to a Gemini `model` content, or none if empty."""
     parts: list[GeminiPart] = []
     for block in blocks:
@@ -300,7 +304,7 @@ def messages_to_gemini(
     body: AnthropicCompatBody, *, model: str | None = None
 ) -> StreamBody:
     """Translate Messages into a Gemini body with a client-side model override."""
-    contents: list[dict[str, Any]] = []
+    contents: list[Content] = []
     tool_names: dict[str, str] = {}
     for msg in body["messages"]:
         content = msg["content"]
@@ -320,7 +324,7 @@ def messages_to_gemini(
         else:
             contents.extend(_user_blocks_to_content(content, tool_names))
 
-    gen_config: dict[str, Any] = {"maxOutputTokens": body["max_tokens"]}
+    gen_config: GenerationConfig = {"maxOutputTokens": body["max_tokens"]}
     if (temperature := body.get("temperature")) is not None:
         gen_config["temperature"] = temperature
     if (top_p := body.get("top_p")) is not None:
@@ -330,7 +334,12 @@ def messages_to_gemini(
     if stop_sequences := body.get("stop_sequences"):
         gen_config["stopSequences"] = stop_sequences
 
-    request: dict[str, Any] = {"contents": contents, "generationConfig": gen_config}
+    # Carry the resolved model; complete()/stream() also accept it explicitly.
+    request: StreamBody = {
+        "model": model or body["model"],
+        "contents": contents,
+        "generationConfig": gen_config,
+    }
     if (system := body.get("system")) is not None:
         if text := _system_text(system):
             request["systemInstruction"] = SystemInstruction(parts=[Part(text=text)])
@@ -340,12 +349,12 @@ def messages_to_gemini(
         request["toolConfig"] = _tool_config(tool_choice)
     if body.get("thinking"):
         log.debug("anthropic compat: dropping thinking config (backend-specific)")
-    # Carry the resolved model; complete()/stream() also accept it explicitly.
-    request["model"] = model or body["model"]
-    return cast(StreamBody, request)
+    return request
 
 
-def _parts_to_blocks(parts: list[dict[str, Any]]) -> list[AnthropicContentBlock]:
+def _parts_to_blocks(
+    parts: Sequence[Mapping[str, Any]],
+) -> list[AnthropicContentBlock]:
     """Convert Gemini response parts to Anthropic content blocks, in order."""
     blocks: list[AnthropicContentBlock] = []
     for i, part in enumerate(parts):
@@ -370,12 +379,12 @@ def _parts_to_blocks(parts: list[dict[str, Any]]) -> list[AnthropicContentBlock]
     return blocks
 
 
-def _usage_to_anthropic(usage: dict[str, Any] | None) -> dict[str, Any]:
+def _usage_to_anthropic(usage: Mapping[str, Any] | None) -> AnthropicUsage:
     if not usage:
         return {"input_tokens": 0, "output_tokens": 0}
     cached = usage.get("cachedContentTokenCount")
     # promptTokenCount includes cache reads; Anthropic's input_tokens does not.
-    token: dict[str, Any] = {
+    token: AnthropicUsage = {
         "input_tokens": usage.get("promptTokenCount", 0) - (cached or 0),
         "output_tokens": usage.get("candidatesTokenCount", 0)
         + (usage.get("thoughtsTokenCount") or 0),
@@ -387,34 +396,35 @@ def _usage_to_anthropic(usage: dict[str, Any] | None) -> dict[str, Any]:
 
 def gemini_response_to_anthropic(
     data: GenerateContentResponseDict, *, model: str | None = None
-) -> dict[str, Any]:
+) -> MessagesResponse:
     """Translate a Gemini generateContent response to an Anthropic Messages response."""
-    candidates = data.get("candidates") or []
+    # The SDK TypedDict is snake_case; the REST payload is camelCase.
+    raw = cast("Mapping[str, Any]", data)
+    candidates = raw.get("candidates") or []
     blocks: list[AnthropicContentBlock] = []
     saw_tool_call = False
     raw_reason: str | None = None
     if candidates:
         choice = candidates[0]
         content = choice.get("content") or {}
-        parts = cast(list[dict[str, Any]], content.get("parts") or [])
-        blocks = _parts_to_blocks(parts)
+        blocks = _parts_to_blocks(content.get("parts") or [])
         saw_tool_call = any(b.get("type") == "tool_use" for b in blocks)
         raw_reason = choice.get("finishReason")
     return {
-        "id": data.get("responseId") or _new_message_id(),
+        "id": raw.get("responseId") or _new_message_id(),
         "type": "message",
         "role": "assistant",
-        "model": model or data.get("modelVersion", ""),
+        "model": model or raw.get("modelVersion", ""),
         "content": blocks,
         "stop_reason": _stop_reason(raw_reason, saw_tool_call),
         "stop_sequence": None,
-        "usage": _usage_to_anthropic(data.get("usageMetadata")),
+        "usage": _usage_to_anthropic(raw.get("usageMetadata")),
     }
 
 
 async def gemini_stream_to_anthropic(
     chunks: AsyncIterator[dict], *, model: str
-) -> AsyncIterator[tuple[str, dict[str, Any]]]:
+) -> AsyncIterator[AnthropicEvent]:
     """Translate a Gemini streamGenerateContent stream to Anthropic SSE events.
 
     Gemini emits whole parts per chunk (a text part, a functionCall part),
@@ -443,7 +453,7 @@ async def gemini_stream_to_anthropic(
     # "thinking" | "text" | open index of the tool_use block currently open.
     open_kind: str | int | None = None
     finish_reason: str | None = None
-    usage: dict[str, Any] | None = None
+    usage: Mapping[str, Any] | None = None
     saw_tool_call = False
     tool_index = 0
 
