@@ -59,39 +59,66 @@ def _system_text(system: str | list[AnthropicContentBlock]) -> str | None:
     return "\n\n".join(parts) or None
 
 
-def _image_source_to_inline_data(
-    source: dict[str, Any],
-) -> InlineDataPart | None:
-    """Convert an Anthropic image `source` to a Gemini `inlineData` part."""
+def _source_to_part(
+    source: dict[str, Any], *, default_mime: str
+) -> InlineDataPart | Part | None:
+    """Convert an Anthropic image/document `source` to a Gemini part."""
     match source.get("type"):
         case "base64":
-            mime_type = source.get("media_type", "image/png")
+            mime_type = source.get("media_type", default_mime)
             data = source.get("data", "")
             return {"inlineData": {"mimeType": mime_type, "data": data}}
+        case "text" if text := source.get("data"):
+            return Part(text=text)
         case "url":
-            log.debug(
-                "anthropic compat: Gemini drops remote image URLs %r", source.get("url")
+            log.warning(
+                "anthropic compat: Gemini drops remote URL sources %r",
+                source.get("url"),
             )
             return None
         case unknown:
-            log.debug("anthropic compat: skipping image source type %r", unknown)
+            log.warning("anthropic compat: skipping source type %r", unknown)
             return None
 
 
-def _flatten_tool_result_content(content: Any) -> dict[str, Any]:
-    """Flatten a tool_result `content` to a JSON-able Gemini function response payload."""
-    if content is None:
-        return {}
+def _media_block_to_part(block: Mapping[str, Any]) -> InlineDataPart | Part | None:
+    """Convert an image or document block to a Gemini part."""
+    default_mime = "application/pdf" if block.get("type") == "document" else "image/png"
+    return _source_to_part(block.get("source") or {}, default_mime=default_mime)
+
+
+def _flatten_tool_result_content(
+    content: Any, *, is_error: bool = False
+) -> tuple[dict[str, Any], list[InlineDataPart | Part]]:
+    """Flatten a tool_result `content` to a function response payload plus its media parts.
+
+    A functionResponse carries JSON only, so images/documents are returned aside.
+    """
+    texts: list[str] = []
+    media: list[InlineDataPart | Part] = []
     if isinstance(content, str):
-        return _maybe_json(content)
-    if isinstance(content, list):
-        texts = [
-            b["text"]
-            for b in content
-            if isinstance(b, dict) and b.get("type") == "text" and b.get("text")
-        ]
-        return _maybe_json("\n".join(texts)) if texts else {}
-    return {"result": str(content)}
+        texts.append(content)
+    elif isinstance(content, list):
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            match block.get("type"):
+                case "text":
+                    if t := block.get("text"):
+                        texts.append(t)
+                case "image" | "document":
+                    if part := _media_block_to_part(block):
+                        media.append(part)
+                case unknown:
+                    log.warning(
+                        "anthropic compat: skipping tool_result block type %r", unknown
+                    )
+    elif content is not None:
+        texts.append(str(content))
+    text = "\n".join(texts)
+    if is_error:
+        return {"error": text}, media
+    return (_maybe_json(text) if texts else {}), media
 
 
 def _maybe_json(text: str) -> dict[str, Any]:
@@ -108,13 +135,19 @@ def _user_blocks_to_content(
 ) -> list[dict[str, Any]]:
     """Keep parallel tool results together and resolve their function names."""
     parts: list[GeminiPart] = []
+    # Media from a run of tool_results follows the run, after its functionResponses.
+    held: list[InlineDataPart | Part] = []
     for block in blocks:
-        match block.get("type"):
+        kind = block.get("type")
+        if kind != "tool_result":
+            parts.extend(held)
+            held.clear()
+        match kind:
             case "text":
                 if text := block.get("text"):
                     parts.append(Part(text=text))
-            case "image":
-                if part := _image_source_to_inline_data(block.get("source") or {}):
+            case "image" | "document":
+                if part := _media_block_to_part(block):
                     parts.append(part)
             case "tool_result":
                 tool_id = block.get("tool_use_id", "")
@@ -123,19 +156,22 @@ def _user_blocks_to_content(
                         f"No preceding tool_use for tool_result {tool_id!r}"
                     )
                 original_id, _ = _decode_tool_id(tool_id)
+                response, media = _flatten_tool_result_content(
+                    block.get("content"), is_error=bool(block.get("is_error"))
+                )
                 parts.append(
                     {
                         "functionResponse": {
                             "id": original_id,
                             "name": tool_names[tool_id],
-                            "response": _flatten_tool_result_content(
-                                block.get("content")
-                            ),
+                            "response": response,
                         }
                     }
                 )
+                held.extend(media)
             case unknown:
-                log.debug("anthropic compat: skipping user block type %r", unknown)
+                log.warning("anthropic compat: skipping user block type %r", unknown)
+    parts.extend(held)
     return [{"role": "user", "parts": parts}] if parts else []
 
 
@@ -195,7 +231,9 @@ def _assistant_blocks_to_content(blocks: list[AnthropicContentBlock]) -> dict[st
             case "thinking" | "redacted_thinking":
                 log.debug("anthropic compat: dropping thinking block on replay")
             case unknown:
-                log.debug("anthropic compat: skipping assistant block type %r", unknown)
+                log.warning(
+                    "anthropic compat: skipping assistant block type %r", unknown
+                )
     return {"role": "model", "parts": parts or [Part(text="")]}
 
 
@@ -204,7 +242,7 @@ def _tools_to_gemini(tools: list[AnthropicTool]) -> list[GeminiTool]:
     declarations: list[FunctionDeclaration] = []
     for tool in tools:
         if (schema := tool.get("input_schema")) is None:
-            log.debug(
+            log.warning(
                 "anthropic compat: skipping server tool %r (type=%r)",
                 tool.get("name"),
                 tool.get("type"),

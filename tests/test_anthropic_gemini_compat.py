@@ -82,31 +82,113 @@ def test_empty_system_omitted():
     assert "systemInstruction" not in request
 
 
-def test_image_block_becomes_inline_data():
+PNG_SOURCE = {"type": "base64", "media_type": "image/png", "data": BASE64_PNG}
+PNG_PART = {"inlineData": {"mimeType": "image/png", "data": BASE64_PNG}}
+PDF_SOURCE = {"type": "base64", "media_type": "application/pdf", "data": "JVBERi0="}
+PDF_PART = {"inlineData": {"mimeType": "application/pdf", "data": "JVBERi0="}}
+
+
+def _weather_response(response: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "functionResponse": {
+            "id": "call_1",
+            "name": "get_weather",
+            "response": response,
+        }
+    }
+
+
+def _tool_result(content: Any, **extra: Any) -> dict[str, Any]:
+    return {"type": "tool_result", "tool_use_id": "call_1", "content": content, **extra}
+
+
+@pytest.mark.parametrize(
+    "blocks, expected",
+    [
+        pytest.param(
+            [
+                {"type": "text", "text": "describe this"},
+                {"type": "image", "source": PNG_SOURCE},
+            ],
+            [{"text": "describe this"}, PNG_PART],
+            id="image",
+        ),
+        pytest.param(
+            [{"type": "document", "source": PDF_SOURCE}],
+            [PDF_PART],
+            id="pdf_document",
+        ),
+        pytest.param(
+            [{"type": "document", "source": {"type": "text", "data": "plain doc"}}],
+            [{"text": "plain doc"}],
+            id="text_document",
+        ),
+        pytest.param(
+            [_tool_result('{"temp": 18}')],
+            [_weather_response({"temp": 18})],
+            id="tool_result_json",
+        ),
+        pytest.param(
+            [_tool_result([{"type": "text", "text": "city not found"}], is_error=True)],
+            [_weather_response({"error": "city not found"})],
+            id="tool_result_error",
+        ),
+        pytest.param(
+            [
+                _tool_result(
+                    [
+                        {"type": "text", "text": "chart"},
+                        {"type": "image", "source": PNG_SOURCE},
+                    ]
+                ),
+                {"type": "text", "text": "what does it show?"},
+            ],
+            [
+                _weather_response({"result": "chart"}),
+                PNG_PART,
+                {"text": "what does it show?"},
+            ],
+            id="tool_result_image_follows_response",
+        ),
+    ],
+)
+def test_user_blocks_to_parts(blocks, expected):
     body = _body(
         messages=[
+            {"role": "user", "content": "weather?"},
             {
-                "role": "user",
+                "role": "assistant",
                 "content": [
-                    {"type": "text", "text": "describe this"},
                     {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/png",
-                            "data": BASE64_PNG,
-                        },
-                    },
+                        "type": "tool_use",
+                        "id": "call_1",
+                        "name": "get_weather",
+                        "input": {},
+                    }
                 ],
-            }
+            },
+            {"role": "user", "content": blocks},
         ]
     )
     request = _to_gemini(body, model="gemini-2.5-flash")
-    parts = request["contents"][0]["parts"]
-    assert parts == [
-        {"text": "describe this"},
-        {"inlineData": {"mimeType": "image/png", "data": BASE64_PNG}},
-    ]
+    assert request["contents"][-1] == {"role": "user", "parts": expected}
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        pytest.param(
+            {"type": "image", "source": {"type": "url", "url": "https://x/y.png"}},
+            id="remote_image",
+        ),
+        pytest.param({"type": "search_result"}, id="unknown_block"),
+    ],
+)
+def test_unsupported_user_block_warns(block, caplog):
+    with caplog.at_level("WARNING", logger="padwan_ai"):
+        request = _to_gemini(_body(messages=[{"role": "user", "content": [block]}]))
+    assert request["contents"] == []
+    assert any("anthropic compat" in rec.message for rec in caplog.records)
 
 
 def test_assistant_tool_use_becomes_function_call():
@@ -138,43 +220,6 @@ def test_assistant_tool_use_becomes_function_call():
                 }
             }
         ],
-    }
-
-
-def test_tool_result_becomes_function_response():
-    body = _body(
-        messages=[
-            {"role": "user", "content": "weather?"},
-            {
-                "role": "assistant",
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "id": "call_1",
-                        "name": "get_weather",
-                        "input": {"city": "Paris"},
-                    }
-                ],
-            },
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": "call_1",
-                        "content": '{"temp": 18}',
-                    }
-                ],
-            },
-        ]
-    )
-    request = _to_gemini(body, model="gemini-2.5-flash")
-    tool_result = request["contents"][2]
-    assert tool_result["role"] == "user"
-    assert tool_result["parts"][0]["functionResponse"] == {
-        "id": "call_1",
-        "name": "get_weather",
-        "response": {"temp": 18},
     }
 
 

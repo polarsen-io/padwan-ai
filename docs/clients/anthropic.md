@@ -176,5 +176,8 @@ Keep returned tool IDs unchanged when replaying assistant calls and user
 results: signed Gemini function calls carry their signatures in those opaque
 IDs. Parallel results stay together in one user turn; unmatched results raise
 `ValueError`. Anthropic thinking blocks and thinking configuration are not
-replayed. Signatures attached to non-function parts are not preserved. Remote
-image URLs, server tools, and non-text tool-result content are not translated.
+replayed. Signatures attached to non-function parts are not preserved. Base64
+images and PDF documents become `inlineData` parts; images and documents inside
+a tool result follow its `functionResponse`, and `is_error` results are sent as
+`{"error": <text>}`. Remote URL sources and server tools are dropped with a
+warning.

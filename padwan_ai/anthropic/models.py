@@ -39,7 +39,7 @@ class AnthropicToolChoice(TypedDict):
 
 
 class AnthropicContentBlock(TypedDict, total=False):
-    """A content block in a message or response (text, tool_use, tool_result, image, thinking)."""
+    """A content block in a message or response (text, tool_use, tool_result, image, document, thinking)."""
 
     type: str
     text: str
@@ -47,6 +47,7 @@ class AnthropicContentBlock(TypedDict, total=False):
     name: str
     input: dict[str, Any]
     tool_use_id: str
+    is_error: bool
     content: Any
     source: dict[str, Any]
     thinking: str
