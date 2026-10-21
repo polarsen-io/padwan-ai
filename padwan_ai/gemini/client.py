@@ -554,10 +554,11 @@ class GeminiClient(_GeminiAuth, LLMClientBase[GeminiRetry], GeminiToolMixin):
 
         payload: dict = {
             "contents": body["contents"],
-            # A caller-supplied generationConfig wins; otherwise build from
-            # the request temperature + the client's thinking config.
-            "generationConfig": body.get("generationConfig")
-            or self._build_gen_config(_temperature),
+            # Caller generationConfig keys win over the client defaults.
+            "generationConfig": {
+                **self._build_gen_config(_temperature),
+                **body.get("generationConfig", {}),
+            },
         }
         if system := body.get("systemInstruction"):
             payload["systemInstruction"] = system

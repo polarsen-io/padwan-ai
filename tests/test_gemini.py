@@ -38,6 +38,7 @@ from padwan_ai.gemini.models import (
     SpeakerVoiceConfig,
     SpeechConfig,
     SpeechMetadata,
+    StreamBody,
     ThinkingConfig,
 )
 
@@ -334,6 +335,47 @@ class TestGenConfig:
             "temperature": 0.3,
             "thinkingConfig": {"thinkingBudget": 1024, "includeThoughts": True},
         }
+
+    @pytest.mark.parametrize(
+        "gen_config, expected",
+        [
+            pytest.param(
+                None,
+                {"temperature": 0.2, "thinkingConfig": {"thinkingBudget": 1024}},
+                id="client_defaults",
+            ),
+            pytest.param(
+                {"maxOutputTokens": 64, "temperature": 0.9},
+                {
+                    "temperature": 0.9,
+                    "maxOutputTokens": 64,
+                    "thinkingConfig": {"thinkingBudget": 1024},
+                },
+                id="merged_body_wins",
+            ),
+            pytest.param(
+                {"thinkingConfig": {"thinkingBudget": 0}},
+                {"temperature": 0.2, "thinkingConfig": {"thinkingBudget": 0}},
+                id="caller_thinking_kept",
+            ),
+        ],
+    )
+    async def test_stream_merges_generation_config(
+        self, gen_config, expected, make_sse_resp
+    ):
+        client = GeminiClient(
+            api_key="test",
+            model="gemini-2.5-flash",
+            thinking_config={"thinkingBudget": 1024},
+        )
+        client._session = AsyncMock()
+        client._session.post.return_value = make_sse_resp([])
+        body: StreamBody = {"contents": []}
+        if gen_config is not None:
+            body["generationConfig"] = gen_config
+        _ = [c async for c in client.stream(body)]
+        payload = client._session.post.call_args.kwargs["json"]
+        assert payload["generationConfig"] == expected
 
     async def test_complete_chat_applies_thinking_config(self):
         """Regression: `complete_chat` used to hard-code generationConfig

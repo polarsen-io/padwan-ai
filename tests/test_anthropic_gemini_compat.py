@@ -630,7 +630,12 @@ async def test_converted_request_selects_endpoint(
         suffix = "generateContent"
     args, kwargs = session.post.call_args
     assert args[0].split("?")[0].endswith(f"/models/{expected}:{suffix}")
-    assert kwargs["json"] == {
-        key: value for key, value in body.items() if key != "model"
-    }
+    expected_json: dict[str, Any] = {k: v for k, v in body.items() if k != "model"}
+    if stream:
+        # stream() layers the request's generationConfig over the client defaults.
+        expected_json["generationConfig"] = {
+            "temperature": client.temperature,
+            **body.get("generationConfig", {}),
+        }
+    assert kwargs["json"] == expected_json
     assert body == before
