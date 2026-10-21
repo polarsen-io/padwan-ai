@@ -1,8 +1,6 @@
 import dataclasses
 from collections.abc import Sequence
 from dataclasses import field
-from functools import partial
-from http import HTTPStatus
 from pathlib import Path
 from typing import (
     Any,
@@ -18,14 +16,10 @@ import niquests
 from niquests.typing import MultiPartFilesType
 from urllib3.util.retry import Retry
 
-from .._base import StandaloneClientMixin, env_api_key
+from .._base import StandaloneClientMixin, env_api_key, standalone_retry
 from ..content import _read_audio
 from ..errors import (
-    LLMError,
     Provider,
-    QuotaExceededError,
-    TooManyRequestsError,
-    _error_message,
 )
 
 ElevenLabsTTSModel = Literal[
@@ -146,37 +140,6 @@ class ElevenLabsSpeech:
     request_id: str | None = None
 
 
-def _check_resp_status(resp: niquests.Response) -> niquests.Response:
-    """Raise padwan errors on non-2xx responses without consuming a successful body."""
-    try:
-        return resp.raise_for_status()
-    except niquests.exceptions.HTTPError as error:
-        try:
-            data: Any = resp.json()
-        except Exception:
-            data = None
-        body = data if isinstance(data, dict) else None
-        message = _error_message(data)
-        if resp.status_code == HTTPStatus.TOO_MANY_REQUESTS:
-            retry_after = resp.headers.get("retry-after")
-            raise TooManyRequestsError(
-                retry_delay=int(retry_after)
-                if retry_after and retry_after.isdigit()
-                else 60,
-                message=message or None,
-                response=resp,
-            ) from error
-        detail = body.get("detail") if body else None
-        if isinstance(detail, dict) and detail.get("status") == "quota_exceeded":
-            raise QuotaExceededError(body=body or {}) from error
-        raise LLMError(
-            "elevenlabs",
-            f"{resp.status_code} {message}".rstrip(),
-            cause=error,
-            body=body,
-        ) from error
-
-
 @dataclasses.dataclass
 class ElevenLabsClient(StandaloneClientMixin):
     """Async client for ElevenLabs text-to-speech and speech-to-text.
@@ -190,18 +153,7 @@ class ElevenLabsClient(StandaloneClientMixin):
     timeout: float = 60
     api_key: str | None = field(default=None, repr=False)
     base_url: str = ELEVENLABS_ENDPOINT
-    _retry: Retry = field(
-        default_factory=partial(
-            Retry,
-            total=3,
-            backoff_factor=0.5,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["GET", "POST"],
-            respect_retry_after_header=True,
-            raise_on_status=False,
-        ),
-        repr=False,
-    )
+    _retry: Retry = field(default_factory=standalone_retry, repr=False)
     _api_key: str = field(init=False, repr=False)
     _session: niquests.AsyncSession | None = field(init=False, default=None, repr=False)
 
@@ -211,12 +163,16 @@ class ElevenLabsClient(StandaloneClientMixin):
     def _set_auth_headers(self, session: niquests.AsyncSession) -> None:
         session.headers["xi-api-key"] = self._api_key
 
+    def _quota_exceeded(self, body: dict[str, Any] | None) -> bool:
+        detail = body.get("detail") if body else None
+        return isinstance(detail, dict) and detail.get("status") == "quota_exceeded"
+
     async def generate_speech(
         self,
         text: str,
         voice_id: str | None = None,
         *,
-        model: str = "eleven_multilingual_v2",
+        model: ElevenLabsTTSModel | str = "eleven_multilingual_v2",
         output_format: ElevenLabsOutputFormat | None = None,
         language_code: str | None = None,
         voice_settings: VoiceSettings | None = None,
@@ -248,7 +204,7 @@ class ElevenLabsClient(StandaloneClientMixin):
         resp = await self.session.post(
             f"text-to-speech/{voice}", json=body, params=params
         )
-        checked = _check_resp_status(resp)
+        checked = self._check_resp_status(resp)
         return ElevenLabsSpeech(
             audio=checked.content or b"",
             mime_type=checked.headers.get("content-type", "audio/mpeg"),
@@ -257,11 +213,13 @@ class ElevenLabsClient(StandaloneClientMixin):
 
     async def transcribe(
         self,
-        file: str | Path | bytes | None = None,
         *,
+        file: str | Path | bytes | None = None,
+        filename: str | None = None,
+        content_type: str | None = None,
         source_url: str | None = None,
-        model: str = "scribe_v2",
-        language_code: str | None = None,
+        model: ElevenLabsSTTModel | str = "scribe_v2",
+        language: str | None = None,
         diarize: bool = False,
         num_speakers: int | None = None,
         tag_audio_events: bool | None = None,
@@ -270,14 +228,17 @@ class ElevenLabsClient(StandaloneClientMixin):
         temperature: float | None = None,
         seed: int | None = None,
     ) -> ElevenLabsTranscription:
-        """Transcribe a local `file` (path or raw bytes) or a remote `source_url`; exactly one is required."""
+        """Transcribe a local `file` (path or raw bytes) or a remote `source_url`; exactly one is required.
+
+        ``filename`` and ``content_type`` override what the path (or raw bytes) imply.
+        """
         if (file is None) == (source_url is None):
             raise ValueError("Provide exactly one of file or source_url")
         fields: list[tuple[str, str]] = [("model_id", model)]
         if source_url is not None:
             fields.append(("source_url", source_url))
-        if language_code is not None:
-            fields.append(("language_code", language_code))
+        if language is not None:
+            fields.append(("language_code", language))
         if diarize:
             fields.append(("diarize", "true"))
         if num_speakers is not None:
@@ -297,10 +258,17 @@ class ElevenLabsClient(StandaloneClientMixin):
             tuple[str, tuple[str | None, str | bytes] | tuple[str, bytes, str]]
         ] = [(name, (None, value)) for name, value in fields]
         if file is not None:
-            parts.append(("file", await _read_audio(file)))
+            parts.append(
+                (
+                    "file",
+                    await _read_audio(
+                        file, filename=filename, content_type=content_type
+                    ),
+                )
+            )
         # niquests types omit the None filename it encodes as a plain form field
         resp = await self.session.post(
             "speech-to-text", files=cast("MultiPartFilesType", parts)
         )
-        result: ElevenLabsTranscription = _check_resp_status(resp).json()
+        result: ElevenLabsTranscription = self._check_resp_status(resp).json()
         return result

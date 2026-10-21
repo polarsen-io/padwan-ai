@@ -151,17 +151,25 @@ async def test_transcribe(kwargs, expected, ctx, make_resp):
         session.post.assert_awaited_once_with("speech-to-text", files=expected)
 
 
-async def test_transcribe_path(tmp_path, make_resp):
+@pytest.mark.parametrize(
+    "kwargs, expected",
+    [
+        pytest.param({}, ("clip.mp3", b"RIFF", "audio/mpeg"), id="from-path"),
+        pytest.param(
+            {"filename": "clip.ogg", "content_type": "audio/ogg"},
+            ("clip.ogg", b"RIFF", "audio/ogg"),
+            id="overrides",
+        ),
+    ],
+)
+async def test_transcribe_path(tmp_path, make_resp, kwargs, expected):
     audio = tmp_path / "clip.mp3"
     audio.write_bytes(b"RIFF")
     client, session = _client(make_resp(200, TRANSCRIPTION))
 
-    await client.transcribe(audio)
+    await client.transcribe(file=audio, **kwargs)
 
-    assert session.post.await_args.kwargs["files"][-1] == (
-        "file",
-        ("clip.mp3", b"RIFF", "audio/mpeg"),
-    )
+    assert session.post.await_args.kwargs["files"][-1] == ("file", expected)
 
 
 @pytest.mark.parametrize(
@@ -195,15 +203,27 @@ async def test_transcribe_path(tmp_path, make_resp):
             pytest.raises(TooManyRequestsError),
             id="rate-limit",
         ),
+        pytest.param(
+            429,
+            "<html>Too Many Requests</html>",
+            {"retry-after": "Wed, 21 Oct 2026 10:00:00 GMT"},
+            pytest.raises(TooManyRequestsError),
+            id="rate-limit-http-date-no-json",
+        ),
     ],
 )
 async def test_errors(status, payload, headers, ctx, make_resp):
-    client, _ = _client(make_resp(status, payload, headers), voice_id="v")
+    resp = make_resp(status, payload, headers)
+    if not isinstance(payload, dict):
+        resp.json.side_effect = ValueError("not json")
+    client, _ = _client(resp, voice_id="v")
 
     with ctx as exc:
         await client.generate_speech("Hi")
     if isinstance(exc.value, TooManyRequestsError):
-        assert exc.value.retry_delay == 3
+        assert exc.value.retry_delay >= 1
+        if headers == {"retry-after": "3"}:
+            assert exc.value.retry_delay == 3
 
 
 async def test_multipart_wire_format():
@@ -269,8 +289,10 @@ def test_sdk_compat(local_type: type, sdk_keys: set[str]):
 
 
 def test_transcribe_params_sdk_compat():
-    """`transcribe` options are SDK speech-to-text params (`model` maps to `model_id`)."""
-    ours = _sdk_params(ElevenLabsClient.transcribe) - {"model"} | {"model_id"}
+    """`transcribe` options are SDK speech-to-text params, bar the padwan-wide upload/language names."""
+    renamed = {"model": "model_id", "language": "language_code"}
+    local = {"filename", "content_type"}
+    ours = {renamed.get(p, p) for p in _sdk_params(ElevenLabsClient.transcribe) - local}
     assert ours <= _sdk_params(AsyncSpeechToTextClient.convert)
 
 

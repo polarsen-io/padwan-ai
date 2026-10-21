@@ -17,7 +17,13 @@ from urllib3.util.retry import Retry
 
 from ._deprecation import warn_if_deprecated
 from .conversation import ChatMessage
-from .errors import LLMError, Provider
+from .errors import (
+    LLMError,
+    Provider,
+    QuotaExceededError,
+    TooManyRequestsError,
+    _error_message,
+)
 from .logs import log
 from .models import ChatResponse, ToolCall, ToolDefinition, UsageToken
 
@@ -385,6 +391,18 @@ class RealtimeClientBase[ConnT](abc.ABC):
         ...
 
 
+def standalone_retry() -> Retry:
+    """Retry connection errors and 5xx on GET/POST, honouring ``Retry-After``; 429 surfaces as an error."""
+    return Retry(
+        total=3,
+        backoff_factor=0.5,
+        status_forcelist=[500, 502, 503, 504],
+        allowed_methods=["GET", "POST"],
+        respect_retry_after_header=True,
+        raise_on_status=False,
+    )
+
+
 class StandaloneClientMixin:
     """Session lifecycle for HTTP clients outside `LLMClientBase` (TypeSafe, speech providers).
 
@@ -399,6 +417,36 @@ class StandaloneClientMixin:
 
     def _set_auth_headers(self, session: niquests.AsyncSession) -> None:
         raise NotImplementedError
+
+    def _quota_exceeded(self, body: dict[str, Any] | None) -> bool:
+        """Whether a failed response's JSON body reports an exhausted quota (provider hook)."""
+        return False
+
+    def _check_resp_status(self, resp: niquests.Response) -> niquests.Response:
+        """Raise padwan errors on non-2xx responses without consuming a successful body."""
+        try:
+            return resp.raise_for_status()
+        except niquests.exceptions.HTTPError as error:
+            try:
+                data: Any = resp.json()
+            except Exception:
+                data = None
+            body = data if isinstance(data, dict) else None
+            message = _error_message(data)
+            if resp.status_code == 429:
+                raise TooManyRequestsError(
+                    retry_delay=retry_after_delay(resp.headers.get("retry-after")),
+                    message=message or None,
+                    response=resp,
+                ) from error
+            if self._quota_exceeded(body):
+                raise QuotaExceededError(body=body or {}) from error
+            raise LLMError(
+                self.provider,
+                f"{resp.status_code} {message}".rstrip(),
+                cause=error,
+                body=body,
+            ) from error
 
     @property
     def session(self) -> niquests.AsyncSession:

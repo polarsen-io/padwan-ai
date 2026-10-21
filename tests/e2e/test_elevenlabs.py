@@ -18,7 +18,9 @@ async def test_speech_roundtrip():
         assert speech.audio
         assert speech.mime_type.startswith("audio/")
 
-        result = await client.transcribe(speech.audio, language_code="en")
+        result = await client.transcribe(
+            file=speech.audio, filename="fox.mp3", language="en"
+        )
 
     assert "fox" in result["text"].lower()
     assert any(w["type"] == "word" for w in result["words"])

@@ -4,8 +4,9 @@ icon: lucide/audio-lines
 
 # ElevenLabs Client
 
-ElevenLabs is a speech provider: text-to-speech and speech-to-text, no chat models. `ElevenLabsClient` is standalone, like
-the [TypeSafe client](typesafe.md): it is not an `LLMClientBase` subclass and `LLMClient` does not route to it.
+ElevenLabs is a speech provider: text-to-speech and speech-to-text, no chat models. `ElevenLabsClient` is experimental
+and standalone, like the [TypeSafe client](typesafe.md): it is not an `LLMClientBase` subclass, `LLMClient` does not
+route to it, and the OpenTelemetry instrumentation does not cover it.
 
 ## Configuration
 
@@ -13,9 +14,10 @@ Set `ELEVENLABS_API_KEY` in your environment or pass `api_key=` explicitly. `bas
 `https://api.elevenlabs.io/v1/`; point it at a data-residency host (e.g. `https://api.eu.residency.elevenlabs.io/v1/`) if
 your account needs one.
 
-Requests retry up to three times on connection errors, HTTP 429 and 5xx, respecting `Retry-After`. Exhausted rate limits
-raise `TooManyRequestsError`, an exhausted credit quota raises `QuotaExceededError`, and other API errors raise
-`LLMError` with `provider="elevenlabs"`. Bad arguments (no voice, no or two audio sources) raise `ValueError`.
+Requests retry up to three times on connection errors and 5xx, respecting `Retry-After`, as the chat clients do. A
+rate limit (429) raises `TooManyRequestsError` with its `retry_delay`, an exhausted credit quota raises
+`QuotaExceededError` (not an `LLMError`), and other API errors raise `LLMError` with `provider="elevenlabs"`. Bad
+arguments (no voice, no or two audio sources) raise `ValueError`.
 
 ## Text-to-speech
 
@@ -44,7 +46,8 @@ per call or set a client default with `voice_id=`.
 ```python
 async with ElevenLabsClient() as client:
     result = await client.transcribe(
-        "meeting.wav",  # path or raw bytes; or source_url="https://..."
+        file="meeting.wav",  # path or raw bytes (then pass filename=); or source_url="https://..."
+        language="en",  # optional ISO code, as on the OpenAI and Mistral clients
         diarize=True,
         keyterms=["Padwan", "Polarsen"],
     )
