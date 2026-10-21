@@ -313,11 +313,14 @@ def _parts_to_blocks(parts: list[dict[str, Any]]) -> list[AnthropicContentBlock]
 def _usage_to_anthropic(usage: dict[str, Any] | None) -> dict[str, Any]:
     if not usage:
         return {"input_tokens": 0, "output_tokens": 0}
+    cached = usage.get("cachedContentTokenCount")
+    # promptTokenCount includes cache reads; Anthropic's input_tokens does not.
     token: dict[str, Any] = {
-        "input_tokens": usage.get("promptTokenCount", 0),
-        "output_tokens": usage.get("candidatesTokenCount", 0),
+        "input_tokens": usage.get("promptTokenCount", 0) - (cached or 0),
+        "output_tokens": usage.get("candidatesTokenCount", 0)
+        + (usage.get("thoughtsTokenCount") or 0),
     }
-    if (cached := usage.get("cachedContentTokenCount")) is not None:
+    if cached is not None:
         token["cache_read_input_tokens"] = cached
     return token
 

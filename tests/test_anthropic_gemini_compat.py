@@ -290,10 +290,41 @@ def test_text_response():
     assert resp["role"] == "assistant"
     assert resp["model"] == "claude-sonnet-5"
     assert resp["usage"] == {
-        "input_tokens": 100,
+        "input_tokens": 40,
         "output_tokens": 20,
         "cache_read_input_tokens": 60,
     }
+
+
+@pytest.mark.parametrize(
+    "usage, expected",
+    [
+        pytest.param(None, {"input_tokens": 0, "output_tokens": 0}, id="missing"),
+        pytest.param(
+            {"promptTokenCount": 100, "candidatesTokenCount": 20},
+            {"input_tokens": 100, "output_tokens": 20},
+            id="uncached",
+        ),
+        pytest.param(
+            {"promptTokenCount": 100, "cachedContentTokenCount": 0},
+            {"input_tokens": 100, "output_tokens": 0, "cache_read_input_tokens": 0},
+            id="zero_cache_reported",
+        ),
+        pytest.param(
+            {
+                "promptTokenCount": 100,
+                "cachedContentTokenCount": 60,
+                "candidatesTokenCount": 20,
+                "thoughtsTokenCount": 30,
+            },
+            {"input_tokens": 40, "output_tokens": 50, "cache_read_input_tokens": 60},
+            id="cached_and_thoughts",
+        ),
+    ],
+)
+def test_usage_mapping(usage, expected):
+    data = _completion([{"text": "x"}], usage=usage)
+    assert _to_anthropic(data)["usage"] == expected
 
 
 def test_model_defaults_to_backend():
@@ -445,7 +476,7 @@ async def test_stream_usage_on_final_chunk():
         ]
     )
     assert events[-2][1]["usage"] == {
-        "input_tokens": 100,
+        "input_tokens": 40,
         "output_tokens": 20,
         "cache_read_input_tokens": 60,
     }
