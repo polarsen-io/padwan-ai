@@ -1,0 +1,53 @@
+/* Injected into changed PR-preview pages by mark_changes.py. */
+html:not(.pr-diff-off) [data-pr-diff] {
+  border-radius: 4px;
+}
+html:not(.pr-diff-off) [data-pr-diff='added'] {
+  box-shadow: -4px 0 0 #16a34a;
+  background: color-mix(in srgb, #16a34a 10%, transparent);
+}
+html:not(.pr-diff-off) [data-pr-diff='changed'] {
+  box-shadow: -4px 0 0 #d97706;
+  background: color-mix(in srgb, #d97706 10%, transparent);
+}
+html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
+  background: none;
+}
+.md-typeset .pr-diff-bar {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.7rem;
+  padding: 0.4rem 0.7rem;
+  margin: 0 0 1rem;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 6px;
+}
+.md-typeset .pr-diff-bar > * {
+  margin: 0;
+}
+.pr-diff-bar .a {
+  color: #16a34a;
+}
+.pr-diff-bar .c {
+  color: #d97706;
+}
+.md-typeset .pr-diff-bar button {
+  font: inherit;
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 5px;
+  color: inherit;
+  padding: 0 0.5rem;
+}
+.pr-diff-badge {
+  margin-left: 0.4rem;
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #d97706;
+  color: #fff;
+}

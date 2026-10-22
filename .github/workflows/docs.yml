@@ -14,6 +14,7 @@ on:
       - docs/**
       - zensical.toml
       - .github/workflows/docs.yml
+      - bin/docs-preview/**
   workflow_dispatch:
 
 permissions:
@@ -53,9 +54,37 @@ jobs:
           branch: gh-pages
           clean-exclude: pr-preview/
 
-      # Deploys on open/sync, removes on close; comments the preview link on the PR.
+      # Production, the base the preview is diffed against; absent on the site's first preview.
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: .pr-preview-prod
+          persist-credentials: false
+
+      - name: Mark changes against production
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        env:
+          URL: https://polarsen-io.github.io/padwan-ai/pr-preview/pr-${{ github.event.number }}/
+        run: ./bin/docs-preview/mark_changes.py .pr-preview-prod site "$URL" "$RUNNER_TEMP/docs-changes.md"
+
+      # Deploys on open/sync, removes on close; the sticky comment below links it.
       - name: Publish or remove the PR preview
         if: github.event_name == 'pull_request'
         uses: rossjrw/pr-preview-action@ffa7509e91a3ec8dfc2e5536c4d5c1acdf7a6de9 # v1.8.1
         with:
           source-dir: site
+          comment: false
+
+      - uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        with:
+          header: docs-changes
+          path: ${{ runner.temp }}/docs-changes.md
+
+      - uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        if: github.event_name == 'pull_request' && github.event.action == 'closed'
+        with:
+          header: docs-changes
+          message: Docs preview removed with the PR.

@@ -2095,6 +2095,7 @@ bump = [
     { name = "commitizen" },
 ]
 dev = [
+    { name = "beautifulsoup4" },
     { name = "msgspec" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
@@ -2138,6 +2139,7 @@ provides-extras = ["langfuse", "otel", "realtime"]
 [package.metadata.requires-dev]
 bump = [{ name = "commitizen", specifier = ">=4.0.0" }]
 dev = [
+    { name = "beautifulsoup4", specifier = ">=4.13" },
     { name = "msgspec", specifier = ">=0.19" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.44" },
     { name = "opentelemetry-sdk", specifier = ">=1.44" },

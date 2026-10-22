@@ -52,6 +52,7 @@ dev = [
     "opentelemetry-sdk>=1.44",
     "prek>=0.2.30",
     "pydantic>=2.0",
+    "beautifulsoup4>=4.13",  # tests/test_docs_preview.py
     "pyright>=1.1.400",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.25.0",
