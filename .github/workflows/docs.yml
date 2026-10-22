@@ -1,40 +1,61 @@
 name: docs
+
+# Pages serves the gh-pages branch: master at the root, each docs PR under pr-preview/pr-<N>/.
 on:
   push:
-    branches:
-      - master
+    branches: [master]
+    paths:
+      - docs/**
+      - zensical.toml
+      - .github/workflows/docs.yml
+  pull_request:
+    types: [opened, reopened, synchronize, closed]
+    paths:
+      - docs/**
+      - zensical.toml
+      - .github/workflows/docs.yml
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+
+# Every run pushes to gh-pages: one writer at a time, none cancelled mid-push.
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    # A fork's token cannot push the preview branch.
+    if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: write
+      pull-requests: write # preview link comment
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Install uv
+        if: github.event.action != 'closed'
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: true
 
-      - name: Install dependencies
-        run: uv sync --group docs
-
       - name: Build
+        if: github.event.action != 'closed'
         run: uv run --group docs zensical build -f zensical.toml
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish the site root
+        if: github.event_name != 'pull_request'
+        uses: JamesIves/github-pages-deploy-action@fa24774553152dd7873cd16ebd8d959b010c5445 # v4.9.0
         with:
-          path: ./site
+          folder: site
+          branch: gh-pages
+          clean-exclude: pr-preview/
 
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+      # Deploys on open/sync, removes on close; comments the preview link on the PR.
+      - name: Publish or remove the PR preview
+        if: github.event_name == 'pull_request'
+        uses: rossjrw/pr-preview-action@ffa7509e91a3ec8dfc2e5536c4d5c1acdf7a6de9 # v1.8.1
+        with:
+          source-dir: site
