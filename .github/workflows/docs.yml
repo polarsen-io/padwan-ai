@@ -52,7 +52,10 @@ jobs:
         with:
           folder: site
           branch: gh-pages
-          clean-exclude: pr-preview/
+          # previews, and the import benchmark history perf.yml pushes to dev/bench
+          clean-exclude: |
+            pr-preview/
+            dev/
 
       # Production, the base the preview is diffed against; absent on the site's first preview.
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
