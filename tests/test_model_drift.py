@@ -1,3 +1,4 @@
+import ast
 import importlib.util
 import sys
 from collections.abc import Iterator
@@ -205,3 +206,78 @@ def test_gemini_speech_type_drift(
     assert set(drift) == {"VoiceConfig"}
     assert drift["VoiceConfig"].added == set()
     assert drift["VoiceConfig"].removed == {"legacy_field"}
+
+
+_INJECTED_DATE = '2026-01-01", "x": __import__("os").getcwd(), "y": "'
+
+
+def _deprecated_entries(source: str) -> tuple[ast.Module, dict[str, str]]:
+    module = ast.parse(source)
+    assign = next(
+        node
+        for node in module.body
+        if isinstance(node, ast.AnnAssign)
+        and isinstance(node.target, ast.Name)
+        and node.target.id == "DEPRECATED"
+    )
+    table = assign.value
+    assert isinstance(table, ast.Dict)
+    entries: dict[str, str] = {}
+    for key, value in zip(table.keys, table.values, strict=True):
+        assert isinstance(key, ast.Constant) and isinstance(key.value, str)
+        assert isinstance(value, ast.Constant) and isinstance(value.value, str)
+        entries[key.value] = value.value
+    return module, entries
+
+
+@pytest.mark.parametrize(
+    "model_id, date",
+    [
+        pytest.param("mistral-large", _INJECTED_DATE, id="quote-in-date"),
+        pytest.param("mistral\nlarge", "2026-01-01", id="newline-in-id"),
+        pytest.param("mistral-large", "2026-01-01", id="valid-entry"),
+    ],
+)
+def test_deprecations_writer_emits_inert_literals(
+    model_drift: ModuleType, tmp_path: Path, model_id: str, date: str
+) -> None:
+    path = tmp_path / "_deprecations.py"
+    model_drift._write_deprecations(path, "Mistral", {model_id: date})
+
+    module, entries = _deprecated_entries(path.read_text(encoding="utf-8"))
+
+    assert entries == {model_id: date}
+    assert not any(isinstance(node, ast.Call) for node in ast.walk(module))
+
+
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        pytest.param("not-a-date", id="words"),
+        pytest.param("2026-01-01\n", id="trailing-newline"),
+        pytest.param("２０２６-０１-０１", id="fullwidth-digits"),
+    ],
+)
+def test_mistral_deprecations_skip_malformed_dates(
+    model_drift: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    malformed: str,
+) -> None:
+    monkeypatch.setenv("MISTRAL_API_KEY", "test-mistral-key")
+    fetch = Mock(
+        return_value={
+            "data": [
+                {"id": "mistral-large", "deprecation": "2026-01-01"},
+                {"id": "mistral-medium", "deprecation": malformed},
+            ]
+        }
+    )
+    monkeypatch.setattr(model_drift, "_json_get", fetch)
+
+    remote = model_drift._mistral_live_models()
+
+    assert remote.deprecations == {"mistral-large": "2026-01-01"}
+    warning = capsys.readouterr().err
+    assert "invalid date" in warning
+    assert "mistral-medium" in warning

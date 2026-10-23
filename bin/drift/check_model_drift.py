@@ -22,8 +22,10 @@ Always exits 0. The workflow decides whether to open a PR based on ``git status`
 and the generated report.
 """
 
+import json
 import os
 import re
+import sys
 import typing
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -99,6 +101,7 @@ _GEMINI_OLD_PREFIXES = ("gemini-1.", "gemini-2.0-")
 _GEMINI_REALTIME_BLACKLIST = ("translate",)
 
 _MISTRAL_BLACKLIST = ("mistral-vibe-cli",)
+_MISTRAL_RETIREMENT_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 _GROK_BLACKLIST = (
     "-beta",
@@ -475,6 +478,15 @@ def _mistral_live_models() -> RemoteModels:
         # Still-served models carry a retirement date here once announced.
         deprecation = _string(item.get("deprecation"))
         candidates = [_string(item.get("id")), *_strings(item.get("aliases"))]
+        if deprecation is not None and not _MISTRAL_RETIREMENT_DATE.fullmatch(
+            deprecation
+        ):
+            print(
+                f"warning: skipping Mistral deprecation for "
+                f"{candidates[0]!r}: invalid date {deprecation!r}",
+                file=sys.stderr,
+            )
+            deprecation = None
         for model_id in candidates:
             if model_id is not None and _is_public_mistral_model(model_id):
                 keep.add(model_id)
@@ -835,7 +847,7 @@ def _write_deprecations(
     """
     if deprecations:
         body = "".join(
-            f'    "{model}": "{date}",\n'
+            f"    {json.dumps(model)}: {json.dumps(date)},\n"
             for model, date in sorted(deprecations.items())
         )
         table = f"{{\n{body}}}"
