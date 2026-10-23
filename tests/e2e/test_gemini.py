@@ -8,20 +8,24 @@ from .conftest import skip_no_gemini
 
 pytestmark = [pytest.mark.e2e, skip_no_gemini]
 
+# trivial questions get no thought parts even with includeThoughts
+PROMPT = "What is 123 * 457? Show your reasoning briefly."
+ANSWER = "56211"
+
 
 async def test_stream_thought_callback() -> None:
     """on_thought callback fires and thoughts are accumulated on the stream."""
     received: list[str] = []
     async with GeminiClient(
-        model="gemini-3.8-flash",
+        model="gemini-3-flash-preview",  # 3.8-flash emits no thought parts at all
         on_thought=received.append,
         thinking_config={"thinkingBudget": 2048, "includeThoughts": True},
     ) as client:
-        stream = client.stream_chat([{"role": "user", "content": "What is 7 * 8?"}])
+        stream = client.stream_chat([{"role": "user", "content": PROMPT}])
         text = "".join([chunk async for chunk in stream])
 
     assert text, "no text returned"
-    assert "56" in text
+    assert ANSWER in text.replace(",", "")
     assert received, "no thought chunks received"
 
 
@@ -35,16 +39,14 @@ async def test_complete_chat_thought_callback() -> None:
     """
     received: list[str] = []
     async with GeminiClient(
-        model="gemini-3.8-flash",
+        model="gemini-3-flash-preview",  # 3.8-flash emits no thought parts at all
         on_thought=received.append,
         thinking_config={"thinkingBudget": 2048, "includeThoughts": True},
     ) as client:
-        response, _ = await client.complete_chat(
-            [{"role": "user", "content": "What is 7 * 8?"}]
-        )
+        response, _ = await client.complete_chat([{"role": "user", "content": PROMPT}])
 
     assert response["content"], "no text returned"
-    assert "56" in response["content"]
+    assert ANSWER in response["content"].replace(",", "")
     assert received, "no thought chunks forwarded to on_thought"
 
 

@@ -38,7 +38,8 @@ async def test_complete_chat(model: str) -> None:
     assert response["finish_reason"] == "stop"
     assert usage["total"] > 0
     assert usage["input"] > 0
-    assert usage["output"] > 0
+    # Gemini sometimes omits candidatesTokenCount and reports only thoughts
+    assert usage["output"] + usage.get("reasoning", 0) > 0
 
 
 @pytest.mark.parametrize(
