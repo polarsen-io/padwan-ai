@@ -19,6 +19,10 @@ Set `GRADIUM_API_KEY` in your environment or pass `api_key=` explicitly. `base_u
 `https://api.gradium.ai/api/`; use `https://eu.api.gradium.ai/api/` or `https://us.api.gradium.ai/api/` for data
 residency.
 
+The env key is used only when `base_url` is the official host over TLS on port 443. Any other `base_url` without
+`api_key`, including a residency host, falls back to `PADWAN_API_KEY`, then `"no-key-required"`. The realtime clients
+follow the same rule.
+
 Requests retry up to three times on connection errors; GET, PUT and DELETE also on HTTP 502, 503 and 504 (Gradium
 reports its own failures as 500, which is not retried, and a POST is billed or creates a voice, so it is never resent). A rate limit (429) raises `TooManyRequestsError`; other API errors, including errors streamed
 after a successful transcription response started, raise `LLMError` with `provider="gradium"`. Bad arguments (no voice,

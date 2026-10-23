@@ -11,7 +11,7 @@ from typing import ClassVar, Literal, cast, get_args
 import niquests
 from urllib3.util.retry import Retry
 
-from .._base import RETRY_AFTER_MAX, ChatStream, LLMClientBase, env_api_key
+from .._base import RETRY_AFTER_MAX, ChatStream, LLMClientBase, env_api_key_for_base_url
 from ..conversation import AssistantToolMessage, ChatMessage, ToolResultMessage
 from ..errors import LLMError, Provider, TooManyRequestsError
 from ..models import (
@@ -144,7 +144,9 @@ class AnthropicClient(LLMClientBase[Retry], AnthropicToolMixin):
     provider: ClassVar[Provider] = "anthropic"
 
     def _get_default_api_key(self) -> str:
-        return env_api_key(self.provider, "ANTHROPIC_API_KEY")
+        return env_api_key_for_base_url(
+            self.provider, "ANTHROPIC_API_KEY", self.base_url, ANTHROPIC_ENDPOINT
+        )
 
     _deprecations: ClassVar[Mapping[str, str]] = {"claude-opus-4-1": "2026-08-05"}
     model: str | None = "claude-opus-4-8"

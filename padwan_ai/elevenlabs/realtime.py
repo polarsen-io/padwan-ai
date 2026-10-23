@@ -109,6 +109,7 @@ class _ElevenLabsWsAuth(ApiKeyWsAuth):
     provider: ClassVar[Provider] = "elevenlabs"
     api_key_env: ClassVar[str] = "ELEVENLABS_API_KEY"
     api_key_header: ClassVar[str] = "xi-api-key"
+    api_key_endpoint: ClassVar[str] = ELEVENLABS_WS_ENDPOINT
 
 
 @dataclass

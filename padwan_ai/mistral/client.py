@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast, get_args
 
-from .._base import Provider, env_api_key
+from .._base import Provider, env_api_key_for_base_url
 from ..content import _read_audio
 from ..errors import LLMError
 from ..openai.client import _check_resp, _OpenAIBase
@@ -111,7 +111,9 @@ class MistralClient(_OpenAIBase):
     provider: ClassVar[Provider] = "mistral"
 
     def _get_default_api_key(self) -> str:
-        return env_api_key(self.provider, "MISTRAL_API_KEY")
+        return env_api_key_for_base_url(
+            self.provider, "MISTRAL_API_KEY", self.base_url, MISTRAL_ENDPOINT
+        )
 
     _deprecations: ClassVar[Mapping[str, str]] = DEPRECATED
     model: str | None = "mistral-large-latest"

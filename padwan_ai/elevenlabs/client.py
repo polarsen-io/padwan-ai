@@ -18,7 +18,7 @@ import niquests
 from niquests.typing import MultiPartFilesType
 from urllib3.util.retry import Retry
 
-from .._base import StandaloneClientMixin, env_api_key, standalone_retry
+from .._base import StandaloneClientMixin, env_api_key_for_base_url, standalone_retry
 from .._json import dumps as _json_dumps
 from ..content import _read_audio
 from ..errors import (
@@ -264,7 +264,9 @@ class ElevenLabsClient(StandaloneClientMixin):
     _session: niquests.AsyncSession | None = field(init=False, default=None, repr=False)
 
     def __post_init__(self) -> None:
-        self._api_key = self.api_key or env_api_key(self.provider, "ELEVENLABS_API_KEY")
+        self._api_key = self.api_key or env_api_key_for_base_url(
+            self.provider, "ELEVENLABS_API_KEY", self.base_url, ELEVENLABS_ENDPOINT
+        )
 
     def _set_auth_headers(self, session: niquests.AsyncSession) -> None:
         session.headers["xi-api-key"] = self._api_key

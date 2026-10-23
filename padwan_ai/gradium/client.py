@@ -10,7 +10,7 @@ import niquests
 from niquests.typing import MultiPartFilesType
 from urllib3.util.retry import Retry
 
-from .._base import StandaloneClientMixin, env_api_key, standalone_retry
+from .._base import StandaloneClientMixin, env_api_key_for_base_url, standalone_retry
 from ..content import _read_audio
 from ..errors import LLMError, Provider
 
@@ -200,7 +200,9 @@ class GradiumClient(StandaloneClientMixin):
     _session: niquests.AsyncSession | None = field(init=False, default=None, repr=False)
 
     def __post_init__(self) -> None:
-        self._api_key = self.api_key or env_api_key(self.provider, "GRADIUM_API_KEY")
+        self._api_key = self.api_key or env_api_key_for_base_url(
+            self.provider, "GRADIUM_API_KEY", self.base_url, GRADIUM_ENDPOINT
+        )
 
     def _set_auth_headers(self, session: niquests.AsyncSession) -> None:
         session.headers["x-api-key"] = self._api_key

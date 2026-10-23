@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import os
 import typing
 from collections.abc import AsyncGenerator, AsyncIterator, Callable, Mapping, Sequence
 from contextlib import aclosing
@@ -10,18 +9,16 @@ from functools import partial
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Literal, cast, get_args
-from urllib.parse import urlparse
 
 import niquests
 from urllib3.util.retry import Retry
 
 from .._base import (
-    PADWAN_API_KEY_ENV,
     RETRY_AFTER_MAX,
     ChatStream,
     LLMClientBase,
     Provider,
-    env_api_key,
+    env_api_key_for_base_url,
     retry_after_delay,
 )
 from .._json import dumps as _json_dumps, loads as _json_loads
@@ -263,9 +260,9 @@ class _OpenAIAuth:
 
     def _get_default_api_key(self) -> str:
         # Never leak OPENAI_API_KEY to a third-party endpoint.
-        if urlparse(self.base_url).hostname != "api.openai.com":
-            return os.environ.get(PADWAN_API_KEY_ENV) or "no-key-required"
-        return env_api_key(self.provider, "OPENAI_API_KEY")
+        return env_api_key_for_base_url(
+            self.provider, "OPENAI_API_KEY", self.base_url, OPENAI_ENDPOINT
+        )
 
 
 @dataclasses.dataclass

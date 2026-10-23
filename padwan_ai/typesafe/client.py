@@ -10,7 +10,7 @@ from urllib3.util.retry import Retry
 from .._base import (
     RETRY_AFTER_MAX,
     StandaloneClientMixin,
-    env_api_key,
+    env_api_key_for_base_url,
     retry_after_delay,
 )
 from ..errors import LLMError, Provider, TooManyRequestsError, _error_message
@@ -87,7 +87,9 @@ class TypeSafeClient(StandaloneClientMixin):
     _session: niquests.AsyncSession | None = field(init=False, default=None, repr=False)
 
     def __post_init__(self) -> None:
-        self._api_key = self.api_key or env_api_key(self.provider, "TYPESAFE_API_KEY")
+        self._api_key = self.api_key or env_api_key_for_base_url(
+            self.provider, "TYPESAFE_API_KEY", self.base_url, TYPESAFE_ENDPOINT
+        )
 
     def _set_auth_headers(self, session: niquests.AsyncSession) -> None:
         session.headers["Authorization"] = f"Bearer {self._api_key}"

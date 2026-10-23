@@ -17,6 +17,10 @@ Set `ELEVENLABS_API_KEY` in your environment or pass `api_key=` explicitly. `bas
 `https://api.elevenlabs.io/v1/`; point it at a data-residency host (e.g. `https://api.eu.residency.elevenlabs.io/v1/`) if
 your account needs one.
 
+The env key is used only when `base_url` is the official host over TLS on port 443. Any other `base_url` without
+`api_key`, including a residency host, falls back to `PADWAN_API_KEY`, then `"no-key-required"`. The realtime clients
+follow the same rule.
+
 Requests retry up to three times on connection errors and 5xx, respecting `Retry-After`, as the chat clients do. A
 rate limit (429, or a realtime `rate_limited`/`commit_throttled`/`queue_overflow` frame) raises `TooManyRequestsError`,
 an exhausted credit quota raises `QuotaExceededError` (not an `LLMError`), and other API errors raise `LLMError` with

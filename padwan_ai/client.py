@@ -264,6 +264,11 @@ def RealtimeClient(
     if base_url is not None and api_key is None:
         api_key = os.environ.get(PADWAN_API_KEY_ENV)
     client: OpenAIRealtimeClient | GeminiRealtimeClient
+    # Pass the final base_url into the constructor so the first key resolution
+    # runs against the intended endpoint, not the provider default.
+    realtime_kwargs: dict[str, Any] = {"api_key": api_key, "timeout": timeout}
+    if base_url is not None:
+        realtime_kwargs["base_url"] = base_url
     if is_gemini_model(model):
         if sample_rate != REALTIME_SAMPLE_RATE:
             raise ValueError(
@@ -280,8 +285,7 @@ def RealtimeClient(
             turn_detection=turn_detection,
             transcription=transcription_model is not None,
             output_modalities=output_modalities,
-            api_key=api_key,
-            timeout=timeout,
+            **realtime_kwargs,
         )
     else:
         client_cls = (
@@ -293,8 +297,7 @@ def RealtimeClient(
             turn_detection=turn_detection,
             output_modalities=output_modalities,
             sample_rate=sample_rate,
-            api_key=api_key,
-            timeout=timeout,
+            **realtime_kwargs,
         )
         if is_grok_model(model):
             # Grok transcribes natively; the "whisper-1" default stands for unset.
@@ -306,6 +309,4 @@ def RealtimeClient(
             client.transcription_model = transcription_model
     if voice is not None:
         client.voice = voice
-    if base_url is not None:
-        client.base_url = base_url
     return client

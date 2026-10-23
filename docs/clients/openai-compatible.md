@@ -21,7 +21,7 @@ client = OpenAIClient(
 ```
 
 !!! note "API key fallback"
-    `OPENAI_API_KEY` is only used when `base_url` points at `api.openai.com`. For any other host (Scaleway, a local vLLM, a proxy, ...) a missing `api_key` falls back to `PADWAN_API_KEY`, then `"no-key-required"` — your OpenAI key is never sent to a third-party endpoint. Pass `api_key` explicitly when the endpoint needs one.
+    A provider's own env key (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, ...) is only used when `base_url` is unset or points at that provider's official host over TLS on port 443 (`https:` or `wss:`). A plaintext URL, another port, or any other host (Scaleway, a local vLLM, a proxy, ...) makes a missing `api_key` fall back to `PADWAN_API_KEY`, then `"no-key-required"`, so a provider secret never leaves a TLS connection to the provider. Pass `api_key` explicitly when the endpoint needs one.
 
 ## Unified gateway via environment
 
@@ -57,9 +57,10 @@ Passing an explicit `base_url` disables gateway mode and restores native
 per-provider routing (so you can still point `GeminiClient` at a Gemini-protocol
 proxy). In gateway mode the token never falls back to `OPENAI_API_KEY`; if
 `PADWAN_API_KEY` is unset it defaults to `"no-key-required"` for local gateways.
-Even outside gateway mode, an explicit `base_url` with no `api_key` still
-prefers `PADWAN_API_KEY` over the provider's native env key, on both
-`LLMClient` and `RealtimeClient`.
+Outside gateway mode, an explicit `base_url` with no `api_key` authenticates with
+`PADWAN_API_KEY`, then `"no-key-required"`, on both `LLMClient` and
+`RealtimeClient`. A provider's own env key is used only when `base_url` is unset
+or points at that provider's official host over TLS on port 443.
 
 ## Usage
 

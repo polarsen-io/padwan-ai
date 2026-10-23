@@ -15,7 +15,13 @@ import niquests
 from urllib3 import AsyncHTTPResponse
 from urllib3.util.retry import Retry
 
-from .._base import RETRY_AFTER_MAX, ChatStream, LLMClientBase, Provider, env_api_key
+from .._base import (
+    RETRY_AFTER_MAX,
+    ChatStream,
+    LLMClientBase,
+    Provider,
+    env_api_key_for_base_url,
+)
 from .._json import loads as _json_loads
 from ..content import ContentPart
 from ..conversation import AssistantToolMessage, ChatMessage, ToolResultMessage
@@ -247,14 +253,16 @@ class GeminiRetry(Retry):
         return await super().async_get_retry_after(response)
 
 
-@dataclasses.dataclass
 class _GeminiAuth:
     """Gemini provider identity, shared by the chat and realtime clients."""
 
     provider: ClassVar[Provider] = "gemini"
+    base_url: str
 
     def _get_default_api_key(self) -> str:
-        return env_api_key(self.provider, "GEMINI_API_KEY")
+        return env_api_key_for_base_url(
+            self.provider, "GEMINI_API_KEY", self.base_url, GEMINI_ENDPOINT
+        )
 
 
 @dataclasses.dataclass

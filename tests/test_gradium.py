@@ -10,7 +10,7 @@ from gradium.speech import TTSSetup
 
 from padwan_ai import GradiumClient
 from padwan_ai.errors import LLMError, TooManyRequestsError
-from padwan_ai.gradium import GradiumSpeech
+from padwan_ai.gradium import GRADIUM_ENDPOINT, GradiumSpeech
 from padwan_ai.gradium.client import _SpeechBody
 
 NDJSON = "\n".join(
@@ -30,6 +30,38 @@ def _client(resp: MagicMock, **kwargs) -> tuple[GradiumClient, AsyncMock]:
     session.post.return_value = resp
     client._session = session
     return client, session
+
+
+@pytest.mark.parametrize(
+    "base_url, api_key, padwan_key, expected",
+    [
+        pytest.param(GRADIUM_ENDPOINT, None, None, "real-key", id="official"),
+        pytest.param(
+            "https://evil.example/api/", None, None, "no-key-required", id="other-host"
+        ),
+        pytest.param(
+            "http://api.gradium.ai/api/", None, None, "no-key-required", id="plaintext"
+        ),
+        pytest.param(
+            "https://evil.example/api/", None, "gw-key", "gw-key", id="padwan-key"
+        ),
+        pytest.param(
+            "https://evil.example/api/", "explicit", "gw-key", "explicit", id="explicit"
+        ),
+    ],
+)
+def test_env_key_scoped_to_official_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    base_url: str,
+    api_key: str | None,
+    padwan_key: str | None,
+    expected: str,
+) -> None:
+    monkeypatch.setenv("GRADIUM_API_KEY", "real-key")
+    monkeypatch.delenv("PADWAN_API_KEY", raising=False)
+    if padwan_key is not None:
+        monkeypatch.setenv("PADWAN_API_KEY", padwan_key)
+    assert GradiumClient(base_url=base_url, api_key=api_key)._api_key == expected
 
 
 @pytest.mark.parametrize(

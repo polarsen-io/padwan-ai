@@ -191,9 +191,9 @@ def test_missing_api_key_raises(monkeypatch: pytest.MonkeyPatch) -> None:
             None,
             None,
             "wss://example.com/rt",
-            "sk-env",
+            "no-key-required",
             "wss://example.com/rt",
-            id="custom_url_falls_back_to_provider_env",
+            id="custom_url_ignores_provider_env",
         ),
     ],
 )
@@ -474,6 +474,26 @@ def test_factory_provider_dispatch(
     assert type(client) is expected_cls
     assert client._api_key == "sk-env"
     assert client.base_url == expected_url
+
+
+@pytest.mark.parametrize(
+    "model, expected_cls",
+    [
+        pytest.param(
+            "gemini-3.1-flash-live-preview", GeminiRealtimeClient, id="gemini"
+        ),
+        pytest.param("grok-voice-latest", GrokRealtimeClient, id="grok"),
+    ],
+)
+def test_realtime_custom_base_url_without_credentials_constructs(
+    monkeypatch: pytest.MonkeyPatch, model: str, expected_cls: type
+) -> None:
+    for var in ("OPENAI_API_KEY", "GEMINI_API_KEY", "GROK_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    client = RealtimeClient(model=model, base_url="wss://custom.example/rt")
+    assert isinstance(client, expected_cls)
+    assert client._api_key == "no-key-required"
+    assert client.base_url == "wss://custom.example/rt"
 
 
 def test_factory_provider_defaults(monkeypatch: pytest.MonkeyPatch) -> None:

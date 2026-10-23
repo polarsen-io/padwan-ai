@@ -2,7 +2,7 @@ from contextlib import nullcontext
 
 import pytest
 
-from padwan_ai._base import RETRY_AFTER_MAX
+from padwan_ai._base import RETRY_AFTER_MAX, env_api_key_for_base_url
 from padwan_ai.anthropic.client import AnthropicClient
 from padwan_ai.client import LLMClient
 from padwan_ai.conversation import (
@@ -11,7 +11,7 @@ from padwan_ai.conversation import (
     ToolResultMessage,
 )
 from padwan_ai.errors import LLMError
-from padwan_ai.gemini.client import GeminiClient, is_gemini_model
+from padwan_ai.gemini.client import GEMINI_ENDPOINT, GeminiClient, is_gemini_model
 from padwan_ai.grok.client import GrokClient, is_grok_model
 from padwan_ai.mistral.client import MistralClient, is_mistral_model
 from padwan_ai.models import ChatResponse, ToolCall, ToolCallFunction, UsageToken
@@ -363,6 +363,34 @@ def test_gateway_without_token_uses_no_key_not_openai_env(
             id="custom-no-key",
         ),
         pytest.param(
+            OpenAIClient,
+            "https://api.openai.com/v1/",
+            None,
+            "real-openai-key",
+            id="openai-official-host",
+        ),
+        pytest.param(
+            OpenAIClient,
+            "http://api.openai.com/v1/",
+            None,
+            "no-key-required",
+            id="openai-plaintext",
+        ),
+        pytest.param(
+            OpenAIClient,
+            "https://api.openai.com:8443/v1/",
+            None,
+            "no-key-required",
+            id="openai-non-443-port",
+        ),
+        pytest.param(
+            OpenAIClient,
+            "https://evil.example\\@api.openai.com/v1/",
+            None,
+            "no-key-required",
+            id="openai-backslash",
+        ),
+        pytest.param(
             OpenAIRealtimeClient, None, None, "real-openai-key", id="realtime-default"
         ),
         pytest.param(
@@ -375,9 +403,9 @@ def test_gateway_without_token_uses_no_key_not_openai_env(
         pytest.param(
             MistralClient,
             "https://3rd.example/v1",
-            "gw-secret",
-            "real-mistral-key",
-            id="mistral-unaffected",
+            None,
+            "no-key-required",
+            id="mistral-custom-no-key",
         ),
     ],
 )
@@ -397,6 +425,29 @@ def test_default_api_key_scoped_to_endpoint(
         monkeypatch.setenv("PADWAN_API_KEY", padwan_key)
     client = cls(**({"base_url": base_url} if base_url else {}))
     assert client._api_key == expected
+
+
+@pytest.mark.parametrize(
+    "base_url, expected",
+    [
+        pytest.param(
+            "https://generativelanguage.googleapis.com/v1beta/",
+            "real-gemini-key",
+            id="canonical",
+        ),
+        pytest.param(
+            "https://evil.example/v1beta/", "no-key-required", id="other-host"
+        ),
+    ],
+)
+def test_gemini_env_key_scoped_to_official_endpoint(
+    monkeypatch: pytest.MonkeyPatch, base_url: str, expected: str
+) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "real-gemini-key")
+    assert (
+        env_api_key_for_base_url("gemini", "GEMINI_API_KEY", base_url, GEMINI_ENDPOINT)
+        == expected
+    )
 
 
 @pytest.mark.parametrize(

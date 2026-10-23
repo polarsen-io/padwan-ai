@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 from typing import ClassVar, Literal, get_args
 
-from .._base import Provider, env_api_key
+from .._base import Provider, env_api_key_for_base_url
 from ..openai.client import _OpenAIBase
 
 VoyageModel = Literal[
@@ -50,4 +50,6 @@ class VoyageClient(_OpenAIBase):
     _embedding_dimensions_key: ClassVar[str] = "output_dimension"
 
     def _get_default_api_key(self) -> str:
-        return env_api_key(self.provider, "VOYAGE_API_KEY")
+        return env_api_key_for_base_url(
+            self.provider, "VOYAGE_API_KEY", self.base_url, VOYAGE_ENDPOINT
+        )

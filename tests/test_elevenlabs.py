@@ -27,6 +27,7 @@ from elevenlabs.voices.ivc.client import AsyncIvcClient
 
 from padwan_ai import ElevenLabsClient
 from padwan_ai.elevenlabs import (
+    ELEVENLABS_ENDPOINT,
     ElevenLabsAudio,
     ElevenLabsOutputFormat,
     ElevenLabsTranscription,
@@ -59,6 +60,42 @@ def _client(resp: MagicMock, **kwargs) -> tuple[ElevenLabsClient, AsyncMock]:
     session.post.return_value = resp
     client._session = session
     return client, session
+
+
+@pytest.mark.parametrize(
+    "base_url, api_key, padwan_key, expected",
+    [
+        pytest.param(ELEVENLABS_ENDPOINT, None, None, "real-key", id="official"),
+        pytest.param(
+            "https://evil.example/v1/", None, None, "no-key-required", id="other-host"
+        ),
+        pytest.param(
+            "http://api.elevenlabs.io/v1/",
+            None,
+            None,
+            "no-key-required",
+            id="plaintext",
+        ),
+        pytest.param(
+            "https://evil.example/v1/", None, "gw-key", "gw-key", id="padwan-key"
+        ),
+        pytest.param(
+            "https://evil.example/v1/", "explicit", "gw-key", "explicit", id="explicit"
+        ),
+    ],
+)
+def test_env_key_scoped_to_official_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    base_url: str,
+    api_key: str | None,
+    padwan_key: str | None,
+    expected: str,
+) -> None:
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "real-key")
+    monkeypatch.delenv("PADWAN_API_KEY", raising=False)
+    if padwan_key is not None:
+        monkeypatch.setenv("PADWAN_API_KEY", padwan_key)
+    assert ElevenLabsClient(base_url=base_url, api_key=api_key)._api_key == expected
 
 
 @pytest.mark.parametrize(

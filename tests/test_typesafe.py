@@ -13,6 +13,7 @@ from urllib3.util.retry import Retry
 from padwan_ai import TYPESAFE_MODELS, TypeSafeClient
 from padwan_ai._base import RETRY_AFTER_MAX
 from padwan_ai.errors import LLMError, TooManyRequestsError
+from padwan_ai.typesafe import TYPESAFE_ENDPOINT
 from padwan_ai.typesafe.client import _check_resp
 
 RESPONSE = {
@@ -176,6 +177,21 @@ def test_api_key_resolution(api_key, env_key, ctx, monkeypatch):
         client = TypeSafeClient(api_key=api_key)
         assert "explicit" not in repr(client)
         assert "environment" not in repr(client)
+
+
+@pytest.mark.parametrize(
+    "base_url, expected",
+    [
+        pytest.param(TYPESAFE_ENDPOINT, "sk-ts-dummy-0013", id="official"),
+        pytest.param("https://evil.example/v1/", "no-key-required", id="other-host"),
+    ],
+)
+def test_env_key_is_scoped_to_the_official_endpoint(
+    monkeypatch: pytest.MonkeyPatch, base_url: str, expected: str
+) -> None:
+    monkeypatch.setenv("TYPESAFE_API_KEY", "sk-ts-dummy-0013")
+    client = TypeSafeClient(base_url=base_url)
+    assert client._api_key == expected
 
 
 async def test_niquests_retries_twice_then_maps_rate_limit(monkeypatch) -> None:

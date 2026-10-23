@@ -126,6 +126,7 @@ class _GradiumWsAuth(ApiKeyWsAuth):
     provider: ClassVar[Provider] = "gradium"
     api_key_env: ClassVar[str] = "GRADIUM_API_KEY"
     api_key_header: ClassVar[str] = "x-api-key"
+    api_key_endpoint: ClassVar[str] = GRADIUM_WS_ENDPOINT
 
 
 @dataclass

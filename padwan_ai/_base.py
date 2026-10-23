@@ -8,6 +8,7 @@ from collections.abc import AsyncGenerator, AsyncIterator, Callable, Mapping, Se
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NoReturn, Self
+from urllib.parse import ParseResult, urlparse
 
 import niquests
 from niquests.typing import JSONEncoderType
@@ -86,6 +87,43 @@ def env_api_key(provider: Provider, var: str) -> str:
     if not api_key:
         raise LLMError(provider, f"{var} not set")
     return api_key
+
+
+_SECURE_SCHEMES = frozenset({"https", "wss"})
+
+
+def _secure_host(url: str) -> str | None:
+    host = urlparse(url).hostname
+    return host.removesuffix(".") if host else None
+
+
+def _ambiguous_authority(url: str, parsed: ParseResult) -> bool:
+    return (
+        not url.isascii()
+        or not url.isprintable()
+        or any(char in url for char in "\\ ")
+        or "@" in parsed.netloc
+    )
+
+
+def _secure_port(url: str) -> int | None:
+    parsed = urlparse(url)
+    if parsed.scheme not in _SECURE_SCHEMES or _ambiguous_authority(url, parsed):
+        return None
+    try:
+        return parsed.port if parsed.port is not None else 443
+    except ValueError:
+        return None
+
+
+def env_api_key_for_base_url(
+    provider: Provider, var: str, base_url: str, endpoint: str
+) -> str:
+    if _secure_port(base_url) == 443 and _secure_host(base_url) == _secure_host(
+        endpoint
+    ):
+        return env_api_key(provider, var)
+    return os.environ.get(PADWAN_API_KEY_ENV) or "no-key-required"
 
 
 # niquests parse_scheme() ignores schemes longer than 9 chars ("psse+ai" is 7)
@@ -427,10 +465,14 @@ class ApiKeyWsAuth:
     provider: ClassVar[Provider]
     api_key_env: ClassVar[str]
     api_key_header: ClassVar[str]
+    api_key_endpoint: ClassVar[str]
+    base_url: str
     _api_key: str
 
     def _get_default_api_key(self) -> str:
-        return env_api_key(self.provider, self.api_key_env)
+        return env_api_key_for_base_url(
+            self.provider, self.api_key_env, self.base_url, self.api_key_endpoint
+        )
 
     def _set_auth_headers(self, session: niquests.AsyncSession) -> None:
         session.headers[self.api_key_header] = self._api_key

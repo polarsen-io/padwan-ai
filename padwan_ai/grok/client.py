@@ -1,7 +1,7 @@
 import dataclasses
 from typing import ClassVar, Literal, get_args
 
-from .._base import Provider, env_api_key
+from .._base import Provider, env_api_key_for_base_url
 from ..errors import LLMError
 from ..openai.client import _check_resp, _check_resp_status, _OpenAIBase
 from .batch import GrokBatchJob, GrokBatchRequest, GrokBatchResult
@@ -71,14 +71,16 @@ GROK_MODELS: set[str] = set(get_args(GrokModel))
 GROK_ENDPOINT = "https://api.x.ai/v1/"
 
 
-@dataclasses.dataclass
 class _GrokAuth:
     """Grok provider identity, shared by the chat and realtime clients."""
 
     provider: ClassVar[Provider] = "grok"
+    base_url: str
 
     def _get_default_api_key(self) -> str:
-        return env_api_key(self.provider, "GROK_API_KEY")
+        return env_api_key_for_base_url(
+            self.provider, "GROK_API_KEY", self.base_url, GROK_ENDPOINT
+        )
 
 
 @dataclasses.dataclass
