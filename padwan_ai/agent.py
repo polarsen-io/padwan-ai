@@ -209,6 +209,22 @@ def _extract_text(result: Any) -> str:
     return _json_dumps(result)
 
 
+def _json_type_name(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, dict):
+        return "object"
+    if isinstance(value, str):
+        return "string"
+    if isinstance(value, (int, float)):
+        return "number"
+    if isinstance(value, list):
+        return "list"
+    return type(value).__name__
+
+
 StopReason = Literal["answer", "empty", "round_limit"]
 """How the last `stream()` / `send()` / `run()` ended: a text answer or an
 accepted `submit` (``answer``), a round with neither text nor tool calls
@@ -548,13 +564,13 @@ class AgentSession[T: Answer = Answer]:
         name = tc["function"]["name"]
         if tool is None:
             return _json_dumps({"error": f"Unknown tool: {name}"})
-        if not approved:
-            return _json_dumps({"error": f"Tool call denied by approval hook: {name}"})
-        if isinstance(args, str):  # the arguments were not valid JSON
-            reason = f"arguments are not valid JSON: {args}"
+        if isinstance(args, str):
+            reason = args
             if self._output is not None and tool is self._output.tool:
                 return _json_dumps(self._output.reject(reason))
             return _json_dumps({"error": reason})
+        if not approved:
+            return _json_dumps({"error": f"Tool call denied by approval hook: {name}"})
         try:
             result: Any = tool.handler(args)
             if inspect.isawaitable(result):
@@ -584,21 +600,36 @@ class AgentSession[T: Answer = Answer]:
         `self.execution`. Results are appended to state in original call
         order regardless of execution policy.
         """
-        # args is the parse error message when the model sent invalid JSON
+        # args is a rejection reason string when the call must not be dispatched:
+        # the arguments were not valid JSON, or they parsed to a non-object.
         plan: list[tuple[ToolCall, McpTool | None, dict[str, Any] | str, bool]] = []
         for tc in tool_calls:
             name = tc["function"]["name"]
             args: dict[str, Any] | str
             try:
-                args = _json_loads(tc["function"]["arguments"])
+                parsed: Any = _json_loads(tc["function"]["arguments"])
             except ValueError as exc:
                 log.warning("Bad tool args for %r: %s", name, exc)
-                args = str(exc)
+                args = f"arguments are not valid JSON: {exc}"
+            else:
+                if isinstance(parsed, dict):
+                    args = parsed
+                else:
+                    log.warning(
+                        "Bad tool args for %r: expected a JSON object, got %s",
+                        name,
+                        _json_type_name(parsed),
+                    )
+                    args = (
+                        f"arguments must be a JSON object, got "
+                        f"{_json_type_name(parsed)}"
+                    )
             tool = dispatch.get(name)
+            # a rejected call never reaches the hook: it only ever sees objects
             approved = (
                 await self._approve(tool, args)
                 if tool is not None and isinstance(args, dict)
-                else tool is not None
+                else False
             )
             plan.append((tc, tool, args, approved))
 

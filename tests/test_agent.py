@@ -25,6 +25,7 @@ from padwan_ai import (
     UsageToken,
 )
 from padwan_ai.agent import ToolErrorHandler, _extract_text
+from padwan_ai.conversation import ToolResultMessage
 
 # Fakes
 
@@ -1287,3 +1288,48 @@ async def test_load_builds_a_typed_session(verdict: type) -> None:
     )
     async with session:
         assert await session.run("go") == verdict(decision="match")
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        pytest.param("[]", id="empty-list"),
+        pytest.param("5", id="integer"),
+        pytest.param("null", id="null"),
+    ],
+)
+async def test_non_object_arguments_never_reach_the_hook_or_handler(
+    arguments: str,
+) -> None:
+    calls: list[str] = []
+
+    def handler(_args: dict[str, Any]) -> str:
+        calls.append("handler")
+        return "ran"
+
+    def allow(_tool: McpTool, _args: dict[str, Any]) -> bool:
+        calls.append("hook")
+        return True
+
+    probe = McpTool(
+        name="probe",
+        description="",
+        input_schema={"type": "object", "properties": {}},
+        handler=handler,
+    )
+    raw = ToolCall(
+        id="call_1",
+        type="function",
+        function=ToolCallFunction(name="probe", arguments=arguments),
+    )
+    session, _ = make_session(
+        [FakeChatStream(tool_calls=[raw]), FakeChatStream(chunks=["done"])],
+        mcp_tools=[probe],
+        approve_tool=allow,
+    )
+    assert await session.send("go") == "done"
+    assert calls == []
+    results = [m for m in session.messages if m.get("role") == "tool"]
+    assert len(results) == 1
+    content = json.loads(cast("ToolResultMessage", results[0])["content"])
+    assert "must be a JSON object" in content["error"]
