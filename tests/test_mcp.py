@@ -576,6 +576,11 @@ class TestMcpStreamable:
             else:
                 assert "Authorization" not in headers
 
+    def test_repr_hides_token(self):
+        token = "sk-mcp-dummy-0001"
+        transport = McpStreamable(url="https://example.com/mcp", token=token)
+        assert token not in repr(transport)
+
     async def test_listen_tracks_last_event_id(self, mock_http):
         """_listen sends Last-Event-ID on reconnect and never sets a read timeout
         (regression: the 30 s default counted every quiet spell as a failure)."""
@@ -1131,6 +1136,12 @@ class TestMcpStdio:
         assert [m["method"] for m in sent] == ["tools/call", "notifications/cancelled"]
         assert sent[1]["params"]["requestId"] == sent[0]["id"]
         assert not client._pending
+
+    async def test_repr_hides_env(self):
+        secret = "sk-stdio-dummy-0001"
+        transport = McpStdio(command="mcp-server", env={"MCP_SECRET": secret})
+        transport._loop = asyncio.get_running_loop()
+        assert secret not in repr(transport)
 
     async def test_list_tools_and_tool_defs(self):
         async with McpStdio(
