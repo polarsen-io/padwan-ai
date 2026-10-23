@@ -963,7 +963,7 @@
 </span></code></pre></div>
 <p>Passing a model a provider has scheduled for retirement emits a one-time <code>ModelDeprecationWarning</code> (a <code>FutureWarning</code>); the model keeps working until retirement.</p>
 <h3 id="retries-and-rate-limits">Retries and rate limits</h3>
-<p>Clients retry transient failures (connection errors, 5xx) with a short backoff. A 429 or 503 carrying <code>Retry-After</code> is retried in place only while that header stays under 30 seconds per attempt; once retries are spent, the request raises <code>TooManyRequestsError</code> whose <code>retry_delay</code> is the server's full <code>Retry-After</code>, so a long rate-limit window surfaces after a few capped waits instead of blocking the call for its whole duration.</p>
+<p>Clients retry transient failures (connection errors, 5xx) with a short backoff. A 429 or 503 carrying <code>Retry-After</code> is retried in place only while that header stays under 30 seconds per attempt; once retries are spent, the request raises <code>TooManyRequestsError</code> whose <code>retry_delay</code> is the server's full <code>Retry-After</code>, so a long rate-limit window surfaces after a few capped waits instead of blocking the call for its whole duration. An exhausted quota or depleted prepaid credit (OpenAI and Gemini answer 402, Gemini also a 429 with a quota failure) raises <code>QuotaExceededError</code>, which is not an <code>LLMError</code>: retrying cannot fix it.</p>
 <h3 id="environment-variables">Environment Variables</h3>
 <p>Each provider looks for its API key in environment variables:</p>
 <table>
