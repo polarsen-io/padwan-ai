@@ -247,6 +247,8 @@ class LLMClientBase[RetryT: Retry](abc.ABC):
             retries=self._retry,
             base_url=self.base_url,
             json_encoder=self.json_encoder,
+            # large bodies on a reused QUIC connection error or stall: jawah/urllib3.future#440
+            disable_http3=True,
         )
         self._set_auth_headers(self._session)
         return self

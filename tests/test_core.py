@@ -454,6 +454,7 @@ async def test_session_lifecycle():
         _ = client.session
     async with client as c:
         assert c._session is not None
+        assert c._session._disable_http3  # jawah/urllib3.future#440
     assert c._session is None
 
 
