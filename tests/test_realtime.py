@@ -556,3 +556,16 @@ async def test_gemini_realtime_input_sdk_compat() -> None:
 def test_gemini_server_content_sdk_compat(key: str) -> None:
     """The serverContent keys our accessors read exist in LiveServerContent."""
     assert _camel_to_snake(key) in get_type_hints(LiveServerContentDict)
+
+
+async def test_gemini_live_key_not_in_handshake_error(unroutable_port: int) -> None:
+    key = "sk-live-dummy-0007"
+    client = GeminiRealtimeClient(
+        model="gemini-3.1-flash-live-preview",
+        base_url=f"ws://127.0.0.1:{unroutable_port}/ws",
+        api_key=key,
+    )
+    with pytest.raises(Exception) as caught:
+        async with client:
+            pass
+    assert key not in str(caught.value)

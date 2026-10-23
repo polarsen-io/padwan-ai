@@ -80,9 +80,7 @@ class GeminiRealtimeClient(_GeminiAuth, RealtimeClientBase["GeminiRealtimeConnec
     output_modalities: Sequence[str] = ("audio",)
 
     def _set_auth_headers(self, session: niquests.AsyncSession) -> None:
-        # The Live API authenticates via the ``key`` query parameter on the
-        # upgrade request (see _connect), not via headers.
-        pass
+        session.headers["x-goog-api-key"] = self._api_key
 
     def setup_payload(self) -> LiveSetupMessage:
         """Build the ``BidiGenerateContentSetup`` message opening the session.
@@ -122,7 +120,6 @@ class GeminiRealtimeClient(_GeminiAuth, RealtimeClientBase["GeminiRealtimeConnec
     async def _connect(self) -> AsyncIterator["GeminiRealtimeConnection"]:
         resp = await self.session.get(
             self.base_url,
-            params={"key": self._api_key},
             timeout=self.timeout,
         )
         ext = resp.extension
