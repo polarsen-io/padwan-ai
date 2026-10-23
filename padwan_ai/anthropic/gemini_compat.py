@@ -271,7 +271,9 @@ def _tools_to_gemini(tools: list[AnthropicTool]) -> list[GeminiTool]:
             {
                 "name": tool["name"],
                 "description": tool.get("description", ""),
-                "parameters": schema,
+                # `parameters` rejects JSON Schema keywords clients send ($schema,
+                # additionalProperties, $ref); parametersJsonSchema takes them as-is.
+                "parametersJsonSchema": schema,
             }
         )
     return [{"function_declarations": declarations}] if declarations else []

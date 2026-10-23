@@ -261,12 +261,20 @@ def test_assistant_blocks_to_content(blocks, expected):
 
 
 def test_tools_map_to_function_declarations():
+    """Schemas go through parametersJsonSchema untouched: Gemini's `parameters`
+    rejected Claude Code's `$schema` and `additionalProperties` with a 400."""
+    schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {"city": {"type": "string"}},
+        "additionalProperties": False,
+    }
     body = _body(
         tools=[
             {
                 "name": "get_weather",
                 "description": "Get the weather",
-                "input_schema": {"type": "object", "properties": {}},
+                "input_schema": schema,
             }
         ]
     )
@@ -277,7 +285,7 @@ def test_tools_map_to_function_declarations():
                 {
                     "name": "get_weather",
                     "description": "Get the weather",
-                    "parameters": {"type": "object", "properties": {}},
+                    "parametersJsonSchema": schema,
                 }
             ]
         }

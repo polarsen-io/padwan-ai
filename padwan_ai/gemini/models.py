@@ -216,6 +216,8 @@ class FunctionDeclaration(TypedDict):
     name: str
     description: str
     parameters: NotRequired[dict[str, Any]]
+    # JSON Schema as-is; `parameters` is Gemini's OpenAPI subset. Mutually exclusive.
+    parametersJsonSchema: NotRequired[dict[str, Any]]
 
 
 class GeminiTool(TypedDict):

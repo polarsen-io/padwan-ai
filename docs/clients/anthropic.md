@@ -172,7 +172,9 @@ The converted `model` selects the client endpoint and is removed from the
 HTTP body. An explicit `complete(..., model=...)` or `stream(..., model=...)`
 argument takes precedence.
 
-Keep returned tool IDs unchanged when replaying assistant calls and user
+Tool `input_schema`s are sent as `parametersJsonSchema`, so JSON Schema keywords
+Gemini's OpenAPI-style `parameters` lacks (`$schema`, `additionalProperties`,
+`$ref`) pass through untouched. Keep returned tool IDs unchanged when replaying assistant calls and user
 results: signed Gemini function calls carry their signatures in those opaque
 IDs. Parallel results stay together in one user turn; unmatched results raise
 `ValueError`. Anthropic thinking blocks and thinking configuration are not
