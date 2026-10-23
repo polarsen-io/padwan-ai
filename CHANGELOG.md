@@ -13,6 +13,7 @@ Two speech providers join (ElevenLabs and Gradium, both experimental), Anthropic
 
 - **Retry-After cap**: an in-session retry on a 429 or 503 sleeps at most `RETRY_AFTER_MAX` (30 s) per attempt, whatever the header says; `TooManyRequestsError.retry_delay` still carries the server's full value. Applies to every client. (#130)
 - **MCP listener**: the notification GET stream is opened without a read timeout, so a quiet server no longer counts as a listener failure every 30 s. (#131)
+- **Gemini 402**: a depleted prepaid credit (HTTP 402) raises `QuotaExceededError`, as OpenAI's 402 and Gemini's 429 quota failure already did, instead of a generic `LLMError`. (#139)
 - **HTTP/2 only**: the chat clients create their session with `disable_http3=True`. Large request bodies on a reused HTTP/3 connection trip a QUIC flow-control error or stall in urllib3-future (jawah/urllib3.future#440). (#137)
 
 ### Docs and tooling
