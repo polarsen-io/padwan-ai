@@ -1,5 +1,5 @@
 import asyncio
-from contextlib import asynccontextmanager, nullcontext
+from contextlib import asynccontextmanager, nullcontext, suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import ClassVar, cast
@@ -27,7 +27,7 @@ from padwan_ai import McpStreamable, McpTool, otel
 from padwan_ai._base import RealtimeClientBase
 from padwan_ai._json import dumps as _json_dumps, loads as _json_loads
 from padwan_ai.errors import LLMError, Provider
-from padwan_ai.gemini import GeminiClient
+from padwan_ai.gemini import GeminiClient, GeminiRealtimeClient
 from padwan_ai.mistral import MistralClient
 from padwan_ai.openai import OpenAIClient
 from padwan_ai.voyage import VoyageClient
@@ -717,6 +717,34 @@ async def test_realtime_session_span(
     assert span.status.status_code == expected_status
     if connect_error is not None:
         assert attrs["error.type"] == "ValueError"
+
+
+async def test_gemini_live_key_not_recorded_on_otel_spans(
+    otel_setup, unroutable_port: int
+):
+    exporter, _ = otel_setup
+    key = "sk-live-dummy-0007"
+    client = GeminiRealtimeClient(
+        model="gemini-3.1-flash-live-preview",
+        base_url=f"ws://127.0.0.1:{unroutable_port}/ws",
+        api_key=key,
+    )
+    with suppress(Exception):
+        async with client:
+            pass
+
+    spans = exporter.get_finished_spans()
+    assert spans, "the failed handshake should produce a realtime span"
+    for span in spans:
+        rendered = [str(span.status.description or "")]
+        rendered += [
+            f"{name}={value}" for name, value in (span.attributes or {}).items()
+        ]
+        for event in span.events:
+            rendered += [
+                f"{name}={value}" for name, value in (event.attributes or {}).items()
+            ]
+        assert key not in " ".join(rendered)
 
 
 async def test_mcp_tool_call_emits_span(otel_setup):
