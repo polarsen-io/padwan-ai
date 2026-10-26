@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793033243623,
+  "lastUpdate": 1793038154146,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -4608,6 +4608,66 @@ window.BENCHMARK_DATA = {
             "value": 240.62,
             "unit": "ms",
             "range": 7.99
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e01a336c6128c7d8540418a1920990d4053f85ae",
+          "message": "feat(anthropic): keep later system messages inline (#147)\n\nThe Messages API now accepts role \"system\" in messages (anthropic 2.3.0), except on Claude 3 and 4.x up to 4-7.\nLeading system messages still go to the top-level system field; the OpenAI and Gemini compat proxies accept inline\nsystem messages instead of treating them as user turns.",
+          "timestamp": "2026-10-26T19:08:17+01:00",
+          "tree_id": "bb300df30a6e46ba2512106d1c86b72ac30679f2",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/e01a336c6128c7d8540418a1920990d4053f85ae"
+        },
+        "date": 1793038153135,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 250.55,
+            "unit": "ms",
+            "range": 11.18
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 240.98,
+            "unit": "ms",
+            "range": 4.14
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 262.89,
+            "unit": "ms",
+            "range": 6.81
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 53.03,
+            "unit": "ms",
+            "range": 1.69
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 193.56,
+            "unit": "ms",
+            "range": 6.04
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 240.14,
+            "unit": "ms",
+            "range": 7.62
           }
         ]
       }
