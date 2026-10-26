@@ -28,7 +28,6 @@ uv sync --all-extras --all-groups
 uv run ruff check . && uv run ruff format --check .   # also formats Python code blocks in docs/*.md
 uv run pyright                                        # includes tests/
 uv run pytest                                         # e2e excluded by default
-just test-min                                         # same suite on 3.13, the supported floor
 ```
 
 E2E needs real keys: `cp env.template .env`, then `just e2e` (`just e2e-vllm` needs a local GPU). For OpenTelemetry

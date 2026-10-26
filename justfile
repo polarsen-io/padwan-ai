@@ -10,11 +10,6 @@ default:
 test *args:
     uv run pytest {{ args }}
 
-# Run unit tests on the lowest supported Python (matches CI matrix floor)
-[group('dev')]
-test-min *args:
-    uv run --python 3.13 pytest {{ args }}
-
 # Run e2e tests (copy env.template to .env first, then fill in keys); --full also starts vLLM; pytest flags go after --
 [group('dev')]
 [arg("full", long="full", value="true")]
