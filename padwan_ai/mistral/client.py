@@ -54,6 +54,7 @@ MistralModel = Literal[
     "glm-5-2",
     "zai-glm-5",
     "zai-glm-5-3",
+    "zai-glm-5-3-flash",
     "zai-glm-5-2",
     "zai-glm-latest",
 ]
@@ -64,6 +65,14 @@ MistralAudioModel = Literal[
     "voxtral-mini-realtime-latest",
     "voxtral-mini-tts-latest",
     "voxtral-small-latest",
+    "voxtral-mini-transcribe-3",
+    "voxtral-mini-transcribe-3-0",
+    "voxtral-mini-transcribe-realtime-3",
+    "voxtral-mini-transcribe-realtime-3-0",
+    "voxtral-mini-tts-3",
+    "voxtral-mini-tts-3-0",
+    "voxtral-small-transcribe-3",
+    "voxtral-small-transcribe-3-0",
 ]
 
 __all__ = (
