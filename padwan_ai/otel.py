@@ -663,6 +663,22 @@ def _chat_tools(
     return args[1] if len(args) > 1 else None
 
 
+def _request_size_attrs(
+    args: tuple[Any, ...], kwargs: dict[str, Any]
+) -> dict[str, int]:
+    """Size of what the request resends every round, in JSON characters; span-only (high cardinality)."""
+    tools = _chat_tools(args, kwargs) or ()
+    return {
+        "padwan_ai.request.messages.size": len(
+            _json_dumps(list(_chat_messages(args, kwargs)))
+        ),
+        "padwan_ai.request.tool_definitions.count": len(tools),
+        "padwan_ai.request.tool_definitions.size": len(_json_dumps(list(tools)))
+        if tools
+        else 0,
+    }
+
+
 def _capture_request(
     client: LLMClientBase, args: tuple[Any, ...], kwargs: dict[str, Any]
 ) -> dict[str, str]:
@@ -680,6 +696,7 @@ def _wrap_complete_chat(original: Any, inst: _Instruments) -> Any:
     async def wrapper(self: LLMClientBase, *args: Any, **kwargs: Any) -> Any:
         attrs = _request_attrs(self)
         span = _start_span(inst, attrs, _sent_temperature(self))
+        span.set_attributes(_request_size_attrs(args, kwargs))
         content_attrs = (
             _capture_request(self, args, kwargs) if inst.capture_content else {}
         )
@@ -762,6 +779,7 @@ def _wrap_stream_chat(original: Any, inst: _Instruments) -> Any:
             _sent_temperature(self),
             thinking,
             input_attrs,
+            _request_size_attrs(args, kwargs),
         )
 
     return wrapper
@@ -1495,6 +1513,7 @@ class _InstrumentedChatStream(ChatStream):
         temperature: float | None,
         thinking: _ThoughtTimer | None = None,
         input_attrs: dict[str, str] | None = None,
+        size_attrs: dict[str, int] | None = None,
     ) -> None:
         self._inner = inner
         self._inst = inst
@@ -1502,6 +1521,7 @@ class _InstrumentedChatStream(ChatStream):
         self._temperature = temperature
         self._thinking = thinking
         self._input_attrs = input_attrs
+        self._size_attrs = size_attrs
 
     def __getattr__(self, name: str) -> Any:
         if name == "_inner":  # guard against recursion before __init__ ran
@@ -1518,6 +1538,8 @@ class _InstrumentedChatStream(ChatStream):
         if self._input_attrs:
             for key, value in self._input_attrs.items():
                 span.set_attribute(key, value)
+        if self._size_attrs:
+            span.set_attributes(self._size_attrs)
         start = time.perf_counter()
         first: float | None = None
         previous = start

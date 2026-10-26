@@ -148,6 +148,9 @@ Each chat call emits one `CLIENT` span named `chat <model>` (or `chat` when no m
 | `openai.api.type`, `openai.request.service_tier`, `openai.response.service_tier`, `openai.response.system_fingerprint` | | OpenAI vendor extras, including streamed responses |
 | `padwan_ai.response.tool_names` | `["get_weather"]` | tool calls requested by the model (custom attribute) |
 | `padwan_ai.thinking.duration` | `1.2` | seconds between the first and last `on_thought` chunk of a stream (custom attribute) |
+| `padwan_ai.request.messages.size` | `48210` | JSON characters of the messages sent, history included (custom attribute, span only) |
+| `padwan_ai.request.tool_definitions.count` | `86` | tool definitions sent with the request (custom attribute, span only) |
+| `padwan_ai.request.tool_definitions.size` | `91337` | JSON characters of those definitions (custom attribute, span only) |
 | `error.type` | `LLMError`, `CancelledError` | on failure, with `ERROR` status and a recorded exception |
 
 ¹ Token accounting follows each provider's usage report: OpenAI-style APIs count reasoning tokens inside `output_tokens`; Gemini reports thought tokens outside `candidatesTokenCount`, so they are not part of `gen_ai.usage.output_tokens`. Anthropic does not report a separate count. Per the Anthropic-specific conventions, `gen_ai.usage.input_tokens` includes cache read/write tokens (which Anthropic's raw `input_tokens` excludes).

@@ -230,6 +230,59 @@ async def test_stream_chat_span(otel_setup, client, make_sse_event, make_sse_res
     )
 
 
+_WEATHER_TOOL = {
+    "name": "get_weather",
+    "description": "Weather for a city",
+    "parameters": {"type": "object", "properties": {"city": {"type": "string"}}},
+}
+
+
+@pytest.mark.parametrize(
+    "streaming, tools",
+    [
+        pytest.param(False, None, id="complete-no-tools"),
+        pytest.param(False, [_WEATHER_TOOL], id="complete-tools"),
+        pytest.param(True, [_WEATHER_TOOL, _WEATHER_TOOL], id="stream-tools"),
+    ],
+)
+async def test_chat_span_records_request_size(
+    otel_setup, client, make_resp, make_sse_event, make_sse_resp, streaming, tools
+):
+    """Request sizes land on the span only: per-call values would explode metric cardinality."""
+    exporter, reader = otel_setup
+    messages = [{"role": "user", "content": "hey"}]
+    if streaming:
+        done = {
+            "choices": [{"delta": {"content": "hi"}, "finish_reason": "stop"}],
+            "usage": USAGE,
+        }
+        client._session.post.return_value = make_sse_resp(
+            [make_sse_event(_json_dumps(done))]
+        )
+        _ = [t async for t in client.stream_chat(messages, tools)]
+    else:
+        client._session.post.return_value = make_resp(
+            200,
+            {
+                "choices": [{"message": {"content": "hi"}, "finish_reason": "stop"}],
+                "usage": USAGE,
+            },
+        )
+        await client.complete_chat(messages, tools)
+
+    (span,) = exporter.get_finished_spans()
+    attrs = dict(span.attributes or {})
+    assert attrs["padwan_ai.request.messages.size"] == len(_json_dumps(messages))
+    assert attrs["padwan_ai.request.tool_definitions.count"] == len(tools or [])
+    assert attrs["padwan_ai.request.tool_definitions.size"] == (
+        len(_json_dumps(tools)) if tools else 0
+    )
+    for point in _histogram_points(reader, "gen_ai.client.operation.duration"):
+        assert not any(
+            k.startswith("padwan_ai.request.") for k in point.attributes or {}
+        )
+
+
 async def test_stream_chat_tool_calls_only_records_first_chunk(
     otel_setup, client, make_sse_event, make_sse_resp
 ):
