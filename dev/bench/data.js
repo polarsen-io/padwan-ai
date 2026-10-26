@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793033214602,
+  "lastUpdate": 1793033243623,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -4548,6 +4548,66 @@ window.BENCHMARK_DATA = {
             "value": 242.19,
             "unit": "ms",
             "range": 7.47
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bot@polarsen.io",
+            "name": "Polarsen-bot",
+            "username": "Polarsen-bot"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c8cc7c134ad579755c29e07eaf629223680097c",
+          "message": "chore: weekly LLM SDK refresh (#145)\n\n* chore: weekly LLM SDK refresh\n\n- Bump openai, google-genai, xai-sdk, mcp to latest\n- Regenerate OpenAI/Mistral OpenAPI TypedDicts\n- Include provider model drift report\n\n* chore: track stable Mistral model IDs\n\nCo-authored-by: Andarius <5070712+Andarius@users.noreply.github.com>\n\n* test(anthropic): check Message keys against every MessageParam member\n\nanthropic 2.3.0 turned MessageParam into a union (user/assistant/system), which get_type_hints rejects.\n\n---------\n\nCo-authored-by: Polarsen-bot <248777799+Polarsen-bot@users.noreply.github.com>\nCo-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>\nCo-authored-by: Andarius <5070712+Andarius@users.noreply.github.com>\nCo-authored-by: julien <julien.brayere@obitrain.com>",
+          "timestamp": "2026-10-26T17:46:32+01:00",
+          "tree_id": "c952a461ddb114678faea19b2ae8b3d3b02e5c76",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/8c8cc7c134ad579755c29e07eaf629223680097c"
+        },
+        "date": 1793033243036,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 238.96,
+            "unit": "ms",
+            "range": 5.79
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 233.86,
+            "unit": "ms",
+            "range": 3.48
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 251.08,
+            "unit": "ms",
+            "range": 4.11
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 53.22,
+            "unit": "ms",
+            "range": 0.88
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 194.7,
+            "unit": "ms",
+            "range": 2.57
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 240.62,
+            "unit": "ms",
+            "range": 7.99
           }
         ]
       }
