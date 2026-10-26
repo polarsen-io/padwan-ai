@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792786626925,
+  "lastUpdate": 1793033214602,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -4488,6 +4488,66 @@ window.BENCHMARK_DATA = {
             "value": 223.48,
             "unit": "ms",
             "range": 3.8
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb24070b7cfdc017c8ca07dc73ee1ba043edcee7",
+          "message": "chore: remove the test-min recipe (#146)\n\nCI already runs the suite on 3.13, and the recipe dropped the llms group so it failed locally.",
+          "timestamp": "2026-10-26T17:46:06+01:00",
+          "tree_id": "6fdbba6afc537b4252abf53db2b3959f41343969",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/bb24070b7cfdc017c8ca07dc73ee1ba043edcee7"
+        },
+        "date": 1793033213999,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 235.73,
+            "unit": "ms",
+            "range": 3.27
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 237.05,
+            "unit": "ms",
+            "range": 7.66
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 250.41,
+            "unit": "ms",
+            "range": 4.42
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 53.75,
+            "unit": "ms",
+            "range": 1.34
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 195.28,
+            "unit": "ms",
+            "range": 3.45
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 242.19,
+            "unit": "ms",
+            "range": 7.47
           }
         ]
       }
