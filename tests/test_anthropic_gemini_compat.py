@@ -74,26 +74,39 @@ def test_generation_config(overrides, expected):
 
 
 @pytest.mark.parametrize(
-    "system, expected",
+    "overrides, expected",
     [
-        pytest.param("You are helpful.", "You are helpful.", id="string"),
+        pytest.param({"system": "You are helpful."}, "You are helpful.", id="string"),
         pytest.param(
-            [
-                {"type": "text", "text": "You are Claude Code."},
-                {
-                    "type": "text",
-                    "text": "Extra context.",
-                    "cache_control": {"type": "ephemeral"},
-                },
-            ],
+            {
+                "system": [
+                    {"type": "text", "text": "You are Claude Code."},
+                    {
+                        "type": "text",
+                        "text": "Extra context.",
+                        "cache_control": {"type": "ephemeral"},
+                    },
+                ]
+            },
             "You are Claude Code.\n\nExtra context.",
             id="blocks_with_cache_control",
         ),
-        pytest.param("", None, id="empty_omitted"),
+        pytest.param({"system": ""}, None, id="empty_omitted"),
+        pytest.param(
+            {
+                "system": "You are helpful.",
+                "messages": [
+                    {"role": "user", "content": "hello"},
+                    {"role": "system", "content": "Answer briefly."},
+                ],
+            },
+            "You are helpful.\n\nAnswer briefly.",
+            id="inline_folded",
+        ),
     ],
 )
-def test_system_maps_to_system_instruction(system, expected):
-    request = _to_gemini(_body(system=system))
+def test_system_maps_to_system_instruction(overrides, expected):
+    request = _to_gemini(_body(**overrides))
     if expected is None:
         assert "systemInstruction" not in request
     else:

@@ -52,7 +52,9 @@ async with AnthropicClient() as client:
 
 ### With System Prompt
 
-System messages are translated to the Messages API's top-level `system` field.
+Leading system messages are translated to the Messages API's top-level `system` field. Later ones are sent in place
+as `role: "system"` messages, except on Claude 3 and 4.x models up to 4.7, which reject them: there they are appended
+to `system` too.
 
 ```python
 from padwan_ai import ConversationState

@@ -134,23 +134,43 @@ def test_usage_from_anthropic(usage, expected):
     assert _usage_from_anthropic(usage) == expected
 
 
+_INLINE = (
+    [
+        {"role": "user", "content": "hi"},
+        {"role": "system", "content": "Answer briefly."},
+    ],
+    "You are Obi.",
+)
+_HOISTED = ([{"role": "user", "content": "hi"}], "You are Obi.\n\nAnswer briefly.")
+
+
 class TestBuildBody:
-    def test_system_and_tools(self):
-        client = AnthropicClient(
-            api_key="test", model="claude-sonnet-5", max_tokens=512
-        )
+    @pytest.mark.parametrize(
+        "model, expected",
+        [
+            pytest.param("claude-sonnet-5", _INLINE, id="inline"),
+            pytest.param("claude-opus-4-8", _INLINE, id="inline_opus_4_8"),
+            pytest.param("claude-sonnet-4-6", _HOISTED, id="hoisted_legacy"),
+            pytest.param("claude-opus-4-20250514", _HOISTED, id="hoisted_dated"),
+            pytest.param("claude-3-5-haiku-latest", _HOISTED, id="hoisted_claude_3"),
+        ],
+    )
+    def test_system_and_tools(self, model, expected):
+        client = AnthropicClient(api_key="test", model=model, max_tokens=512)
         body = client.build_body(
             [
                 {"role": "system", "content": "You are Obi."},
                 {"role": "user", "content": "hi"},
+                {"role": "system", "content": "Answer briefly."},
             ],
             tools=[WEATHER_TOOL],
         )
+        messages, system = expected
         assert body == {
-            "model": "claude-sonnet-5",
+            "model": model,
             "max_tokens": 512,
-            "messages": [{"role": "user", "content": "hi"}],
-            "system": "You are Obi.",
+            "messages": messages,
+            "system": system,
             "tools": [
                 {
                     "name": "get_weather",

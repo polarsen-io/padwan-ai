@@ -11,9 +11,20 @@ pytestmark = [pytest.mark.e2e, skip_no_anthropic]
 MODEL = "claude-haiku-4-5"
 
 
-async def test_complete_chat() -> None:
+@pytest.mark.parametrize(
+    "messages",
+    [
+        pytest.param(PROMPT, id="plain"),
+        pytest.param(
+            [*PROMPT, {"role": "system", "content": "Keep it under ten words."}],
+            id="inline_system",
+        ),
+    ],
+)
+async def test_complete_chat(messages) -> None:
+    # haiku-4-5 rejects inline system messages: build_body hoists them into `system`.
     async with AnthropicClient(model=MODEL) as client:
-        response, usage = await client.complete_chat(PROMPT)
+        response, usage = await client.complete_chat(messages)
 
     assert response["content"]
     assert "hello" in response["content"].lower()

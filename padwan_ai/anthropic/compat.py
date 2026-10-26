@@ -191,6 +191,9 @@ def _assistant_blocks_to_message(
 
 def _convert_message(msg: AnthropicMessage) -> list[OpenAIRequestMessage]:
     content = msg["content"]
+    if msg["role"] == "system":
+        text = _system_text(content)
+        return [{"role": "system", "content": text}] if text else []
     if msg["role"] == "assistant":
         if isinstance(content, str):
             return [{"role": "assistant", "content": content}]

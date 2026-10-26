@@ -58,7 +58,7 @@ class AnthropicContentBlock(TypedDict, total=False):
 class AnthropicMessage(TypedDict):
     """A single message in Anthropic wire format."""
 
-    role: Literal["user", "assistant"]
+    role: Literal["user", "assistant", "system"]
     content: str | list[AnthropicContentBlock]
 
 

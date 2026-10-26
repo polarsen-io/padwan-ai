@@ -68,6 +68,26 @@ def test_system_flattened_to_system_message(system, expected):
     assert request["messages"][1] == {"role": "user", "content": "hello"}
 
 
+@pytest.mark.parametrize(
+    "content, expected",
+    [
+        pytest.param(
+            [{"type": "text", "text": "Answer briefly."}],
+            [{"role": "system", "content": "Answer briefly."}],
+            id="blocks",
+        ),
+        pytest.param("", [], id="empty_omitted"),
+    ],
+)
+def test_inline_system_message_kept_in_place(content, expected):
+    messages = [
+        {"role": "user", "content": "hello"},
+        {"role": "system", "content": content},
+    ]
+    request = _to_openai(_body(messages=messages), model="glm-4.6")
+    assert request["messages"] == [{"role": "user", "content": "hello"}, *expected]
+
+
 def test_empty_system_omitted():
     request = _to_openai(_body(system=""), model="glm-4.6")
     assert request["messages"] == [{"role": "user", "content": "hello"}]

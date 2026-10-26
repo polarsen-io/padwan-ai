@@ -301,9 +301,13 @@ def messages_to_gemini(
     """Translate Messages into a Gemini body with a client-side model override."""
     contents: list[Content] = []
     tool_names: dict[str, str] = {}
+    # Gemini has no in-conversation system turn: fold them into systemInstruction.
+    system_texts = [_system_text(system)] if (system := body.get("system")) else []
     for msg in body["messages"]:
         content = msg["content"]
-        if msg["role"] == "assistant":
+        if msg["role"] == "system":
+            system_texts.append(_system_text(content))
+        elif msg["role"] == "assistant":
             if isinstance(content, str):
                 contents.append({"role": "model", "parts": [Part(text=content)]})
             else:
@@ -335,9 +339,8 @@ def messages_to_gemini(
         "contents": contents,
         "generationConfig": gen_config,
     }
-    if (system := body.get("system")) is not None:
-        if text := _system_text(system):
-            request["systemInstruction"] = SystemInstruction(parts=[Part(text=text)])
+    if text := "\n\n".join(t for t in system_texts if t):
+        request["systemInstruction"] = SystemInstruction(parts=[Part(text=text)])
     if tools := _tools_to_gemini(body.get("tools") or []):
         request["tools"] = tools
     if (tool_choice := body.get("tool_choice")) and "tools" in request:

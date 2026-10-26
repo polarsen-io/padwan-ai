@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import re
 import typing
 from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from contextlib import aclosing
@@ -69,6 +70,10 @@ def is_anthropic_model(model_name: str | None) -> bool:
     if model_name is None:
         return False
     return model_name.startswith("claude")
+
+
+# The API rejects in-conversation role "system" messages on Claude 3 and 4.x up to 4-7.
+_NO_INLINE_SYSTEM = re.compile(r"claude-(3|(opus|sonnet|haiku)-4(-[0-7])?(-\d{8})?$)")
 
 
 _STOP_REASON_MAP: dict[str, FinishReason] = {
@@ -194,14 +199,15 @@ class AnthropicClient(LLMClientBase[Retry], AnthropicToolMixin):
         messages: Sequence[ChatMessage],
         tools: Sequence[ToolDefinition] | None = None,
     ) -> MessagesBody:
-        """Build a Messages API body: system messages become the system field."""
+        """Build a Messages API body: system messages after the first turn stay inline when the model allows it."""
         if not self.model:
             raise LLMError(self.provider, "No model specified")
         converted: list[AnthropicMessage] = []
         system_parts: list[str] = []
+        hoist_system = _NO_INLINE_SYSTEM.match(self.model) is not None
         for msg in messages:
             role = msg["role"]
-            if role == "system":
+            if role == "system" and (hoist_system or not converted):
                 system_parts.append(cast(str, msg["content"]))
                 continue
             if role == "tool":
@@ -218,7 +224,7 @@ class AnthropicClient(LLMClientBase[Retry], AnthropicToolMixin):
                 continue
             converted.append(
                 {
-                    "role": cast(Literal["user", "assistant"], role),
+                    "role": cast(Literal["user", "assistant", "system"], role),
                     "content": cast(str, msg["content"]),
                 }
             )
