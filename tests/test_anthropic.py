@@ -1,6 +1,6 @@
 import json
 from contextlib import nullcontext
-from typing import get_type_hints
+from typing import get_args, get_type_hints
 from unittest.mock import AsyncMock
 
 import pytest
@@ -447,7 +447,11 @@ _SDK_BLOCK_TYPES = (
     "local_type, sdk_keys",
     [
         pytest.param(AnthropicTool, set(get_type_hints(ToolParam)), id="Tool"),
-        pytest.param(AnthropicMessage, set(get_type_hints(MessageParam)), id="Message"),
+        pytest.param(
+            AnthropicMessage,
+            set().union(*(get_type_hints(t) for t in get_args(MessageParam))),
+            id="Message",
+        ),
         pytest.param(AnthropicUsage, set(Usage.model_fields), id="Usage"),
         pytest.param(
             MessagesResponse, set(SdkMessage.model_fields), id="MessagesResponse"
