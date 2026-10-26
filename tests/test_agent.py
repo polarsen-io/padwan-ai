@@ -4,7 +4,7 @@ import logging
 from collections.abc import AsyncIterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import pytest
 
@@ -26,6 +26,7 @@ from padwan_ai import (
 )
 from padwan_ai.agent import ToolErrorHandler, _extract_text
 from padwan_ai.conversation import ToolResultMessage
+from padwan_ai.testing import ScriptedClient, Step
 
 # Fakes
 
@@ -1333,3 +1334,166 @@ async def test_non_object_arguments_never_reach_the_hook_or_handler(
     assert len(results) == 1
     content = json.loads(cast("ToolResultMessage", results[0])["content"])
     assert "must be a JSON object" in content["error"]
+
+
+# Deferred tool loading
+
+
+def _named_tool(name: str, description: str, calls: list[str]) -> McpTool:
+    def handler(_args: dict[str, Any]) -> str:
+        calls.append(name)
+        return f"{name} ok"
+
+    return McpTool(
+        name=name,
+        description=description,
+        input_schema={"type": "object"},
+        handler=handler,
+    )
+
+
+def _registry(calls: list[str]) -> list[McpTool]:
+    return [
+        _named_tool("plan", "Track the plan.", calls),
+        _named_tool("search", "Search the code base. Returns paths.", calls),
+        _named_tool("read_file", "Read one file\nwith line numbers", calls),
+    ]
+
+
+@pytest.mark.parametrize(
+    "tool_loading, steps, offered, called",
+    [
+        pytest.param(
+            "eager",
+            [Step(text="hi")],
+            [["plan", "search", "read_file"]],
+            [],
+            id="eager-sends-everything",
+        ),
+        pytest.param(
+            "deferred",
+            [Step(text="hi")],
+            [["plan", "load_tools"]],
+            [],
+            id="deferred-sends-the-catalog",
+        ),
+        pytest.param(
+            "deferred",
+            [
+                Step(tool_calls=[("load_tools", {"names": ["read_file", "search"]})]),
+                Step(tool_calls=[("read_file", {})]),
+                Step(text="done"),
+            ],
+            [
+                ["plan", "load_tools"],
+                ["plan", "load_tools", "read_file", "search"],
+                ["plan", "load_tools", "read_file", "search"],
+            ],
+            ["read_file"],
+            id="load-then-call",
+        ),
+        pytest.param(
+            "deferred",
+            [
+                Step(tool_calls=[("load_tools", {"names": ["serch"]})]),
+                Step(text="done"),
+            ],
+            [["plan", "load_tools"], ["plan", "load_tools"]],
+            [],
+            id="unknown-name-loads-nothing",
+        ),
+        pytest.param(
+            "deferred",
+            [Step(tool_calls=[("search", {})]), Step(text="done")],
+            [["plan", "load_tools"], ["plan", "load_tools"]],
+            ["search"],
+            id="unloaded-call-runs-but-loads-nothing",
+        ),
+    ],
+)
+async def test_deferred_tool_loading(
+    tool_loading: Literal["eager", "deferred"],
+    steps: list[Step],
+    offered: list[list[str]],
+    called: list[str],
+) -> None:
+    calls: list[str] = []
+    client = ScriptedClient(steps)
+    session = AgentSession(
+        client=client,
+        mcp_tools=_registry(calls),
+        tool_loading=tool_loading,
+        always_loaded=("plan",),
+    )
+    await session.send("go")
+    assert [r.tool_names for r in client.requests] == offered
+    assert calls == called
+
+
+async def test_deferred_catalog_and_unknown_names() -> None:
+    client = ScriptedClient(
+        [Step(tool_calls=[("load_tools", {"names": ["serch"]})]), Step(text="done")]
+    )
+    session = AgentSession(
+        client=client, mcp_tools=_registry([]), tool_loading="deferred"
+    )
+    await session.send("go")
+    (loader,) = client.requests[0].tools
+    assert loader["description"].endswith(
+        "- plan: Track the plan\n- search: Search the code base\n- read_file: Read one file"
+    )
+    result = json.loads(cast(dict[str, Any], session.messages[-2])["content"])
+    assert result == {"loaded": [], "unknown": {"serch": ["search"]}}
+
+
+async def test_deferred_loads_survive_restore_and_registry_changes() -> None:
+    store = FakeStore()
+    tools = _registry([])
+    first = AgentSession(
+        client=ScriptedClient(
+            [
+                Step(tool_calls=[("load_tools", {"names": ["search", "read_file"]})]),
+                Step(text="ok"),
+            ]
+        ),
+        mcp_tools=tools,
+        tool_loading="deferred",
+        store=store,
+        session_id="s",
+    )
+    await first.send("go")
+    first.save()
+    tools.pop()  # read_file leaves the registry
+    client = ScriptedClient([Step(text="again")])
+    restored = AgentSession.load(
+        client=client,
+        store=store,
+        session_id="s",
+        mcp_tools=tools,
+        tool_loading="deferred",
+    )
+    await restored.send("again")
+    assert client.requests[0].tool_names == ["load_tools", "search"]
+
+
+def test_deferred_reserves_the_load_tools_name() -> None:
+    clash = McpTool(name="load_tools", description="", input_schema={}, handler=_search)
+    session = AgentSession(
+        client=ScriptedClient([Step(text="x")]),
+        mcp_tools=[clash],
+        tool_loading="deferred",
+    )
+    with pytest.raises(ValueError, match="'load_tools' is reserved"):
+        asyncio.run(session.send("go"))
+
+
+async def test_deferred_keeps_the_output_tool(verdict: type) -> None:
+    client = ScriptedClient([Step(tool_calls=[("submit", {"decision": "ship"})])])
+    session = AgentSession(
+        client=client,
+        mcp_tools=[SEARCH],
+        tool_loading="deferred",
+        output=AgentOutput(verdict),
+    )
+    await session.run("go")
+    assert client.requests[0].tool_names == ["submit", "load_tools"]

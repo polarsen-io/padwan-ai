@@ -210,6 +210,8 @@ AgentSession(
     max_tool_rounds=5,  # round cap; None = unbounded (use with care)
     max_tool_result_chars=8_000,  # truncate tool results sent to the LLM; None = no limit
     execution="sequential",  # "sequential" or "parallel"
+    tool_loading="eager",  # "deferred" = a load_tools catalog instead of every definition — see below
+    always_loaded=(),  # public tool names sent in full when deferred
     on_tool=None,  # (ToolCallContext) -> context manager wrapping the dispatch
     on_tool_error=None,  # custom error formatter — see below
     approve_tool=None,  # pre-execution hook returning bool | Awaitable[bool]
@@ -220,6 +222,27 @@ AgentSession(
     output=None,  # AgentOutput(cls, ...) for a typed answer through run() — see above
 )
 ```
+
+### Deferred tool loading
+
+Every round resends every tool definition. With many tools (a few MCP servers easily make 20k tokens of JSON schemas) that is most of each request. `tool_loading="deferred"` sends instead:
+
+- the `always_loaded` tools and the `output=` tool, in full;
+- a `load_tools` tool whose description lists every other tool, one line each (`name: first sentence of its description`);
+- the tools loaded so far, in load order.
+
+```python
+session = AgentSession(
+    client=llm,
+    mcp_tools=[github, grafana],
+    tool_loading="deferred",
+    always_loaded=("plan",),
+)
+```
+
+The model calls `load_tools(names=[...])`; the result lists what was loaded and the closest matches for unknown names, and the next round carries those definitions. Only `load_tools` results load a tool, and they stay in `session.messages`, so a saved and restored session keeps its loaded tools. A loaded tool that later leaves the registry is no longer sent. A call to a tool that was never loaded still runs but loads nothing.
+
+Each load adds definitions to the request, which invalidates the provider's prompt cache from that point once; the catalog text itself does not change while the registry is the same. `load_tools` goes through `approve_tool` and `on_tool` like any other tool, and is a reserved name in deferred mode.
 
 ### Parallel tool execution
 
