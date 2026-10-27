@@ -202,6 +202,9 @@ AgentSession(
     execution="sequential",  # "sequential" or "parallel"
     tool_loading="eager",  # "deferred" = a load_tools catalog instead of every definition — see below
     always_loaded=(),  # public tool names sent in full when deferred
+    compact_after=None,  # input tokens of the last call above which older history is compacted — see below
+    keep_recent_rounds=2,  # rounds a compaction never touches
+    compactor=ElideToolResults(),  # how older history is rewritten
     on_tool=None,  # (ToolCallContext) -> context manager wrapping the dispatch
     on_tool_error=None,  # custom error formatter — see below
     approve_tool=None,  # pre-execution hook returning bool | Awaitable[bool]
@@ -241,6 +244,25 @@ session = AgentSession(
 The model calls `load_tools(names=[...])`; the result lists what was loaded and the closest matches for unknown names, and the next round carries those definitions. Only `load_tools` results load a tool, and they stay in `session.messages`, so a saved and restored session keeps its loaded tools. A loaded tool that later leaves the registry is no longer sent. A call to a tool that was never loaded still runs but loads nothing.
 
 Each load adds definitions to the request, which invalidates the provider's prompt cache from that point once; the catalog text itself does not change while the registry is the same. `load_tools` goes through `approve_tool` and `on_tool` like any other tool, and is a reserved name in deferred mode.
+
+### History compaction
+
+Every round also resends the whole history. With `compact_after` set, once the provider reports more input tokens than that for the last call, the history before the last `keep_recent_rounds` rounds is handed to the `compactor`, and its output replaces that part in every following request:
+
+```python
+from padwan_ai import AgentSession, ElideToolResults
+
+session = AgentSession(
+    client=llm,
+    mcp_tools=[github, grafana],
+    compact_after=40_000,
+    compactor=ElideToolResults(keep={"spawn"}),
+)
+```
+
+The default `ElideToolResults` replaces old tool results with `[elided: <n> chars of <tool> result]`, except for the tools named in `keep` and results shorter than the stub. Any object with `async def compact(self, messages) -> list[ChatMessage]` works, e.g. one that summarises old rounds with a cheaper model; a result whose tool calls and results no longer pair up raises `CompactionError`.
+
+The compactor runs once per trip, not every round: its output is reused until the next trip, so the provider's prompt cache holds between compactions. `session.messages` keeps the full history; the compacted part is saved in the snapshot and reset by `clear()`.
 
 ### Parallel tool execution
 

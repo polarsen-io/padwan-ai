@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator, Sequence
-from contextlib import contextmanager
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 from dataclasses import dataclass, field
 from typing import Any, Literal, cast
 
@@ -13,8 +13,10 @@ from padwan_ai import (
     AgentSession,
     ChatMessage,
     ChatStream,
+    CompactionError,
     ConversationSnapshot,
     ConversationState,
+    ElideToolResults,
     McpTool,
     OutputError,
     OutputFailure,
@@ -1497,3 +1499,120 @@ async def test_deferred_keeps_the_output_tool(verdict: type) -> None:
     )
     await session.run("go")
     assert client.requests[0].tool_names == ["submit", "load_tools"]
+
+
+# History compaction
+
+_BIG = "x" * 200
+
+
+def _big_tool(name: str = "read_file") -> McpTool:
+    return McpTool(
+        name=name,
+        description="",
+        input_schema={"type": "object"},
+        handler=lambda _: _BIG,
+    )
+
+
+def _seen_results(messages: Sequence[ChatMessage]) -> list[str]:
+    """Each tool result sent, as "full" or "stub"."""
+    return [
+        "full" if cast(dict[str, Any], m)["content"] == _BIG else "stub"
+        for m in messages
+        if m["role"] == "tool"
+    ]
+
+
+class _DropResults:
+    async def compact(self, messages: Sequence[ChatMessage]) -> list[ChatMessage]:
+        return [m for m in messages if m["role"] != "tool"]
+
+
+_THREE_CALLS = [Step(tool_calls=[("read_file", {})])] * 3 + [Step(text="done")]
+
+
+@pytest.mark.parametrize(
+    "options, seen, expect",
+    [
+        pytest.param(
+            {},
+            [[], ["full"], ["full", "full"], ["full", "full", "full"]],
+            nullcontext(),
+            id="disabled",
+        ),
+        pytest.param(
+            {"compact_after": 100},
+            [[], ["full"], ["full", "full"], ["full", "full", "full"]],
+            nullcontext(),
+            id="under-budget",
+        ),
+        pytest.param(
+            {"compact_after": 5, "keep_recent_rounds": 1},
+            [[], ["full"], ["stub", "full"], ["stub", "stub", "full"]],
+            nullcontext(),
+            id="steps-past-the-kept-round",
+        ),
+        pytest.param(
+            {"compact_after": 5, "keep_recent_rounds": 0},
+            [[], ["stub"], ["stub", "stub"], ["stub", "stub", "stub"]],
+            nullcontext(),
+            id="keep-no-round",
+        ),
+        pytest.param(
+            {
+                "compact_after": 5,
+                "keep_recent_rounds": 0,
+                "compactor": ElideToolResults(keep={"read_file"}),
+            },
+            [[], ["full"], ["full", "full"], ["full", "full", "full"]],
+            nullcontext(),
+            id="kept-tool",
+        ),
+        pytest.param(
+            {"compact_after": 5, "keep_recent_rounds": 0, "compactor": _DropResults()},
+            [[]],
+            pytest.raises(CompactionError, match="without a result"),
+            id="unpaired-calls-rejected",
+        ),
+    ],
+)
+async def test_history_compaction(
+    options: dict[str, Any],
+    seen: list[list[str]],
+    expect: AbstractContextManager[object],
+) -> None:
+    client = ScriptedClient(_THREE_CALLS)
+    session = AgentSession(
+        client=client, mcp_tools=[_big_tool()], max_tool_rounds=None, **options
+    )
+    with expect:
+        await session.send("go")
+    assert [_seen_results(r.messages) for r in client.requests] == seen
+    assert set(_seen_results(session.messages)) <= {"full"}
+
+
+async def test_compaction_survives_restore_and_clear() -> None:
+    store = FakeStore()
+    first = AgentSession(
+        client=ScriptedClient(_THREE_CALLS),
+        mcp_tools=[_big_tool()],
+        compact_after=5,
+        keep_recent_rounds=1,
+        store=store,
+        session_id="s",
+    )
+    await first.send("go")
+    first.save()
+    client = ScriptedClient([Step(text="again"), Step(text="fresh")])
+    restored = AgentSession.load(
+        client=client, store=store, session_id="s", mcp_tools=[_big_tool()]
+    )
+    await restored.send("again")
+    restored.clear()
+    await restored.send("fresh")
+    assert [_seen_results(r.messages) for r in client.requests] == [
+        ["stub", "stub", "full"],
+        [],
+    ]
+    assert "compacted" not in restored._state.snapshot()

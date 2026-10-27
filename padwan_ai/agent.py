@@ -13,10 +13,12 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, cast
 from ._base import ChatStream
 from ._json import dumps as _json_dumps, loads as _json_loads
 from .client import LLMClient
+from .compaction import Compactor, ElideToolResults, _check_pairs, _round_start
 from .content import ContentPart
 from .conversation import (
     AssistantToolMessage,
     ChatMessage,
+    CompactedHistory,
     ConversationSnapshot,
     ConversationState,
     ToolResultMessage,
@@ -282,6 +284,12 @@ class AgentSession[T: Answer = Answer]:
     """``deferred`` sends a `load_tools` catalog instead of every definition; see `ToolLoading`."""
     always_loaded: Collection[str] = ()
     """Public tool names sent in full from the first round when `tool_loading` is ``deferred``."""
+    compact_after: int | None = None
+    """Compact older history once the last call's provider-reported input tokens exceed this. None disables it."""
+    keep_recent_rounds: int = 2
+    """Rounds (assistant turns and their tool results) a compaction never touches."""
+    compactor: Compactor = field(default_factory=ElideToolResults)
+    """How older history is rewritten; runs once per compaction, its output is reused until the next one."""
     on_tool: OnTool | None = None
     """Context-manager hook around each tool dispatch"""
     on_tool_error: ToolErrorHandler | None = None
@@ -321,6 +329,14 @@ class AgentSession[T: Answer = Answer]:
         if self.max_tool_rounds is not None and self.max_tool_rounds < 1:
             raise ValueError(
                 f"max_tool_rounds must be >= 1 or None, got {self.max_tool_rounds}"
+            )
+        if self.compact_after is not None and self.compact_after < 1:
+            raise ValueError(
+                f"compact_after must be >= 1 or None, got {self.compact_after}"
+            )
+        if self.keep_recent_rounds < 0:
+            raise ValueError(
+                f"keep_recent_rounds must be >= 0, got {self.keep_recent_rounds}"
             )
         if self.output is not None:
             self._output = _OutputRun(self.output)
@@ -394,6 +410,9 @@ class AgentSession[T: Answer = Answer]:
         execution: Literal["sequential", "parallel"] = "sequential",
         tool_loading: ToolLoading = "eager",
         always_loaded: Collection[str] = (),
+        compact_after: int | None = None,
+        keep_recent_rounds: int = 2,
+        compactor: Compactor | None = None,
         on_tool: OnTool | None = None,
         on_tool_error: ToolErrorHandler | None = None,
         approve_tool: ApprovalHook | None = None,
@@ -404,8 +423,8 @@ class AgentSession[T: Answer = Answer]:
         """Construct an AgentSession, optionally restoring state from `store`.
 
         If `session_id` is provided and the store has a matching snapshot,
-        the conversation history, total usage, and system prompt are
-        restored from it. If the snapshot is missing, the session is built fresh but
+        the conversation history, total usage, system prompt and any
+        compacted history are restored from it. If the snapshot is missing, the session is built fresh but
         pinned to the caller-supplied `session_id`, so subsequent `save()`
         calls land under that id.
 
@@ -447,6 +466,9 @@ class AgentSession[T: Answer = Answer]:
             execution=execution,
             tool_loading=tool_loading,
             always_loaded=always_loaded,
+            compact_after=compact_after,
+            keep_recent_rounds=keep_recent_rounds,
+            compactor=compactor or ElideToolResults(),
             on_tool=on_tool,
             on_tool_error=on_tool_error,
             approve_tool=approve_tool,
@@ -467,9 +489,9 @@ class AgentSession[T: Answer = Answer]:
         """
         limit = self.max_tool_result_chars
         if limit is None:
-            return list(self._state.messages)
+            return self._model_view()
         out: list[ChatMessage] = []
-        for msg in self._state.messages:
+        for msg in self._model_view():
             if msg["role"] == "tool":
                 content = msg["content"]
                 if len(content) > limit:
@@ -481,6 +503,50 @@ class AgentSession[T: Answer = Answer]:
                     )
             out.append(msg)
         return out
+
+    def _model_view(self) -> list[ChatMessage]:
+        """History as the model sees it: the compacted prefix, if any, in place of what it replaced."""
+        messages = self._state.messages
+        if (compacted := self._state.compacted) is None:
+            return list(messages)
+        head = 1 if messages and messages[0]["role"] == "system" else 0
+        return [
+            *messages[:head],
+            *compacted["messages"],
+            *messages[compacted["upto"] :],
+        ]
+
+    async def _maybe_compact(self) -> None:
+        """Run the compactor once the last call went over `compact_after` and new rounds can be compacted."""
+        usage = self._state.last_usage
+        if (
+            self.compact_after is None
+            or usage is None
+            or usage["input"] <= self.compact_after
+        ):
+            return
+        messages = self._state.messages
+        keep_from = _round_start(messages, self.keep_recent_rounds)
+        compacted = self._state.compacted
+        if keep_from is None or (
+            compacted is not None and keep_from <= compacted["upto"]
+        ):
+            return
+        head = 1 if messages and messages[0]["role"] == "system" else 0
+        upto = compacted["upto"] if compacted is not None else head
+        older = [
+            *(compacted["messages"] if compacted is not None else ()),
+            *messages[upto:keep_from],
+        ]
+        rewritten = await self.compactor.compact(older)
+        _check_pairs(rewritten)
+        self._state.compacted = CompactedHistory(messages=rewritten, upto=keep_from)
+        log.info(
+            "compacted %d messages into %d (last input %d tokens)",
+            keep_from - head,
+            len(rewritten),
+            usage["input"],
+        )
 
     def _build_round_dispatch(
         self,
@@ -783,6 +849,7 @@ class AgentSession[T: Answer = Answer]:
             if calls_remaining is not None:
                 calls_remaining -= 1
 
+            await self._maybe_compact()
             # Read mcp_tools at the top of every round — picks up tools/list_changed updates.
             tool_defs, dispatch = self._round_tools(*self._build_round_dispatch())
             chunks: list[str] = []
