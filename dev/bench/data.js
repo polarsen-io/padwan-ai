@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793044913183,
+  "lastUpdate": 1793080364230,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -4728,6 +4728,66 @@ window.BENCHMARK_DATA = {
             "value": 232.53,
             "unit": "ms",
             "range": 2.69
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "df6bde81fad5d6443d109eae749e67687ffb37f9",
+          "message": "fix: restore HTTP/3 now that jawah/urllib3.future#440 is fixed (#150)\n\nDrop the disable_http3 pin from #137 and raise the floors to qh3 2.1.0 and\nurllib3-future 2.25.904, which carry the QUIC flow-control fix.",
+          "timestamp": "2026-10-27T06:51:55+01:00",
+          "tree_id": "5a374777fcd2848ad4e997441627f4ca7fab4d43",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/df6bde81fad5d6443d109eae749e67687ffb37f9"
+        },
+        "date": 1793080362806,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 237.18,
+            "unit": "ms",
+            "range": 2.44
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 238.88,
+            "unit": "ms",
+            "range": 1.39
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 254.36,
+            "unit": "ms",
+            "range": 1.86
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 53.45,
+            "unit": "ms",
+            "range": 0.79
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 195.39,
+            "unit": "ms",
+            "range": 3.1
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 235.16,
+            "unit": "ms",
+            "range": 3.78
           }
         ]
       }
