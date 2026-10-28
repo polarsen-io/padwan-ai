@@ -300,7 +300,7 @@ class McpStreamable:
     """
 
     url: str
-    token: str | None = None
+    token: str | None = field(default=None, repr=False)
     on_progress: Callable[[ProgressEvent], Any] | None = None
     on_auth: OnAuth | None = None
     """Called on HTTP 401 to obtain a fresh token. Receives the transport
@@ -641,7 +641,7 @@ class McpStdio:
 
     command: str
     args: list[str] = field(default_factory=list)
-    env: dict[str, str] | None = None
+    env: dict[str, str] | None = field(default=None, repr=False)
     cwd: str | None = None
     on_progress: Callable[[ProgressEvent], Any] | None = None
     client_name: str = "padwan-ai"

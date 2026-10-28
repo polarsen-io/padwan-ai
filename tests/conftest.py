@@ -1,5 +1,7 @@
 import json
+import socket
 import sys
+from collections.abc import Iterator
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -50,6 +52,16 @@ def _clear_gateway_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep the unified-gateway env vars out of tests that don't opt in."""
     monkeypatch.delenv("PADWAN_BASE_URL", raising=False)
     monkeypatch.delenv("PADWAN_API_KEY", raising=False)
+
+
+@pytest.fixture
+def unroutable_port() -> Iterator[int]:
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    try:
+        yield int(sock.getsockname()[1])
+    finally:
+        sock.close()
 
 
 @pytest.fixture
