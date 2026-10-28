@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793194595880,
+  "lastUpdate": 1793194642911,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -4848,6 +4848,66 @@ window.BENCHMARK_DATA = {
             "value": 229.24,
             "unit": "ms",
             "range": 5.65
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "52211726+Volkiaa@users.noreply.github.com",
+            "name": "Volkiaa",
+            "username": "Volkiaa"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ac891049b996e7e5feb53f6887cbceb127ddf674",
+          "message": "fix(agent): reject non-object tool arguments before the approval hook (#141)\n\n* fix(agent): reject non-object tool arguments before the approval hook\n\nA tool call whose arguments parsed to valid JSON that is not an object\n(`[]`, `5`, `null`) skipped `approve_tool` and still reached the handler.\nSuch a call now gets an error result naming the received JSON type, and\nneither the hook nor the handler runs.\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\n\n* refactor(agent): drop the JSON type-name helper\n\ntype(parsed).__name__ is enough for the rejection message.\n\n---------\n\nCo-authored-by: amsn <claude@massonalexandre.com>\nCo-authored-by: Claude Sonnet 5.5 <noreply@anthropic.com>\nCo-authored-by: julien <julien.brayere@obitrain.com>",
+          "timestamp": "2026-10-28T14:36:26+01:00",
+          "tree_id": "65ea662e68344f0c2cce34529d2ee5eaa08016cd",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/ac891049b996e7e5feb53f6887cbceb127ddf674"
+        },
+        "date": 1793194641991,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 245.45,
+            "unit": "ms",
+            "range": 1.74
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 247.83,
+            "unit": "ms",
+            "range": 1.64
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 262.16,
+            "unit": "ms",
+            "range": 1.41
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 54.09,
+            "unit": "ms",
+            "range": 0.96
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 198.62,
+            "unit": "ms",
+            "range": 1.66
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 238.62,
+            "unit": "ms",
+            "range": 2.44
           }
         ]
       }
