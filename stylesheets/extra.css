@@ -95,3 +95,20 @@
   width: 1.75rem;
   height: 1.75rem;
 }
+
+/* Diagrams marked { .zoomable } open full screen on click (docs/javascripts/mermaid.mjs) */
+
+.md-typeset img.zoomable {
+  cursor: zoom-in;
+}
+
+.md-typeset img.zoomable:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none;
+  object-fit: contain;
+  padding: 2rem;
+  box-sizing: border-box;
+  background: var(--md-default-bg-color, #fff);
+  cursor: zoom-out;
+}
