@@ -158,7 +158,18 @@ function cleanupOrphanedErrors() {
     .forEach((svg) => svg.parentElement?.remove());
 }
 
+// Static diagrams (`![...](x.svg){ .zoomable }`) open full screen on click.
+function attachImageFullscreen() {
+  document.querySelectorAll("img.zoomable").forEach((img) => {
+    img.addEventListener("click", () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else img.requestFullscreen();
+    });
+  });
+}
+
 renderAll();
+attachImageFullscreen();
 
 const cleanupObserver = new MutationObserver(cleanupOrphanedErrors);
 cleanupObserver.observe(document.body, { childList: true });

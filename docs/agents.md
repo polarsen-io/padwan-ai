@@ -8,21 +8,11 @@ icon: lucide/bot
 
 ## The loop
 
-```mermaid
-flowchart TD
-    Start([user sends message]) --> Call[call LLM with messages + tools]
-    Call --> Resp{response has<br/>tool calls?}
-    Resp -->|no| Done([return final text])
-    Resp -->|yes| Approve[approve_tool hook]
-    Approve --> Dispatch[run handlers]
-    Dispatch --> Append[append tool results<br/>to message history]
-    Append --> Call
-    Call -.->|rounds exhausted| Limit([yield limit-reached message])
-```
+![The agent loop: each round picks the tool definitions to send (every definition when eager; always_loaded, the output= tool, the load_tools catalog and the tools loaded so far when deferred), calls the LLM, returns the text if there are no tool calls, otherwise runs approve_tool and the handlers, appends the results and starts the next round; the loop stops with a limit-reached message once the rounds are exhausted](static/agents/loop.svg){ .zoomable }
 
-Each iteration of the loop is called a **round**. Tool lists are re-read at the top of every round, so MCP servers that emit `notifications/tools/list_changed` (and refresh `McpStreamable.tools` / `McpStdio.tools` in place) get picked up without restarting the session.
+Each iteration of the loop is called a **round**. Tool lists are re-read at the top of every round, so MCP servers that emit `notifications/tools/list_changed` (and refresh `McpStreamable.tools` / `McpStdio.tools` in place) get picked up without restarting the session. Which definitions a round sends depends on `tool_loading` (see [Deferred tool loading](#deferred-tool-loading)).
 
-With `output=` set (see [Typed answers](#typed-answers)), the round limit and a text answer without a tool call both raise `OutputError` instead of yielding a limit-reached message. `Dispatch` above runs each handler wrapped by the `on_tool` context manager, if set.
+With `output=` set (see [Typed answers](#typed-answers)), the round limit and a text answer without a tool call both raise `OutputError` instead of yielding a limit-reached message. "run handlers" above runs each handler wrapped by the `on_tool` context manager, if set.
 
 A text run never raises on those: an empty answer yields `"(no response)"` and the round limit a limit-reached message, both as text. `session.stop_reason` tells them apart from a real answer once the run is over: `"answer"`, `"empty"` or `"round_limit"` (`None` before the first run, while one is in flight, and after a run that raised, such as a typed run's `OutputError`).
 
@@ -225,11 +215,19 @@ AgentSession(
 
 ### Deferred tool loading
 
-Every round resends every tool definition. With many tools (a few MCP servers easily make 20k tokens of JSON schemas) that is most of each request. `tool_loading="deferred"` sends instead:
+By default (`tool_loading="eager"`) every round resends every tool definition. With many tools (a few MCP servers easily make 20k tokens of JSON schemas) that is most of each request. `tool_loading="deferred"` sends instead:
 
 - the `always_loaded` tools and the `output=` tool, in full;
 - a `load_tools` tool whose description lists every other tool, one line each (`name: first sentence of its description`);
 - the tools loaded so far, in load order.
+
+=== "Eager (default)"
+
+    ![Eager: local tools, MCP server tools and the output= tool all go into every request as full definitions](static/agents/tools-eager.svg){ .zoomable width="640" }
+
+=== "Deferred"
+
+    ![Deferred: always_loaded and the output= tool go into every request in full; every other tool is one line in the load_tools catalog until a load_tools result names it, after which its full definition is sent too](static/agents/tools-deferred.svg){ .zoomable width="640" }
 
 ```python
 session = AgentSession(
