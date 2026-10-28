@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793080364230,
+  "lastUpdate": 1793194595880,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -4788,6 +4788,66 @@ window.BENCHMARK_DATA = {
             "value": 235.16,
             "unit": "ms",
             "range": 3.78
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "52211726+Volkiaa@users.noreply.github.com",
+            "name": "Volkiaa",
+            "username": "Volkiaa"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "857e0145c39343be95d4c9f07875de85841b9447",
+          "message": "fix: keep MCP credentials out of repr and the Gemini Live key out of the URL (#143)\n\n* fix(mcp): keep transport credentials out of repr\n\n`McpStreamable.token` and `McpStdio.env` were dataclass fields that appear\nin `repr()`, so logging a transport or an `AgentSession` printed a bearer\ntoken or the child's environment. Both fields now use `repr=False`, like the\nprovider `api_key` fields.\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\n\n* fix(gemini): send the Live API key in a header, not the URL\n\n`GeminiRealtimeClient` put the key in the `key` query parameter of the\nwebsocket URL, so a failed handshake copied it into the exception text and\ninto OpenTelemetry spans. The key now goes in `x-goog-api-key`, as the chat\nclient and `google-genai` do.\n\nCo-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: amsn <claude@massonalexandre.com>\nCo-authored-by: Claude Sonnet 5.5 <noreply@anthropic.com>",
+          "timestamp": "2026-10-28T14:35:41+01:00",
+          "tree_id": "1b1d432b8326ff05f2d397e9da8b37d5a705e07e",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/857e0145c39343be95d4c9f07875de85841b9447"
+        },
+        "date": 1793194594523,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 237.32,
+            "unit": "ms",
+            "range": 3.5
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 239.79,
+            "unit": "ms",
+            "range": 5.48
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 253.62,
+            "unit": "ms",
+            "range": 4.08
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 53.1,
+            "unit": "ms",
+            "range": 1.38
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 191.57,
+            "unit": "ms",
+            "range": 5.74
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 229.24,
+            "unit": "ms",
+            "range": 5.65
           }
         ]
       }
