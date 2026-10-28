@@ -96,6 +96,11 @@ gen-favicon:
     uv run --with pillow python -c "from PIL import Image; Image.open('docs/static/logo-hood.png').resize((64, 64), Image.Resampling.LANCZOS).save('docs/static/favicon.png', optimize=True)"
     echo "regenerated docs/static/favicon.png"
 
+# Regenerate the docs/static/agents/*.svg diagrams from their .d2 sources (needs d2)
+[group('gen')]
+gen-diagrams:
+    for f in docs/static/agents/*.d2; do d2 --sketch --layout elk --theme 0 --dark-theme 200 --pad 16 "$f" "${f%.d2}.svg"; done
+
 # Bump version (commitizen — updates pyproject.toml and CHANGELOG)
 [group('release')]
 bump *args:

@@ -1,9 +1,10 @@
 import asyncio
 import contextlib
+import difflib
 import inspect
 import logging
 import uuid
-from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Sequence
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field
 from types import TracebackType
@@ -209,6 +210,36 @@ def _extract_text(result: Any) -> str:
     return _json_dumps(result)
 
 
+LOAD_TOOLS = "load_tools"
+"""Name of the tool a `tool_loading="deferred"` session offers to load the others."""
+
+ToolLoading = Literal["eager", "deferred"]
+"""Send every tool definition each round (``eager``), or a one-line catalog and the
+definitions of the tools loaded so far (``deferred``)."""
+
+
+def _summary(description: str, limit: int = 120) -> str:
+    """First sentence of a tool description, for the deferred catalog."""
+    first = description.strip().split("\n", 1)[0].split(". ", 1)[0].rstrip(".")
+    return first if len(first) <= limit else first[: limit - 1] + "…"
+
+
+def _loaded_names(messages: Sequence[ChatMessage]) -> list[str]:
+    """Tools loaded by `load_tools` results so far, in load order; attempted calls do not count."""
+    loaded: list[str] = []
+    for msg in messages:
+        if msg["role"] != "tool" or cast(ToolResultMessage, msg)["name"] != LOAD_TOOLS:
+            continue
+        try:
+            names = _json_loads(cast(ToolResultMessage, msg)["content"]).get(
+                "loaded", []
+            )
+        except (ValueError, AttributeError):
+            continue
+        loaded.extend(n for n in names if isinstance(n, str) and n not in loaded)
+    return loaded
+
+
 StopReason = Literal["answer", "empty", "round_limit"]
 """How the last `stream()` / `send()` / `run()` ended: a text answer or an
 accepted `submit` (``answer``), a round with neither text nor tool calls
@@ -247,6 +278,10 @@ class AgentSession[T: Answer = Answer]:
     """Truncate tool results sent back to the model. None disables truncation."""
     execution: Literal["sequential", "parallel"] = "sequential"
     """Run tool calls sequentially or in parallel within each round."""
+    tool_loading: ToolLoading = "eager"
+    """``deferred`` sends a `load_tools` catalog instead of every definition; see `ToolLoading`."""
+    always_loaded: Collection[str] = ()
+    """Public tool names sent in full from the first round when `tool_loading` is ``deferred``."""
     on_tool: OnTool | None = None
     """Context-manager hook around each tool dispatch"""
     on_tool_error: ToolErrorHandler | None = None
@@ -277,6 +312,9 @@ class AgentSession[T: Answer = Answer]:
         init=False,
         default=None,
         repr=False,
+    )
+    _loader: tuple[tuple[int, ...] | None, McpTool | None] | None = field(
+        init=False, default=None, repr=False
     )
 
     def __post_init__(self) -> None:
@@ -354,6 +392,8 @@ class AgentSession[T: Answer = Answer]:
         max_tool_rounds: int | None = 5,
         max_tool_result_chars: int | None = 8_000,
         execution: Literal["sequential", "parallel"] = "sequential",
+        tool_loading: ToolLoading = "eager",
+        always_loaded: Collection[str] = (),
         on_tool: OnTool | None = None,
         on_tool_error: ToolErrorHandler | None = None,
         approve_tool: ApprovalHook | None = None,
@@ -405,6 +445,8 @@ class AgentSession[T: Answer = Answer]:
             max_tool_rounds=max_tool_rounds,
             max_tool_result_chars=max_tool_result_chars,
             execution=execution,
+            tool_loading=tool_loading,
+            always_loaded=always_loaded,
             on_tool=on_tool,
             on_tool_error=on_tool_error,
             approve_tool=approve_tool,
@@ -529,6 +571,77 @@ class AgentSession[T: Answer = Answer]:
         self._dispatch_fingerprint = fingerprint
         self._dispatch_cache = (tool_defs, dispatch)
         return tool_defs, dispatch
+
+    def _round_tools(
+        self, tool_defs: list[ToolDefinition], dispatch: dict[str, McpTool]
+    ) -> tuple[list[ToolDefinition], dict[str, McpTool]]:
+        """The definitions offered this round and the dispatch table, `load_tools` included when deferred.
+
+        Deferred: the always-loaded and output tools, `load_tools` (whose description is the
+        catalog, fixed for a given registry), then the loaded tools in load order. A loaded name the
+        registry no longer has is dropped; every registered tool stays callable.
+        """
+        if self.tool_loading == "eager":
+            return tool_defs, dispatch
+        if LOAD_TOOLS in dispatch:
+            raise ValueError(
+                f"{LOAD_TOOLS!r} is reserved when tool_loading='deferred'; rename that tool"
+            )
+        output = self._output.tool.name if self._output is not None else None
+        keep = {*self.always_loaded, output}
+        pinned = [d for d in tool_defs if d["name"] in keep]
+        deferred = {d["name"]: d for d in tool_defs if d["name"] not in keep}
+        loader = self._loader_for(deferred)
+        if loader is None:
+            return pinned, dispatch
+        loaded = [
+            deferred[n] for n in _loaded_names(self._state.messages) if n in deferred
+        ]
+        return [*pinned, loader.to_tool_def(), *loaded], {
+            **dispatch,
+            LOAD_TOOLS: loader,
+        }
+
+    def _loader_for(self, deferred: dict[str, ToolDefinition]) -> McpTool | None:
+        """The `load_tools` tool for this registry, rebuilt only when the registry changes."""
+        if self._loader is not None and self._loader[0] == self._dispatch_fingerprint:
+            return self._loader[1]
+        loader = None
+        if deferred:
+            names = list(deferred)
+            catalog = "\n".join(
+                f"- {n}: {_summary(d['description'])}" for n, d in deferred.items()
+            )
+
+            def load(args: dict[str, Any]) -> dict[str, Any]:
+                asked = [n for n in args.get("names") or [] if isinstance(n, str)]
+                unknown = {
+                    n: difflib.get_close_matches(n, names, n=3)
+                    for n in asked
+                    if n not in deferred
+                }
+                return {
+                    "loaded": [n for n in asked if n in deferred],
+                    "unknown": unknown,
+                }
+
+            loader = McpTool(
+                name=LOAD_TOOLS,
+                description=(
+                    "Load tools by name before calling them; their definitions come with the next "
+                    f"round. Tools you can load:\n{catalog}"
+                ),
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "names": {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["names"],
+                },
+                handler=load,
+            )
+        self._loader = (self._dispatch_fingerprint, loader)
+        return loader
 
     async def _approve(self, tool: McpTool, args: dict[str, Any]) -> bool:
         if self.approve_tool is None:
@@ -671,7 +784,7 @@ class AgentSession[T: Answer = Answer]:
                 calls_remaining -= 1
 
             # Read mcp_tools at the top of every round — picks up tools/list_changed updates.
-            tool_defs, dispatch = self._build_round_dispatch()
+            tool_defs, dispatch = self._round_tools(*self._build_round_dispatch())
             chunks: list[str] = []
             chat_stream = self.client.stream_chat(
                 self._context_messages(),
