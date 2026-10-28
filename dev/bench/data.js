@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793196410220,
+  "lastUpdate": 1793207648151,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -4968,6 +4968,66 @@ window.BENCHMARK_DATA = {
             "value": 242.65,
             "unit": "ms",
             "range": 2.96
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "72442499fe80a9c586079bed90709e3df0a39d2d",
+          "message": "feat(agent): deferred tool loading behind a load_tools catalog (#149)\n\n* feat(agent): deferred tool loading behind a load_tools catalog\n\n* docs(agents): D2 diagrams for the loop and eager vs deferred tool loading\n\nStatic sketch diagrams generated from docs/static/agents/*.d2 (just gen-diagrams); they open full screen on click.",
+          "timestamp": "2026-10-28T18:13:02+01:00",
+          "tree_id": "4ffbb29559246e0a901f4d1f1c64f4983dd53547",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/72442499fe80a9c586079bed90709e3df0a39d2d"
+        },
+        "date": 1793207646044,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 238.56,
+            "unit": "ms",
+            "range": 2.47
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 236.87,
+            "unit": "ms",
+            "range": 2.64
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 251.96,
+            "unit": "ms",
+            "range": 2.9
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 52.81,
+            "unit": "ms",
+            "range": 0.87
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 191.47,
+            "unit": "ms",
+            "range": 2.47
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 231.16,
+            "unit": "ms",
+            "range": 4.32
           }
         ]
       }
