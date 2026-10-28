@@ -1,0 +1,45 @@
+# Regenerate with `just gen-diagrams`.
+grid-rows: 3
+grid-columns: 6
+horizontal-gap: 70
+vertical-gap: 60
+classes: {
+  gap: {label: ""; style.fill: transparent; style.stroke: transparent}
+  pill: {style.border-radius: 999}
+}
+x1.class: gap
+x2.class: gap
+x3.class: gap
+limit: "yield limit-reached message" {class: pill}
+x4.class: gap
+x5.class: gap
+start: "user sends message" {class: pill}
+pick: "tool_loading" {shape: diamond}
+defs: "" {
+  style.fill: transparent; style.stroke: transparent
+  grid-rows: 2
+  vertical-gap: 12
+  eager: "every tool definition" {style.fill: "#ffe8d6"; style.font-color: "#1f2328"}
+  deferred: "always_loaded + output= tool\n+ load_tools catalog\n+ tools loaded so far" {style.fill: "#cfe5ff"; style.font-color: "#1f2328"}
+}
+call: "call LLM with\nmessages + tools"
+resp: "tool calls?" {shape: diamond}
+done: "return final text" {class: pill}
+x6.class: gap
+x7.class: gap
+append: "append tool results\nto message history"
+dispatch: "run handlers"
+approve: "approve_tool hook"
+x8.class: gap
+start -> pick
+pick -> defs.eager: eager
+pick -> defs.deferred: deferred
+defs.eager -> call
+defs.deferred -> call
+call -> resp
+resp -> done: no
+resp -> approve: yes
+approve -> dispatch
+dispatch -> append
+append -> pick: next round
+call -> limit: rounds exhausted {style.stroke-dash: 4}
