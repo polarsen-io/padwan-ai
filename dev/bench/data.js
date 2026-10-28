@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793194642911,
+  "lastUpdate": 1793196410220,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -4908,6 +4908,66 @@ window.BENCHMARK_DATA = {
             "value": 238.62,
             "unit": "ms",
             "range": 2.44
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8f6974dfaae18e7d0a3090f876ebd371fdd6fd40",
+          "message": "docs(client): state the real env-key fallback for a custom base_url (#153)\n\nThe docstring promised provider keys never reach a custom endpoint; that only\nholds when PADWAN_API_KEY is set. Say what the code does.",
+          "timestamp": "2026-10-28T15:05:53+01:00",
+          "tree_id": "16ae9507998cfef19a2041992a479cf17dcb3ffc",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/8f6974dfaae18e7d0a3090f876ebd371fdd6fd40"
+        },
+        "date": 1793196408918,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 233.14,
+            "unit": "ms",
+            "range": 4.06
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 251.15,
+            "unit": "ms",
+            "range": 7.21
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 247.75,
+            "unit": "ms",
+            "range": 4.04
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 51.75,
+            "unit": "ms",
+            "range": 1.13
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 193.77,
+            "unit": "ms",
+            "range": 3.56
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 242.65,
+            "unit": "ms",
+            "range": 2.96
           }
         ]
       }
