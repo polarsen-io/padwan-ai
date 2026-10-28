@@ -576,7 +576,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-<span class="pr-diff-badge">PR</span></a>
+</a>
 </li>
 </ul>
 </nav>
@@ -584,21 +584,13 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </div>
 </div>
 <div class="md-content" data-md-component="content">
-<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">13 added</span> · <span class="c">1 changed</span> · 0 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
+<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">15 added</span> · <span class="c">3 changed</span> · 1 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
 <h1 id="agents">Agents</h1>
 <p><code>AgentSession</code> is the agentic loop built on top of the unified chat interface. Given a client, a system prompt, and zero or more tools, it repeatedly calls the LLM, dispatches any tool calls the model requests, feeds the results back, and keeps going until the model produces a plain text answer (or a round limit is hit).</p>
 <h2 id="the-loop">The loop</h2>
-<pre class="mermaid"><code>flowchart TD
-    Start([user sends message]) --&gt; Call[call LLM with messages + tools]
-    Call --&gt; Resp{response has&lt;br/&gt;tool calls?}
-    Resp --&gt;|no| Done([return final text])
-    Resp --&gt;|yes| Approve[approve_tool hook]
-    Approve --&gt; Dispatch[run handlers]
-    Dispatch --&gt; Append[append tool results&lt;br/&gt;to message history]
-    Append --&gt; Call
-    Call -.-&gt;|rounds exhausted| Limit([yield limit-reached message])</code></pre>
-<p>Each iteration of the loop is called a <strong>round</strong>. Tool lists are re-read at the top of every round, so MCP servers that emit <code>notifications/tools/list_changed</code> (and refresh <code>McpStreamable.tools</code> / <code>McpStdio.tools</code> in place) get picked up without restarting the session.</p>
-<p>With <code>output=</code> set (see <a href="#typed-answers">Typed answers</a>), the round limit and a text answer without a tool call both raise <code>OutputError</code> instead of yielding a limit-reached message. <code>Dispatch</code> above runs each handler wrapped by the <code>on_tool</code> context manager, if set.</p>
+<p data-pr-diff="added"><img alt="The agent loop: each round picks the tool definitions to send (every definition when eager; always_loaded, the output= tool, the load_tools catalog and the tools loaded so far when deferred), calls the LLM, returns the text if there are no tool calls, otherwise runs approve_tool and the handlers, appends the results and starts the next round; the loop stops with a limit-reached message once the rounds are exhausted" class="zoomable" src="../static/agents/loop.svg"/></p>
+<p data-pr-diff="changed">Each iteration of the loop is called a <strong>round</strong>. Tool lists are re-read at the top of every round, so MCP servers that emit <code>notifications/tools/list_changed</code> (and refresh <code>McpStreamable.tools</code> / <code>McpStdio.tools</code> in place) get picked up without restarting the session. Which definitions a round sends depends on <code>tool_loading</code> (see <a href="#deferred-tool-loading">Deferred tool loading</a>).</p>
+<p data-pr-diff="changed">With <code>output=</code> set (see <a href="#typed-answers">Typed answers</a>), the round limit and a text answer without a tool call both raise <code>OutputError</code> instead of yielding a limit-reached message. "run handlers" above runs each handler wrapped by the <code>on_tool</code> context manager, if set.</p>
 <p>A text run never raises on those: an empty answer yields <code>"(no response)"</code> and the round limit a limit-reached message, both as text. <code>session.stop_reason</code> tells them apart from a real answer once the run is over: <code>"answer"</code>, <code>"empty"</code> or <code>"round_limit"</code> (<code>None</code> before the first run, while one is in flight, and after a run that raised, such as a typed run's <code>OutputError</code>).</p>
 <h2 id="quick-start">Quick start</h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a href="#__codelineno-0-1" id="__codelineno-0-1" name="__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">McpStdio</span>
@@ -770,12 +762,22 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 </span><span id="__span-7-21"><a href="#__codelineno-7-21" id="__codelineno-7-21" name="__codelineno-7-21"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 data-pr-diff="added" id="deferred-tool-loading">Deferred tool loading</h3>
-<p data-pr-diff="added">Every round resends every tool definition. With many tools (a few MCP servers easily make 20k tokens of JSON schemas) that is most of each request. <code>tool_loading="deferred"</code> sends instead:</p>
+<p data-pr-diff="added">By default (<code>tool_loading="eager"</code>) every round resends every tool definition. With many tools (a few MCP servers easily make 20k tokens of JSON schemas) that is most of each request. <code>tool_loading="deferred"</code> sends instead:</p>
 <ul>
 <li data-pr-diff="added">the <code>always_loaded</code> tools and the <code>output=</code> tool, in full;</li>
 <li data-pr-diff="added">a <code>load_tools</code> tool whose description lists every other tool, one line each (<code>name: first sentence of its description</code>);</li>
 <li data-pr-diff="added">the tools loaded so far, in load order.</li>
 </ul>
+<div class="tabbed-set tabbed-alternate" data-pr-diff="added" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio"/><input id="__tabbed_2_2" name="__tabbed_2" type="radio"/><div class="tabbed-labels"><label for="__tabbed_2_1">Eager (default)</label><label for="__tabbed_2_2">Deferred</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p><img alt="Eager: local tools, MCP server tools and the output= tool all go into every request as full definitions" class="zoomable" src="../static/agents/tools-eager.svg" width="640"/></p>
+</div>
+<div class="tabbed-block">
+<p><img alt="Deferred: always_loaded and the output= tool go into every request in full; every other tool is one line in the load_tools catalog until a load_tools result names it, after which its full definition is sent too" class="zoomable" src="../static/agents/tools-deferred.svg" width="640"/></p>
+</div>
+</div>
+</div>
 <div class="language-python highlight" data-pr-diff="added"><pre><span></span><code><span id="__span-8-1"><a href="#__codelineno-8-1" id="__codelineno-8-1" name="__codelineno-8-1"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
 </span><span id="__span-8-2"><a href="#__codelineno-8-2" id="__codelineno-8-2" name="__codelineno-8-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">llm</span><span class="p">,</span>
 </span><span id="__span-8-3"><a href="#__codelineno-8-3" id="__codelineno-8-3" name="__codelineno-8-3"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="n">github</span><span class="p">,</span> <span class="n">grafana</span><span class="p">],</span>
