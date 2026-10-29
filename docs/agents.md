@@ -202,6 +202,9 @@ AgentSession(
     execution="sequential",  # "sequential" or "parallel"
     tool_loading="eager",  # "deferred" = a load_tools catalog instead of every definition — see below
     always_loaded=(),  # public tool names sent in full when deferred
+    compact_after=None,  # input tokens of the last call above which older history is compacted — see below
+    keep_recent_rounds=2,  # rounds a compaction never touches
+    compactor=ElideToolResults(),  # how older history is rewritten
     on_tool=None,  # (ToolCallContext) -> context manager wrapping the dispatch
     on_tool_error=None,  # custom error formatter — see below
     approve_tool=None,  # pre-execution hook returning bool | Awaitable[bool]
@@ -223,11 +226,11 @@ By default (`tool_loading="eager"`) every round resends every tool definition. W
 
 === "Eager (default)"
 
-    ![Eager: local tools, MCP server tools and the output= tool all go into every request as full definitions](static/agents/tools-eager.svg){ .zoomable width="640" }
+    ![Eager: local tools, MCP server tools and the output= tool all go into every request as full definitions](static/agents/tools-eager.svg){ .zoomable }
 
 === "Deferred"
 
-    ![Deferred: always_loaded and the output= tool go into every request in full; every other tool is one line in the load_tools catalog until a load_tools result names it, after which its full definition is sent too](static/agents/tools-deferred.svg){ .zoomable width="640" }
+    ![Deferred: always_loaded and the output= tool go into every request in full; every other tool is one line in the load_tools catalog until a load_tools result names it, after which its full definition is sent too](static/agents/tools-deferred.svg){ .zoomable }
 
 ```python
 session = AgentSession(
@@ -241,6 +244,162 @@ session = AgentSession(
 The model calls `load_tools(names=[...])`; the result lists what was loaded and the closest matches for unknown names, and the next round carries those definitions. Only `load_tools` results load a tool, and they stay in `session.messages`, so a saved and restored session keeps its loaded tools. A loaded tool that later leaves the registry is no longer sent. A call to a tool that was never loaded still runs but loads nothing.
 
 Each load adds definitions to the request, which invalidates the provider's prompt cache from that point once; the catalog text itself does not change while the registry is the same. `load_tools` goes through `approve_tool` and `on_tool` like any other tool, and is a reserved name in deferred mode.
+
+What it saves, measured on one run of `glm-5.3` with 33 tools (GitHub and Grafana MCP servers, about 23k tokens of definitions) and the same prompt in both modes. Input tokens are as the provider reported them; the model's path varies from run to run, so read the shape, not the exact numbers.
+
+=== "Chart"
+
+    Input tokens sent so far, after each call (hover or use the arrow keys for each call's numbers):
+
+    <svg class="tok-chart" viewBox="0 0 940 254" data-top="30" data-bottom="230" tabindex="0" role="img" aria-label="Running total of input tokens: eager reaches 74,652 after 3 calls, deferred 21,201 after 4">
+    <line class="tok-grid" x1="44" x2="810" y1="230.0" y2="230.0"/><text class="tok-tick" x="38" y="234.0" text-anchor="end">0k</text>
+    <line class="tok-grid" x1="44" x2="810" y1="180.0" y2="180.0"/><text class="tok-tick" x="38" y="184.0" text-anchor="end">20k</text>
+    <line class="tok-grid" x1="44" x2="810" y1="130.0" y2="130.0"/><text class="tok-tick" x="38" y="134.0" text-anchor="end">40k</text>
+    <line class="tok-grid" x1="44" x2="810" y1="80.0" y2="80.0"/><text class="tok-tick" x="38" y="84.0" text-anchor="end">60k</text>
+    <line class="tok-grid" x1="44" x2="810" y1="30.0" y2="30.0"/><text class="tok-tick" x="38" y="34.0" text-anchor="end">80k</text>
+    <text class="tok-tick" x="54.0" y="248" text-anchor="middle">start</text>
+    <text class="tok-tick" x="241.5" y="248" text-anchor="middle">call 1</text>
+    <text class="tok-tick" x="429.0" y="248" text-anchor="middle">call 2</text>
+    <text class="tok-tick" x="616.5" y="248" text-anchor="middle">call 3</text>
+    <text class="tok-tick" x="804.0" y="248" text-anchor="middle">call 4</text>
+    <path class="tok-line tok-eager" d="M54.0 230.0 L241.5 183.5 L429.0 125.2 L616.5 43.4"/>
+    <circle class="tok-dot tok-eager" cx="241.5" cy="183.5" r="5" data-call="1" data-mode="eager" data-value="18582" data-total="18582"/>
+    <circle class="tok-dot tok-eager" cx="429.0" cy="125.2" r="5" data-call="2" data-mode="eager" data-value="23351" data-total="41933"/>
+    <circle class="tok-dot tok-eager" cx="616.5" cy="43.4" r="5" data-call="3" data-mode="eager" data-value="32719" data-total="74652"/>
+    <text class="tok-label" x="626.5" y="47.4">eager 74.7k</text>
+    <path class="tok-line tok-deferred" d="M54.0 230.0 L241.5 223.1 L429.0 211.9 L616.5 200.3 L804.0 177.0"/>
+    <circle class="tok-dot tok-deferred" cx="241.5" cy="223.1" r="5" data-call="1" data-mode="deferred" data-value="2749" data-total="2749"/>
+    <circle class="tok-dot tok-deferred" cx="429.0" cy="211.9" r="5" data-call="2" data-mode="deferred" data-value="4506" data-total="7255"/>
+    <circle class="tok-dot tok-deferred" cx="616.5" cy="200.3" r="5" data-call="3" data-mode="deferred" data-value="4628" data-total="11883"/>
+    <circle class="tok-dot tok-deferred" cx="804.0" cy="177.0" r="5" data-call="4" data-mode="deferred" data-value="9318" data-total="21201"/>
+    <text class="tok-label" x="814.0" y="181.0">deferred 21.2k</text>
+    </svg>
+
+=== "Table"
+
+    | Call | Eager | Deferred | Deferred sends |
+    |------|-------|----------|----------------|
+    | 1 | <span class="tok-bar tok-eager" style="width:57%"></span>18,582 | <span class="tok-bar tok-deferred" style="width:8%"></span>2,749 | always_loaded + the catalog; the model calls `load_tools` |
+    | 2 | <span class="tok-bar tok-eager" style="width:71%"></span>23,351 | <span class="tok-bar tok-deferred" style="width:14%"></span>4,506 | + the 3 loaded Grafana tools |
+    | 3 | <span class="tok-bar tok-eager" style="width:100%"></span>32,719 | <span class="tok-bar tok-deferred" style="width:14%"></span>4,628 | |
+    | 4 | | <span class="tok-bar tok-deferred" style="width:28%"></span>9,318 | |
+    | **Total** | **74,652** | **21,201** <span class="tok-badge">−72%</span> | one more call than eager |
+
+Deferred was faster as well. Over 3 runs of each mode in the same setup, the median `send()` took 14.0 s with deferred and 21.3 s with eager: deferred made one more call (5 against 4), but each call was smaller and came back sooner.
+
+Eager stays the default because deferred adds:
+
+- an extra round, in which the model calls `load_tools` (one call can load several tools). That round resends the whole history once more, and every later request still carries the catalog, the `load_tools` definition and the full definitions of what was loaded. Deferred only saves the definitions of tools the model never loads. With a handful of small tools, most of which a task ends up using, that saving is smaller than the extra round: with 5 small tools and a task needing 4 of them, deferred sent 54% more input tokens than eager (median of 3 runs: 1,644 against 1,068, in 3 calls against 2);
+- tool choice from one-line descriptions, which weaker models make less reliably;
+- a prompt cache restart at each load, since each load changes the tool list.
+
+Switch to deferred when tool definitions are a large share of each request, typically with several MCP servers. To help the model pick the right tools from the catalog:
+
+- put the tools most tasks start with in `always_loaded`, so the common path needs no load;
+- make the first sentence of each tool description say what it does and when to use it: that sentence (up to 120 characters) is the tool's whole catalog line;
+- name the tools for a task in the system prompt (`"for metrics, load grafana_query"`) when you know the workflow.
+
+A mistyped name is not fatal: the `load_tools` result lists the closest registered names under `unknown`, so the model can load again with the right one.
+
+### History compaction
+
+Every round also resends the whole history. With `compact_after` set, once the provider reports more input tokens than that for the last call, the history before the last `keep_recent_rounds` rounds is handed to the `compactor`, and its output replaces that part in every following request:
+
+```python
+from padwan_ai import AgentSession, ElideToolResults
+
+session = AgentSession(
+    client=llm,
+    mcp_tools=[github, grafana],
+    compact_after=40_000,
+    keep_recent_rounds=2,
+    compactor=ElideToolResults(keep={"spawn"}),
+)
+```
+
+The compactor runs again only when the last call is still over `compact_after` and more rounds have aged out of `keep_recent_rounds`; in between, every request reuses its output as is, so the provider's prompt cache holds. Set `compact_after` well above what a request costs with no history (system prompt plus tool definitions), or every round goes over it and the compactor runs every round. `session.messages` keeps the full history; the compacted part is saved in the snapshot and reset by `clear()`.
+
+#### `ElideToolResults`, the default compactor
+
+Tool results are usually most of the history: a query, a file or a page of logs is thousands of characters, while the call that fetched it is a line. `ElideToolResults` replaces each older tool result with a stub that names the tool and the size it had:
+
+```text
+[elided: 8012 chars of grafana_query result]
+```
+
+Everything else stays as it is: the user's messages, the model's text, and the tool calls with their arguments. The model can still see what it looked up and in which order, and can call a tool again if it needs a result back. The stub keeps the result's `tool_call_id`, so every call still has its result.
+
+A result is left whole when:
+
+- its tool is named in `keep` (`ElideToolResults(keep={"spawn", "read_plan"})`): use it for results the model keeps referring to, like a plan or a sub-agent's report;
+- it is shorter than its stub would be;
+- it is already a stub from an earlier compaction, so the size it shows stays the original one.
+
+Here is what the model is sent after a compaction in a trip of four `grafana_query` rounds, with `keep_recent_rounds=2`:
+
+| # | Message | `session.messages` | Sent to the model |
+|---|---------|--------------------|-------------------|
+| 1 | user | `dig into the api pod` | unchanged |
+| 2 | assistant | calls `grafana_query` | unchanged |
+| 3 | tool | 8,012 chars of metrics | <span class="cmp-elided">`[elided: 8012 chars of grafana_query result]`</span> |
+| 4 | assistant | calls `grafana_query` | unchanged |
+| 5 | tool | 8,012 chars of metrics | <span class="cmp-elided">`[elided: 8012 chars of grafana_query result]`</span> |
+| 6 | assistant | calls `grafana_query` | <span class="cmp-kept">unchanged (last 2 rounds)</span> |
+| 7 | tool | 8,012 chars of metrics | <span class="cmp-kept">unchanged</span> |
+| 8 | assistant | calls `grafana_query` | <span class="cmp-kept">unchanged</span> |
+| 9 | tool | 8,012 chars of metrics | <span class="cmp-kept">unchanged</span> |
+
+<span class="cmp-legend cmp-elided">compacted</span> <span class="cmp-legend cmp-kept">last `keep_recent_rounds` rounds, sent whole</span>
+
+It costs no model call and gives the same output for the same history, but what an elided result said is gone from the model's view: only the fact that it existed remains. When the model needs the gist of old results, summarise them instead.
+
+#### Custom compactors
+
+A compactor implements the `Compactor` protocol: `async def compact(self, messages) -> list[ChatMessage]`. Subclassing `Compactor` lets the type checker verify the signature; any object with that method works too. `messages` is the part being compacted (the system prompt is never included), and the returned list replaces it. This one has a cheaper model summarise the older rounds, keeping the user's first message:
+
+```python
+import json
+from collections.abc import Sequence
+
+from padwan_ai import AgentSession, ChatMessage, Compactor, LLMClient, LLMClientBase
+
+
+class Summarise(Compactor):
+    """Replace older rounds with a summary written by another model."""
+
+    def __init__(self, client: LLMClientBase) -> None:
+        self.client = client
+
+    async def compact(self, messages: Sequence[ChatMessage]) -> list[ChatMessage]:
+        transcript = json.dumps(list(messages[1:]), ensure_ascii=False)
+        response, _ = await self.client.complete_chat(
+            [
+                {
+                    "role": "user",
+                    "content": "Summarise this agent transcript: what was looked up, "
+                    f"what was found (keep the numbers), what is still open.\n{transcript}",
+                }
+            ]
+        )
+        summary = response["content"] or ""
+        return [
+            messages[0],
+            {"role": "user", "content": f"Earlier rounds, summarised:\n{summary}"},
+        ]
+
+
+summariser = LLMClient(model="mistral-small-latest")
+session = AgentSession(
+    client=llm,
+    mcp_tools=[github, grafana],
+    compact_after=40_000,
+    compactor=Summarise(summariser),
+)
+async with summariser, session:
+    answer = await session.send("dig into the api pod")
+```
+
+A later compaction gets the earlier summary back as part of `messages`, so it summarises the summary and the rounds since. A compactor may drop whole rounds but not half of one: if a tool call and its result no longer pair up, the session raises `CompactionError` instead of sending the request.
 
 ### Parallel tool execution
 

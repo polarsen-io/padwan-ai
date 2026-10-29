@@ -7,6 +7,7 @@ __lazy_modules__ = frozenset(
         "padwan_ai.anthropic",
         "padwan_ai.audio",
         "padwan_ai.client",
+        "padwan_ai.compaction",
         "padwan_ai.content",
         "padwan_ai.embeddings",
         "padwan_ai.conversation",
@@ -45,6 +46,7 @@ from .anthropic import (
 )
 from .audio import supports_audio
 from .client import LLMClient, RealtimeClient
+from .compaction import CompactionError, Compactor, ElideToolResults
 from .content import (
     AudioFormat,
     ContentAudioPart,
@@ -60,6 +62,7 @@ from .content import (
 from .conversation import (
     AssistantToolMessage,
     ChatMessage,
+    CompactedHistory,
     ConversationSnapshot,
     ConversationState,
     Message,
@@ -150,6 +153,9 @@ __all__ = (
     "ChatStream",
     "ChoiceAnswer",
     "ChoiceQuestion",
+    "CompactedHistory",
+    "CompactionError",
+    "Compactor",
     "ContentAudioPart",
     "ContentImagePart",
     "ContentPart",
@@ -158,6 +164,7 @@ __all__ = (
     "ElevenLabsModel",
     "ElevenLabsRealtimeSTTClient",
     "ElevenLabsRealtimeTTSClient",
+    "ElideToolResults",
     "ConversationSnapshot",
     "ConversationState",
     "ConversationStore",

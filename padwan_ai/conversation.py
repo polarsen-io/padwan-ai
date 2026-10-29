@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Literal, Self, TypedDict, cast
+from typing import Literal, NotRequired, Self, TypedDict, cast
 
 from .content import ContentPart
 from .models import ChatResponse, ToolCall, UsageToken
@@ -7,6 +7,7 @@ from .models import ChatResponse, ToolCall, UsageToken
 __all__ = (
     "AssistantToolMessage",
     "ChatMessage",
+    "CompactedHistory",
     "ConversationSnapshot",
     "ConversationState",
     "Message",
@@ -49,6 +50,13 @@ class ToolResultMessage(TypedDict):
 ChatMessage = Message | AssistantToolMessage | ToolResultMessage
 
 
+class CompactedHistory(TypedDict):
+    """What the model sees instead of `messages[1 if system else 0:upto]` after a compaction."""
+
+    messages: list[ChatMessage]
+    upto: int
+
+
 class ConversationSnapshot(TypedDict):
     """Serializable view of a `ConversationState`.
 
@@ -60,6 +68,7 @@ class ConversationSnapshot(TypedDict):
     system: str | None
     messages: list[ChatMessage]
     total_usage: UsageToken
+    compacted: NotRequired[CompactedHistory]
 
 
 @dataclass
@@ -77,6 +86,7 @@ class ConversationState:
     total_usage: UsageToken = field(
         default_factory=lambda: {"total": 0, "input": 0, "output": 0}, init=False
     )
+    compacted: CompactedHistory | None = field(default=None, init=False)
 
     def __post_init__(self) -> None:
         if self.system:
@@ -145,6 +155,7 @@ class ConversationState:
 
     def clear(self) -> None:
         """Clear conversation history, keeping only the system message if set."""
+        self.compacted = None
         if self.system:
             self.messages = [Message(role="system", content=self.system)]
         else:
@@ -156,11 +167,16 @@ class ConversationState:
         Includes the system prompt, message history, and accumulated token
         usage. Use with `from_snapshot` to restore.
         """
-        return ConversationSnapshot(
+        snapshot = ConversationSnapshot(
             system=self.system,
             messages=list(self.messages),
             total_usage=cast(UsageToken, dict(self.total_usage)),
         )
+        if self.compacted is not None:
+            snapshot["compacted"] = CompactedHistory(
+                messages=list(self.compacted["messages"]), upto=self.compacted["upto"]
+            )
+        return snapshot
 
     @classmethod
     def from_snapshot(cls, data: ConversationSnapshot) -> Self:
@@ -174,4 +190,5 @@ class ConversationState:
         state.messages = list(data.get("messages", []))
         if usage := data.get("total_usage"):
             state.total_usage = cast(UsageToken, dict(usage))
+        state.compacted = data.get("compacted")
         return state

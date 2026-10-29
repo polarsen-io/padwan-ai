@@ -8,7 +8,7 @@ repo_url = "https://github.com/polarsen-io/padwan-ai"
 repo_name = "polarsen-io/padwan-ai"
 
 extra_css = ["stylesheets/extra.css"]
-extra_javascript = ["javascripts/mermaid.mjs"]
+extra_javascript = ["javascripts/mermaid.mjs", "javascripts/charts.mjs"]
 
 nav = [
   { "Introduction" = "index.md" },
