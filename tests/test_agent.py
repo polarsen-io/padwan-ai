@@ -546,7 +546,11 @@ def test_conversation_state_snapshot_round_trip() -> None:
         ),
     ],
 )
+@pytest.mark.parametrize(
+    "via", [pytest.param("store", id="store"), pytest.param("snapshot", id="snapshot")]
+)
 async def test_load_restores_state_from_store(
+    via: str,
     source_chunks: list[str],
     source_system: str,
     load_system: str | None,
@@ -563,12 +567,17 @@ async def test_load_restores_state_from_store(
     session.save()
 
     client2 = FakeClient(responses=[FakeChatStream(chunks=["y"])])
-    session2 = AgentSession.load(
-        client=client2,
-        store=store,
-        session_id="abc",
-        system=load_system,
-    )
+    if via == "store":
+        session2 = AgentSession.load(
+            client=client2,
+            store=store,
+            session_id="abc",
+            system=load_system,
+        )
+    else:
+        session2 = AgentSession(
+            client=client2, system=load_system, restore=session.snapshot()
+        )
     assert session2.messages == session.messages
     assert session2.system == expected_system
 
