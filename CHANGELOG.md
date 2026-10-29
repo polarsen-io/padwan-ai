@@ -1,3 +1,24 @@
+## 0.17.0 (2026-10-29)
+
+Agents get two ways to send less per round: deferred tool loading and history compaction. Tool calls with non-object arguments no longer slip past the approval hook, MCP credentials stay out of `repr()`, and HTTP/3 is back.
+
+### Features
+
+- **Deferred tool loading**: `AgentSession(tool_loading="deferred")` sends a `load_tools` catalog (one line per tool) instead of every tool definition; the model loads what it needs and the definitions come with the next round. `always_loaded` names tools sent in full from the start. Loads come from `load_tools` results in the history, so a saved and restored session keeps them. Measured on glm-5.3 with 33 tools: 72% fewer input tokens than eager. (#149)
+- **History compaction**: with `compact_after`, once the last call reported more input tokens than that, the history before the last `keep_recent_rounds` rounds is rewritten by a `compactor` and reused until the next compaction. The default `ElideToolResults` replaces old tool results with a stub (`keep=` exempts tools); any object implementing the `Compactor` protocol works, and a compactor that breaks call/result pairing raises `CompactionError`. `session.messages` keeps the full history. (#151)
+- **Anthropic inline system messages**: a system message after the first turn stays in place instead of being hoisted to the top-level `system` field, on models that accept it; Claude 3 and 4.x up to 4-7 keep the hoisting. The OpenAI and Gemini compat proxies map it to a system message instead of a user turn. (#147)
+- **OpenTelemetry**: chat spans record `padwan_ai.request.messages.size`, `padwan_ai.request.tool_definitions.count` and `padwan_ai.request.tool_definitions.size`, to see whether history or tool definitions dominate a request. (#148)
+
+### Fixes
+
+- **Agent approval bypass**: a tool call whose arguments parse to JSON that is not an object (`[]`, `5`, `null`) skipped `approve_tool` and still ran the handler. It now gets an error result before the hook, and neither the hook nor the handler runs. (#141)
+- **Secrets in logs**: `McpStreamable.token` and `McpStdio.env` are left out of `repr()`, and the Gemini Live API key goes in the `x-goog-api-key` header instead of the websocket URL, where a failed handshake copied it into the error and spans. (#143)
+- **HTTP/3 restored**: the chat clients no longer pin HTTP/2; the QUIC flow-control bug (jawah/urllib3.future#440) is fixed in urllib3-future 2.25.904 and qh3 2.1.0, now the floors. (#150)
+
+### Docs and tooling
+
+- The Agents page gets diagrams for the loop and for eager vs deferred loading (they open full screen on click), measured token and latency numbers, and a custom compactor example (#149, #151); the `LLMClient` docstring states the real env-key fallback for a custom `base_url` (#153); weekly LLM SDK refresh (#145); `just test-min` is removed (#146).
+
 ## 0.16.0 (2026-10-23)
 
 Two speech providers join (ElevenLabs and Gradium, both experimental), Anthropic Messages can be served over Gemini, and the chat clients stop upgrading to HTTP/3.
