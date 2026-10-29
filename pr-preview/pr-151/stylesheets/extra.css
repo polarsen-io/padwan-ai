@@ -112,3 +112,44 @@
   background: var(--md-default-bg-color, #fff);
   cursor: zoom-out;
 }
+
+/* Eager vs deferred token stats (docs/agents.md, Deferred tool loading) */
+:root { --tok-eager: #eb6834; --tok-deferred: #2a78d6; }
+[data-md-color-scheme="slate"] { --tok-eager: #d95926; --tok-deferred: #3987e5; }
+.md-typeset .tok-chart { width: 100%; height: auto; display: block; font-size: 13px; }
+.tok-grid { stroke: var(--md-default-fg-color--lightest); }
+.tok-tick { fill: var(--md-default-fg-color--light); }
+.tok-label { fill: var(--md-default-fg-color); font-weight: 600; }
+.tok-line { fill: none; stroke-width: 2; }
+.tok-line.tok-eager { stroke: var(--tok-eager); }
+.tok-line.tok-deferred { stroke: var(--tok-deferred); }
+.tok-dot { stroke: var(--md-default-bg-color); stroke-width: 2; }
+.tok-dot.tok-eager { fill: var(--tok-eager); }
+.tok-dot.tok-deferred { fill: var(--tok-deferred); }
+.md-typeset td:has(> .tok-bar) { position: relative; min-width: 9rem; text-align: left !important; font-variant-numeric: tabular-nums; }
+.md-typeset td:has(> .tok-bar) > :not(.tok-bar), .md-typeset td:has(> .tok-bar) { isolation: isolate; }
+.md-typeset .tok-bar { position: absolute; left: 0; top: 22%; height: 56%; border-radius: 0 3px 3px 0; opacity: 0.3; z-index: -1; }
+.tok-bar.tok-eager { background: var(--tok-eager); }
+.tok-bar.tok-deferred { background: var(--tok-deferred); }
+.md-typeset .tok-badge { background: var(--tok-deferred); color: #fff; border-radius: 0.6rem; padding: 0 0.4rem; font-size: 0.7rem; margin-left: 0.2rem; }
+.tok-wrap { position: relative; }
+.tok-chart:focus-visible { outline: 2px solid var(--md-accent-fg-color); outline-offset: 4px; }
+.tok-guide { stroke: var(--md-default-fg-color--lighter); stroke-dasharray: 3 3; }
+.tok-dot.tok-active { r: 7; }
+.tok-tip {
+  position: absolute; top: 0.5rem; pointer-events: none; z-index: 1;
+  padding: 0.4rem 0.6rem; border-radius: 0.3rem; font-size: 0.7rem; line-height: 1.5; white-space: nowrap;
+  background: var(--md-default-bg-color); color: var(--md-default-fg-color);
+  border: 1px solid var(--md-default-fg-color--lightest); box-shadow: var(--md-shadow-z1);
+}
+.tok-swatch { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; margin-right: 0.35rem; }
+.tok-swatch.tok-eager { background: var(--tok-eager); }
+.tok-swatch.tok-deferred { background: var(--tok-deferred); }
+.tok-muted { color: var(--md-default-fg-color--light); }
+
+/* Compaction example table (docs/agents.md, History compaction): compacted vs kept rows */
+.md-typeset tr:has(.cmp-elided) { background: color-mix(in srgb, var(--tok-eager) 13%, transparent); }
+.md-typeset tr:has(.cmp-kept) { background: color-mix(in srgb, var(--tok-deferred) 10%, transparent); }
+.md-typeset .cmp-legend { display: inline-block; font-size: 0.7rem; padding: 0 0.5rem; border-radius: 0.2rem; margin-right: 0.4rem; }
+.md-typeset .cmp-legend.cmp-elided { background: color-mix(in srgb, var(--tok-eager) 20%, transparent); }
+.md-typeset .cmp-legend.cmp-kept { background: color-mix(in srgb, var(--tok-deferred) 16%, transparent); }

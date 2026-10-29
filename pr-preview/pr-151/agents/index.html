@@ -478,6 +478,28 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
       </span>
 </span>
 </a>
+<nav aria-label="History compaction" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#elidetoolresults-the-default-compactor">
+<span class="md-ellipsis">
+<span class="md-typeset">
+<code>ElideToolResults</code>, the default compactor
+      </span>
+</span>
+</a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#custom-compactors">
+<span class="md-ellipsis">
+<span class="md-typeset">
+        Custom compactors
+      </span>
+</span>
+</a>
+</li>
+</ul>
+</nav>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#parallel-tool-execution">
@@ -584,13 +606,13 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </div>
 </div>
 <div class="md-content" data-md-component="content">
-<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">15 added</span> · <span class="c">3 changed</span> · 1 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
+<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">41 added</span> · <span class="c">1 changed</span> · 0 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
 <h1 id="agents">Agents</h1>
 <p><code>AgentSession</code> is the agentic loop built on top of the unified chat interface. Given a client, a system prompt, and zero or more tools, it repeatedly calls the LLM, dispatches any tool calls the model requests, feeds the results back, and keeps going until the model produces a plain text answer (or a round limit is hit).</p>
 <h2 id="the-loop">The loop</h2>
-<p data-pr-diff="added"><img alt="The agent loop: each round picks the tool definitions to send (every definition when eager; always_loaded, the output= tool, the load_tools catalog and the tools loaded so far when deferred), calls the LLM, returns the text if there are no tool calls, otherwise runs approve_tool and the handlers, appends the results and starts the next round; the loop stops with a limit-reached message once the rounds are exhausted" class="zoomable" src="../static/agents/loop.svg"/></p>
-<p data-pr-diff="changed">Each iteration of the loop is called a <strong>round</strong>. Tool lists are re-read at the top of every round, so MCP servers that emit <code>notifications/tools/list_changed</code> (and refresh <code>McpStreamable.tools</code> / <code>McpStdio.tools</code> in place) get picked up without restarting the session. Which definitions a round sends depends on <code>tool_loading</code> (see <a href="#deferred-tool-loading">Deferred tool loading</a>).</p>
-<p data-pr-diff="changed">With <code>output=</code> set (see <a href="#typed-answers">Typed answers</a>), the round limit and a text answer without a tool call both raise <code>OutputError</code> instead of yielding a limit-reached message. "run handlers" above runs each handler wrapped by the <code>on_tool</code> context manager, if set.</p>
+<p><img alt="The agent loop: each round picks the tool definitions to send (every definition when eager; always_loaded, the output= tool, the load_tools catalog and the tools loaded so far when deferred), calls the LLM, returns the text if there are no tool calls, otherwise runs approve_tool and the handlers, appends the results and starts the next round; the loop stops with a limit-reached message once the rounds are exhausted" class="zoomable" src="../static/agents/loop.svg"/></p>
+<p>Each iteration of the loop is called a <strong>round</strong>. Tool lists are re-read at the top of every round, so MCP servers that emit <code>notifications/tools/list_changed</code> (and refresh <code>McpStreamable.tools</code> / <code>McpStdio.tools</code> in place) get picked up without restarting the session. Which definitions a round sends depends on <code>tool_loading</code> (see <a href="#deferred-tool-loading">Deferred tool loading</a>).</p>
+<p>With <code>output=</code> set (see <a href="#typed-answers">Typed answers</a>), the round limit and a text answer without a tool call both raise <code>OutputError</code> instead of yielding a limit-reached message. "run handlers" above runs each handler wrapped by the <code>on_tool</code> context manager, if set.</p>
 <p>A text run never raises on those: an empty answer yields <code>"(no response)"</code> and the round limit a limit-reached message, both as text. <code>session.stop_reason</code> tells them apart from a real answer once the run is over: <code>"answer"</code>, <code>"empty"</code> or <code>"round_limit"</code> (<code>None</code> before the first run, while one is in flight, and after a run that raised, such as a typed run's <code>OutputError</code>).</p>
 <h2 id="quick-start">Quick start</h2>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a href="#__codelineno-0-1" id="__codelineno-0-1" name="__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">McpStdio</span>
@@ -761,32 +783,121 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 </span><span id="__span-7-20"><a href="#__codelineno-7-20" id="__codelineno-7-20" name="__codelineno-7-20"></a>    <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># AgentOutput(cls, ...) for a typed answer through run() — see above</span>
 </span><span id="__span-7-21"><a href="#__codelineno-7-21" id="__codelineno-7-21" name="__codelineno-7-21"></a><span class="p">)</span>
 </span></code></pre></div>
-<h3 data-pr-diff="added" id="deferred-tool-loading">Deferred tool loading</h3>
-<p data-pr-diff="added">By default (<code>tool_loading="eager"</code>) every round resends every tool definition. With many tools (a few MCP servers easily make 20k tokens of JSON schemas) that is most of each request. <code>tool_loading="deferred"</code> sends instead:</p>
+<h3 id="deferred-tool-loading">Deferred tool loading</h3>
+<p>By default (<code>tool_loading="eager"</code>) every round resends every tool definition. With many tools (a few MCP servers easily make 20k tokens of JSON schemas) that is most of each request. <code>tool_loading="deferred"</code> sends instead:</p>
 <ul>
-<li data-pr-diff="added">the <code>always_loaded</code> tools and the <code>output=</code> tool, in full;</li>
-<li data-pr-diff="added">a <code>load_tools</code> tool whose description lists every other tool, one line each (<code>name: first sentence of its description</code>);</li>
-<li data-pr-diff="added">the tools loaded so far, in load order.</li>
+<li>the <code>always_loaded</code> tools and the <code>output=</code> tool, in full;</li>
+<li>a <code>load_tools</code> tool whose description lists every other tool, one line each (<code>name: first sentence of its description</code>);</li>
+<li>the tools loaded so far, in load order.</li>
 </ul>
-<div class="tabbed-set tabbed-alternate" data-pr-diff="added" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio"/><input id="__tabbed_2_2" name="__tabbed_2" type="radio"/><div class="tabbed-labels"><label for="__tabbed_2_1">Eager (default)</label><label for="__tabbed_2_2">Deferred</label></div>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio"/><input id="__tabbed_2_2" name="__tabbed_2" type="radio"/><div class="tabbed-labels"><label for="__tabbed_2_1">Eager (default)</label><label for="__tabbed_2_2">Deferred</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<p><img alt="Eager: local tools, MCP server tools and the output= tool all go into every request as full definitions" class="zoomable" src="../static/agents/tools-eager.svg" width="640"/></p>
+<p><img alt="Eager: local tools, MCP server tools and the output= tool all go into every request as full definitions" class="zoomable" src="../static/agents/tools-eager.svg"/></p>
 </div>
 <div class="tabbed-block">
-<p><img alt="Deferred: always_loaded and the output= tool go into every request in full; every other tool is one line in the load_tools catalog until a load_tools result names it, after which its full definition is sent too" class="zoomable" src="../static/agents/tools-deferred.svg" width="640"/></p>
+<p><img alt="Deferred: always_loaded and the output= tool go into every request in full; every other tool is one line in the load_tools catalog until a load_tools result names it, after which its full definition is sent too" class="zoomable" src="../static/agents/tools-deferred.svg"/></p>
 </div>
 </div>
 </div>
-<div class="language-python highlight" data-pr-diff="added"><pre><span></span><code><span id="__span-8-1"><a href="#__codelineno-8-1" id="__codelineno-8-1" name="__codelineno-8-1"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a href="#__codelineno-8-1" id="__codelineno-8-1" name="__codelineno-8-1"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
 </span><span id="__span-8-2"><a href="#__codelineno-8-2" id="__codelineno-8-2" name="__codelineno-8-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">llm</span><span class="p">,</span>
 </span><span id="__span-8-3"><a href="#__codelineno-8-3" id="__codelineno-8-3" name="__codelineno-8-3"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="n">github</span><span class="p">,</span> <span class="n">grafana</span><span class="p">],</span>
 </span><span id="__span-8-4"><a href="#__codelineno-8-4" id="__codelineno-8-4" name="__codelineno-8-4"></a>    <span class="n">tool_loading</span><span class="o">=</span><span class="s2">"deferred"</span><span class="p">,</span>
 </span><span id="__span-8-5"><a href="#__codelineno-8-5" id="__codelineno-8-5" name="__codelineno-8-5"></a>    <span class="n">always_loaded</span><span class="o">=</span><span class="p">(</span><span class="s2">"plan"</span><span class="p">,),</span>
 </span><span id="__span-8-6"><a href="#__codelineno-8-6" id="__codelineno-8-6" name="__codelineno-8-6"></a><span class="p">)</span>
 </span></code></pre></div>
-<p data-pr-diff="added">The model calls <code>load_tools(names=[...])</code>; the result lists what was loaded and the closest matches for unknown names, and the next round carries those definitions. Only <code>load_tools</code> results load a tool, and they stay in <code>session.messages</code>, so a saved and restored session keeps its loaded tools. A loaded tool that later leaves the registry is no longer sent. A call to a tool that was never loaded still runs but loads nothing.</p>
-<p data-pr-diff="added">Each load adds definitions to the request, which invalidates the provider's prompt cache from that point once; the catalog text itself does not change while the registry is the same. <code>load_tools</code> goes through <code>approve_tool</code> and <code>on_tool</code> like any other tool, and is a reserved name in deferred mode.</p>
+<p>The model calls <code>load_tools(names=[...])</code>; the result lists what was loaded and the closest matches for unknown names, and the next round carries those definitions. Only <code>load_tools</code> results load a tool, and they stay in <code>session.messages</code>, so a saved and restored session keeps its loaded tools. A loaded tool that later leaves the registry is no longer sent. A call to a tool that was never loaded still runs but loads nothing.</p>
+<p>Each load adds definitions to the request, which invalidates the provider's prompt cache from that point once; the catalog text itself does not change while the registry is the same. <code>load_tools</code> goes through <code>approve_tool</code> and <code>on_tool</code> like any other tool, and is a reserved name in deferred mode.</p>
+<p data-pr-diff="added">What it saves, measured on one run of <code>glm-5.3</code> with 33 tools (GitHub and Grafana MCP servers, about 23k tokens of definitions) and the same prompt in both modes. Input tokens are as the provider reported them; the model's path varies from run to run, so read the shape, not the exact numbers.</p>
+<div class="tabbed-set tabbed-alternate" data-pr-diff="added" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio"/><input id="__tabbed_3_2" name="__tabbed_3" type="radio"/><div class="tabbed-labels"><label for="__tabbed_3_1">Chart</label><label for="__tabbed_3_2">Table</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Input tokens sent so far, after each call (hover or use the arrow keys for each call's numbers):</p>
+<p><svg aria-label="Running total of input tokens: eager reaches 74,652 after 3 calls, deferred 21,201 after 4" class="tok-chart" data-bottom="230" data-top="30" role="img" tabindex="0" viewbox="0 0 940 254">
+<line class="tok-grid" x1="44" x2="810" y1="230.0" y2="230.0"></line><text class="tok-tick" text-anchor="end" x="38" y="234.0">0k</text>
+<line class="tok-grid" x1="44" x2="810" y1="180.0" y2="180.0"></line><text class="tok-tick" text-anchor="end" x="38" y="184.0">20k</text>
+<line class="tok-grid" x1="44" x2="810" y1="130.0" y2="130.0"></line><text class="tok-tick" text-anchor="end" x="38" y="134.0">40k</text>
+<line class="tok-grid" x1="44" x2="810" y1="80.0" y2="80.0"></line><text class="tok-tick" text-anchor="end" x="38" y="84.0">60k</text>
+<line class="tok-grid" x1="44" x2="810" y1="30.0" y2="30.0"></line><text class="tok-tick" text-anchor="end" x="38" y="34.0">80k</text>
+<text class="tok-tick" text-anchor="middle" x="54.0" y="248">start</text>
+<text class="tok-tick" text-anchor="middle" x="241.5" y="248">call 1</text>
+<text class="tok-tick" text-anchor="middle" x="429.0" y="248">call 2</text>
+<text class="tok-tick" text-anchor="middle" x="616.5" y="248">call 3</text>
+<text class="tok-tick" text-anchor="middle" x="804.0" y="248">call 4</text>
+<path class="tok-line tok-eager" d="M54.0 230.0 L241.5 183.5 L429.0 125.2 L616.5 43.4"></path>
+<circle class="tok-dot tok-eager" cx="241.5" cy="183.5" data-call="1" data-mode="eager" data-total="18582" data-value="18582" r="5"></circle>
+<circle class="tok-dot tok-eager" cx="429.0" cy="125.2" data-call="2" data-mode="eager" data-total="41933" data-value="23351" r="5"></circle>
+<circle class="tok-dot tok-eager" cx="616.5" cy="43.4" data-call="3" data-mode="eager" data-total="74652" data-value="32719" r="5"></circle>
+<text class="tok-label" x="626.5" y="47.4">eager 74.7k</text>
+<path class="tok-line tok-deferred" d="M54.0 230.0 L241.5 223.1 L429.0 211.9 L616.5 200.3 L804.0 177.0"></path>
+<circle class="tok-dot tok-deferred" cx="241.5" cy="223.1" data-call="1" data-mode="deferred" data-total="2749" data-value="2749" r="5"></circle>
+<circle class="tok-dot tok-deferred" cx="429.0" cy="211.9" data-call="2" data-mode="deferred" data-total="7255" data-value="4506" r="5"></circle>
+<circle class="tok-dot tok-deferred" cx="616.5" cy="200.3" data-call="3" data-mode="deferred" data-total="11883" data-value="4628" r="5"></circle>
+<circle class="tok-dot tok-deferred" cx="804.0" cy="177.0" data-call="4" data-mode="deferred" data-total="21201" data-value="9318" r="5"></circle>
+<text class="tok-label" x="814.0" y="181.0">deferred 21.2k</text>
+</svg></p>
+</div>
+<div class="tabbed-block">
+<table>
+<thead>
+<tr>
+<th>Call</th>
+<th>Eager</th>
+<th>Deferred</th>
+<th>Deferred sends</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><span class="tok-bar tok-eager" style="width:57%"></span>18,582</td>
+<td><span class="tok-bar tok-deferred" style="width:8%"></span>2,749</td>
+<td>always_loaded + the catalog; the model calls <code>load_tools</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><span class="tok-bar tok-eager" style="width:71%"></span>23,351</td>
+<td><span class="tok-bar tok-deferred" style="width:14%"></span>4,506</td>
+<td>+ the 3 loaded Grafana tools</td>
+</tr>
+<tr>
+<td>3</td>
+<td><span class="tok-bar tok-eager" style="width:100%"></span>32,719</td>
+<td><span class="tok-bar tok-deferred" style="width:14%"></span>4,628</td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+<td><span class="tok-bar tok-deferred" style="width:28%"></span>9,318</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>74,652</strong></td>
+<td><strong>21,201</strong> <span class="tok-badge">−72%</span></td>
+<td>one more call than eager</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p data-pr-diff="added">Deferred was faster as well. Over 3 runs of each mode in the same setup, the median <code>send()</code> took 14.0 s with deferred and 21.3 s with eager: deferred made one more call (5 against 4), but each call was smaller and came back sooner.</p>
+<p data-pr-diff="added">Eager stays the default because deferred adds:</p>
+<ul>
+<li data-pr-diff="added">an extra round, in which the model calls <code>load_tools</code> (one call can load several tools). That round resends the whole history once more, and every later request still carries the catalog, the <code>load_tools</code> definition and the full definitions of what was loaded. Deferred only saves the definitions of tools the model never loads. With a handful of small tools, most of which a task ends up using, that saving is smaller than the extra round: with 5 small tools and a task needing 4 of them, deferred sent 54% more input tokens than eager (median of 3 runs: 1,644 against 1,068, in 3 calls against 2);</li>
+<li data-pr-diff="added">tool choice from one-line descriptions, which weaker models make less reliably;</li>
+<li data-pr-diff="added">a prompt cache restart at each load, since each load changes the tool list.</li>
+</ul>
+<p data-pr-diff="added">Switch to deferred when tool definitions are a large share of each request, typically with several MCP servers. To help the model pick the right tools from the catalog:</p>
+<ul>
+<li data-pr-diff="added">put the tools most tasks start with in <code>always_loaded</code>, so the common path needs no load;</li>
+<li data-pr-diff="added">make the first sentence of each tool description say what it does and when to use it: that sentence (up to 120 characters) is the tool's whole catalog line;</li>
+<li data-pr-diff="added">name the tools for a task in the system prompt (<code>"for metrics, load grafana_query"</code>) when you know the workflow.</li>
+</ul>
+<p data-pr-diff="added">A mistyped name is not fatal: the <code>load_tools</code> result lists the closest registered names under <code>unknown</code>, so the model can load again with the right one.</p>
 <h3 data-pr-diff="added" id="history-compaction">History compaction</h3>
 <p data-pr-diff="added">Every round also resends the whole history. With <code>compact_after</code> set, once the provider reports more input tokens than that for the last call, the history before the last <code>keep_recent_rounds</code> rounds is handed to the <code>compactor</code>, and its output replaces that part in every following request:</p>
 <div class="language-python highlight" data-pr-diff="added"><pre><span></span><code><span id="__span-9-1"><a href="#__codelineno-9-1" id="__codelineno-9-1" name="__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">ElideToolResults</span>
@@ -795,104 +906,227 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 </span><span id="__span-9-4"><a href="#__codelineno-9-4" id="__codelineno-9-4" name="__codelineno-9-4"></a>    <span class="n">client</span><span class="o">=</span><span class="n">llm</span><span class="p">,</span>
 </span><span id="__span-9-5"><a href="#__codelineno-9-5" id="__codelineno-9-5" name="__codelineno-9-5"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="n">github</span><span class="p">,</span> <span class="n">grafana</span><span class="p">],</span>
 </span><span id="__span-9-6"><a href="#__codelineno-9-6" id="__codelineno-9-6" name="__codelineno-9-6"></a>    <span class="n">compact_after</span><span class="o">=</span><span class="mi">40_000</span><span class="p">,</span>
-</span><span id="__span-9-7"><a href="#__codelineno-9-7" id="__codelineno-9-7" name="__codelineno-9-7"></a>    <span class="n">compactor</span><span class="o">=</span><span class="n">ElideToolResults</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="p">{</span><span class="s2">"spawn"</span><span class="p">}),</span>
-</span><span id="__span-9-8"><a href="#__codelineno-9-8" id="__codelineno-9-8" name="__codelineno-9-8"></a><span class="p">)</span>
+</span><span id="__span-9-7"><a href="#__codelineno-9-7" id="__codelineno-9-7" name="__codelineno-9-7"></a>    <span class="n">keep_recent_rounds</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="__span-9-8"><a href="#__codelineno-9-8" id="__codelineno-9-8" name="__codelineno-9-8"></a>    <span class="n">compactor</span><span class="o">=</span><span class="n">ElideToolResults</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="p">{</span><span class="s2">"spawn"</span><span class="p">}),</span>
+</span><span id="__span-9-9"><a href="#__codelineno-9-9" id="__codelineno-9-9" name="__codelineno-9-9"></a><span class="p">)</span>
 </span></code></pre></div>
-<p data-pr-diff="added">The default <code>ElideToolResults</code> replaces old tool results with <code>[elided: &lt;n&gt; chars of &lt;tool&gt; result]</code>, except for the tools named in <code>keep</code> and results shorter than the stub. Any object with <code>async def compact(self, messages) -&gt; list[ChatMessage]</code> works, e.g. one that summarises old rounds with a cheaper model; a result whose tool calls and results no longer pair up raises <code>CompactionError</code>.</p>
-<p data-pr-diff="added">The compactor runs once per trip, not every round: its output is reused until the next trip, so the provider's prompt cache holds between compactions. <code>session.messages</code> keeps the full history; the compacted part is saved in the snapshot and reset by <code>clear()</code>.</p>
+<p data-pr-diff="added">The compactor runs again only when the last call is still over <code>compact_after</code> and more rounds have aged out of <code>keep_recent_rounds</code>; in between, every request reuses its output as is, so the provider's prompt cache holds. Set <code>compact_after</code> well above what a request costs with no history (system prompt plus tool definitions), or every round goes over it and the compactor runs every round. <code>session.messages</code> keeps the full history; the compacted part is saved in the snapshot and reset by <code>clear()</code>.</p>
+<h4 data-pr-diff="added" id="elidetoolresults-the-default-compactor"><code>ElideToolResults</code>, the default compactor</h4>
+<p data-pr-diff="added">Tool results are usually most of the history: a query, a file or a page of logs is thousands of characters, while the call that fetched it is a line. <code>ElideToolResults</code> replaces each older tool result with a stub that names the tool and the size it had:</p>
+<div class="language-text highlight" data-pr-diff="added"><pre><span></span><code><span id="__span-10-1"><a href="#__codelineno-10-1" id="__codelineno-10-1" name="__codelineno-10-1"></a>[elided: 8012 chars of grafana_query result]
+</span></code></pre></div>
+<p data-pr-diff="added">Everything else stays as it is: the user's messages, the model's text, and the tool calls with their arguments. The model can still see what it looked up and in which order, and can call a tool again if it needs a result back. The stub keeps the result's <code>tool_call_id</code>, so every call still has its result.</p>
+<p data-pr-diff="added">A result is left whole when:</p>
+<ul>
+<li data-pr-diff="added">its tool is named in <code>keep</code> (<code>ElideToolResults(keep={"spawn", "read_plan"})</code>): use it for results the model keeps referring to, like a plan or a sub-agent's report;</li>
+<li data-pr-diff="added">it is shorter than its stub would be;</li>
+<li data-pr-diff="added">it is already a stub from an earlier compaction, so the size it shows stays the original one.</li>
+</ul>
+<p data-pr-diff="added">Here is what the model is sent after a compaction in a trip of four <code>grafana_query</code> rounds, with <code>keep_recent_rounds=2</code>:</p>
+<table>
+<thead>
+<tr data-pr-diff="added">
+<th>#</th>
+<th>Message</th>
+<th><code>session.messages</code></th>
+<th>Sent to the model</th>
+</tr>
+</thead>
+<tbody>
+<tr data-pr-diff="added">
+<td>1</td>
+<td>user</td>
+<td><code>dig into the api pod</code></td>
+<td>unchanged</td>
+</tr>
+<tr data-pr-diff="added">
+<td>2</td>
+<td>assistant</td>
+<td>calls <code>grafana_query</code></td>
+<td>unchanged</td>
+</tr>
+<tr data-pr-diff="added">
+<td>3</td>
+<td>tool</td>
+<td>8,012 chars of metrics</td>
+<td><span class="cmp-elided"><code>[elided: 8012 chars of grafana_query result]</code></span></td>
+</tr>
+<tr data-pr-diff="added">
+<td>4</td>
+<td>assistant</td>
+<td>calls <code>grafana_query</code></td>
+<td>unchanged</td>
+</tr>
+<tr data-pr-diff="added">
+<td>5</td>
+<td>tool</td>
+<td>8,012 chars of metrics</td>
+<td><span class="cmp-elided"><code>[elided: 8012 chars of grafana_query result]</code></span></td>
+</tr>
+<tr data-pr-diff="added">
+<td>6</td>
+<td>assistant</td>
+<td>calls <code>grafana_query</code></td>
+<td><span class="cmp-kept">unchanged (last 2 rounds)</span></td>
+</tr>
+<tr data-pr-diff="added">
+<td>7</td>
+<td>tool</td>
+<td>8,012 chars of metrics</td>
+<td><span class="cmp-kept">unchanged</span></td>
+</tr>
+<tr data-pr-diff="added">
+<td>8</td>
+<td>assistant</td>
+<td>calls <code>grafana_query</code></td>
+<td><span class="cmp-kept">unchanged</span></td>
+</tr>
+<tr data-pr-diff="added">
+<td>9</td>
+<td>tool</td>
+<td>8,012 chars of metrics</td>
+<td><span class="cmp-kept">unchanged</span></td>
+</tr>
+</tbody>
+</table>
+<p data-pr-diff="added"><span class="cmp-legend cmp-elided">compacted</span> <span class="cmp-legend cmp-kept">last <code>keep_recent_rounds</code> rounds, sent whole</span></p>
+<p data-pr-diff="added">It costs no model call and gives the same output for the same history, but what an elided result said is gone from the model's view: only the fact that it existed remains. When the model needs the gist of old results, summarise them instead.</p>
+<h4 data-pr-diff="added" id="custom-compactors">Custom compactors</h4>
+<p data-pr-diff="added">A compactor implements the <code>Compactor</code> protocol: <code>async def compact(self, messages) -&gt; list[ChatMessage]</code>. Subclassing <code>Compactor</code> lets the type checker verify the signature; any object with that method works too. <code>messages</code> is the part being compacted (the system prompt is never included), and the returned list replaces it. This one has a cheaper model summarise the older rounds, keeping the user's first message:</p>
+<div class="language-python highlight" data-pr-diff="added"><pre><span></span><code><span id="__span-11-1"><a href="#__codelineno-11-1" id="__codelineno-11-1" name="__codelineno-11-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+</span><span id="__span-11-2"><a href="#__codelineno-11-2" id="__codelineno-11-2" name="__codelineno-11-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Sequence</span>
+</span><span id="__span-11-3"><a href="#__codelineno-11-3" id="__codelineno-11-3" name="__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a href="#__codelineno-11-4" id="__codelineno-11-4" name="__codelineno-11-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">ChatMessage</span><span class="p">,</span> <span class="n">Compactor</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">LLMClientBase</span>
+</span><span id="__span-11-5"><a href="#__codelineno-11-5" id="__codelineno-11-5" name="__codelineno-11-5"></a>
+</span><span id="__span-11-6"><a href="#__codelineno-11-6" id="__codelineno-11-6" name="__codelineno-11-6"></a>
+</span><span id="__span-11-7"><a href="#__codelineno-11-7" id="__codelineno-11-7" name="__codelineno-11-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">Summarise</span><span class="p">(</span><span class="n">Compactor</span><span class="p">):</span>
+</span><span id="__span-11-8"><a href="#__codelineno-11-8" id="__codelineno-11-8" name="__codelineno-11-8"></a><span class="w">    </span><span class="sd">"""Replace older rounds with a summary written by another model."""</span>
+</span><span id="__span-11-9"><a href="#__codelineno-11-9" id="__codelineno-11-9" name="__codelineno-11-9"></a>
+</span><span id="__span-11-10"><a href="#__codelineno-11-10" id="__codelineno-11-10" name="__codelineno-11-10"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">:</span> <span class="n">LLMClientBase</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-11-11"><a href="#__codelineno-11-11" id="__codelineno-11-11" name="__codelineno-11-11"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">client</span>
+</span><span id="__span-11-12"><a href="#__codelineno-11-12" id="__codelineno-11-12" name="__codelineno-11-12"></a>
+</span><span id="__span-11-13"><a href="#__codelineno-11-13" id="__codelineno-11-13" name="__codelineno-11-13"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">compact</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messages</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">ChatMessage</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ChatMessage</span><span class="p">]:</span>
+</span><span id="__span-11-14"><a href="#__codelineno-11-14" id="__codelineno-11-14" name="__codelineno-11-14"></a>        <span class="n">transcript</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">messages</span><span class="p">[</span><span class="mi">1</span><span class="p">:]),</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span><span id="__span-11-15"><a href="#__codelineno-11-15" id="__codelineno-11-15" name="__codelineno-11-15"></a>        <span class="n">response</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">complete_chat</span><span class="p">(</span>
+</span><span id="__span-11-16"><a href="#__codelineno-11-16" id="__codelineno-11-16" name="__codelineno-11-16"></a>            <span class="p">[</span>
+</span><span id="__span-11-17"><a href="#__codelineno-11-17" id="__codelineno-11-17" name="__codelineno-11-17"></a>                <span class="p">{</span>
+</span><span id="__span-11-18"><a href="#__codelineno-11-18" id="__codelineno-11-18" name="__codelineno-11-18"></a>                    <span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span>
+</span><span id="__span-11-19"><a href="#__codelineno-11-19" id="__codelineno-11-19" name="__codelineno-11-19"></a>                    <span class="s2">"content"</span><span class="p">:</span> <span class="s2">"Summarise this agent transcript: what was looked up, "</span>
+</span><span id="__span-11-20"><a href="#__codelineno-11-20" id="__codelineno-11-20" name="__codelineno-11-20"></a>                    <span class="sa">f</span><span class="s2">"what was found (keep the numbers), what is still open.</span><span class="se">\n</span><span class="si">{</span><span class="n">transcript</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="__span-11-21"><a href="#__codelineno-11-21" id="__codelineno-11-21" name="__codelineno-11-21"></a>                <span class="p">}</span>
+</span><span id="__span-11-22"><a href="#__codelineno-11-22" id="__codelineno-11-22" name="__codelineno-11-22"></a>            <span class="p">]</span>
+</span><span id="__span-11-23"><a href="#__codelineno-11-23" id="__codelineno-11-23" name="__codelineno-11-23"></a>        <span class="p">)</span>
+</span><span id="__span-11-24"><a href="#__codelineno-11-24" id="__codelineno-11-24" name="__codelineno-11-24"></a>        <span class="n">summary</span> <span class="o">=</span> <span class="n">response</span><span class="p">[</span><span class="s2">"content"</span><span class="p">]</span> <span class="ow">or</span> <span class="s2">""</span>
+</span><span id="__span-11-25"><a href="#__codelineno-11-25" id="__codelineno-11-25" name="__codelineno-11-25"></a>        <span class="k">return</span> <span class="p">[</span>
+</span><span id="__span-11-26"><a href="#__codelineno-11-26" id="__codelineno-11-26" name="__codelineno-11-26"></a>            <span class="n">messages</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+</span><span id="__span-11-27"><a href="#__codelineno-11-27" id="__codelineno-11-27" name="__codelineno-11-27"></a>            <span class="p">{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"Earlier rounds, summarised:</span><span class="se">\n</span><span class="si">{</span><span class="n">summary</span><span class="si">}</span><span class="s2">"</span><span class="p">},</span>
+</span><span id="__span-11-28"><a href="#__codelineno-11-28" id="__codelineno-11-28" name="__codelineno-11-28"></a>        <span class="p">]</span>
+</span><span id="__span-11-29"><a href="#__codelineno-11-29" id="__codelineno-11-29" name="__codelineno-11-29"></a>
+</span><span id="__span-11-30"><a href="#__codelineno-11-30" id="__codelineno-11-30" name="__codelineno-11-30"></a>
+</span><span id="__span-11-31"><a href="#__codelineno-11-31" id="__codelineno-11-31" name="__codelineno-11-31"></a><span class="n">summariser</span> <span class="o">=</span> <span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"mistral-small-latest"</span><span class="p">)</span>
+</span><span id="__span-11-32"><a href="#__codelineno-11-32" id="__codelineno-11-32" name="__codelineno-11-32"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
+</span><span id="__span-11-33"><a href="#__codelineno-11-33" id="__codelineno-11-33" name="__codelineno-11-33"></a>    <span class="n">client</span><span class="o">=</span><span class="n">llm</span><span class="p">,</span>
+</span><span id="__span-11-34"><a href="#__codelineno-11-34" id="__codelineno-11-34" name="__codelineno-11-34"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="n">github</span><span class="p">,</span> <span class="n">grafana</span><span class="p">],</span>
+</span><span id="__span-11-35"><a href="#__codelineno-11-35" id="__codelineno-11-35" name="__codelineno-11-35"></a>    <span class="n">compact_after</span><span class="o">=</span><span class="mi">40_000</span><span class="p">,</span>
+</span><span id="__span-11-36"><a href="#__codelineno-11-36" id="__codelineno-11-36" name="__codelineno-11-36"></a>    <span class="n">compactor</span><span class="o">=</span><span class="n">Summarise</span><span class="p">(</span><span class="n">summariser</span><span class="p">),</span>
+</span><span id="__span-11-37"><a href="#__codelineno-11-37" id="__codelineno-11-37" name="__codelineno-11-37"></a><span class="p">)</span>
+</span><span id="__span-11-38"><a href="#__codelineno-11-38" id="__codelineno-11-38" name="__codelineno-11-38"></a><span class="k">async</span> <span class="k">with</span> <span class="n">summariser</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span>
+</span><span id="__span-11-39"><a href="#__codelineno-11-39" id="__codelineno-11-39" name="__codelineno-11-39"></a>    <span class="n">answer</span> <span class="o">=</span> <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"dig into the api pod"</span><span class="p">)</span>
+</span></code></pre></div>
+<p data-pr-diff="added">A later compaction gets the earlier summary back as part of <code>messages</code>, so it summarises the summary and the rounds since. A compactor may drop whole rounds but not half of one: if a tool call and its result no longer pair up, the session raises <code>CompactionError</code> instead of sending the request.</p>
 <h3 id="parallel-tool-execution">Parallel tool execution</h3>
 <p>When a single LLM response contains multiple tool calls, <code>execution="parallel"</code> dispatches them via <code>asyncio.gather</code>. Results are still appended to the message history in original call order:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a href="#__codelineno-10-1" id="__codelineno-10-1" name="__codelineno-10-1"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-10-2"><a href="#__codelineno-10-2" id="__codelineno-10-2" name="__codelineno-10-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
-</span><span id="__span-10-3"><a href="#__codelineno-10-3" id="__codelineno-10-3" name="__codelineno-10-3"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>
-</span><span id="__span-10-4"><a href="#__codelineno-10-4" id="__codelineno-10-4" name="__codelineno-10-4"></a>    <span class="n">execution</span><span class="o">=</span><span class="s2">"parallel"</span><span class="p">,</span>
-</span><span id="__span-10-5"><a href="#__codelineno-10-5" id="__codelineno-10-5" name="__codelineno-10-5"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a href="#__codelineno-12-1" id="__codelineno-12-1" name="__codelineno-12-1"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
+</span><span id="__span-12-2"><a href="#__codelineno-12-2" id="__codelineno-12-2" name="__codelineno-12-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
+</span><span id="__span-12-3"><a href="#__codelineno-12-3" id="__codelineno-12-3" name="__codelineno-12-3"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>
+</span><span id="__span-12-4"><a href="#__codelineno-12-4" id="__codelineno-12-4" name="__codelineno-12-4"></a>    <span class="n">execution</span><span class="o">=</span><span class="s2">"parallel"</span><span class="p">,</span>
+</span><span id="__span-12-5"><a href="#__codelineno-12-5" id="__codelineno-12-5" name="__codelineno-12-5"></a><span class="p">)</span>
 </span></code></pre></div>
 <p>Use the default <code>"sequential"</code> if you care about ordering side effects or want to rate-limit the downstream servers.</p>
 <h3 id="approval-hooks">Approval hooks</h3>
 <p><code>approve_tool</code> runs before every tool dispatch. Return <code>False</code> to block the call — the agent will append <code>{"error": "Tool call denied by approval hook: &lt;name&gt;"}</code> as the result instead of executing the handler. The hook may be sync or async:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a href="#__codelineno-11-1" id="__codelineno-11-1" name="__codelineno-11-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">prompt_user</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
-</span><span id="__span-11-2"><a href="#__codelineno-11-2" id="__codelineno-11-2" name="__codelineno-11-2"></a>    <span class="k">return</span> <span class="nb">input</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Run </span><span class="si">{</span><span class="n">tool</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">args</span><span class="si">}</span><span class="s2">)? [y/N] "</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"y"</span>
-</span><span id="__span-11-3"><a href="#__codelineno-11-3" id="__codelineno-11-3" name="__codelineno-11-3"></a>
-</span><span id="__span-11-4"><a href="#__codelineno-11-4" id="__codelineno-11-4" name="__codelineno-11-4"></a>
-</span><span id="__span-11-5"><a href="#__codelineno-11-5" id="__codelineno-11-5" name="__codelineno-11-5"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-11-6"><a href="#__codelineno-11-6" id="__codelineno-11-6" name="__codelineno-11-6"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
-</span><span id="__span-11-7"><a href="#__codelineno-11-7" id="__codelineno-11-7" name="__codelineno-11-7"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>
-</span><span id="__span-11-8"><a href="#__codelineno-11-8" id="__codelineno-11-8" name="__codelineno-11-8"></a>    <span class="n">approve_tool</span><span class="o">=</span><span class="n">prompt_user</span><span class="p">,</span>
-</span><span id="__span-11-9"><a href="#__codelineno-11-9" id="__codelineno-11-9" name="__codelineno-11-9"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a href="#__codelineno-13-1" id="__codelineno-13-1" name="__codelineno-13-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">prompt_user</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+</span><span id="__span-13-2"><a href="#__codelineno-13-2" id="__codelineno-13-2" name="__codelineno-13-2"></a>    <span class="k">return</span> <span class="nb">input</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Run </span><span class="si">{</span><span class="n">tool</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">args</span><span class="si">}</span><span class="s2">)? [y/N] "</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"y"</span>
+</span><span id="__span-13-3"><a href="#__codelineno-13-3" id="__codelineno-13-3" name="__codelineno-13-3"></a>
+</span><span id="__span-13-4"><a href="#__codelineno-13-4" id="__codelineno-13-4" name="__codelineno-13-4"></a>
+</span><span id="__span-13-5"><a href="#__codelineno-13-5" id="__codelineno-13-5" name="__codelineno-13-5"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
+</span><span id="__span-13-6"><a href="#__codelineno-13-6" id="__codelineno-13-6" name="__codelineno-13-6"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
+</span><span id="__span-13-7"><a href="#__codelineno-13-7" id="__codelineno-13-7" name="__codelineno-13-7"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>
+</span><span id="__span-13-8"><a href="#__codelineno-13-8" id="__codelineno-13-8" name="__codelineno-13-8"></a>    <span class="n">approve_tool</span><span class="o">=</span><span class="n">prompt_user</span><span class="p">,</span>
+</span><span id="__span-13-9"><a href="#__codelineno-13-9" id="__codelineno-13-9" name="__codelineno-13-9"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="error-handling">Error handling</h3>
 <p>By default, exceptions raised inside a tool handler are caught, formatted as JSON <code>{"error": str(exc)}</code>, and appended as the tool result so the model can recover. Each failure is logged as one WARNING line on the <code>padwan_ai</code> logger; its traceback is attached only when that logger is enabled for DEBUG. Override <code>on_tool_error</code> to customize:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a href="#__codelineno-12-1" id="__codelineno-12-1" name="__codelineno-12-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">format_error</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">exc</span><span class="p">):</span>
-</span><span id="__span-12-2"><a href="#__codelineno-12-2" id="__codelineno-12-2" name="__codelineno-12-2"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">tool</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> failed: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">]"</span>
-</span><span id="__span-12-3"><a href="#__codelineno-12-3" id="__codelineno-12-3" name="__codelineno-12-3"></a>
-</span><span id="__span-12-4"><a href="#__codelineno-12-4" id="__codelineno-12-4" name="__codelineno-12-4"></a>
-</span><span id="__span-12-5"><a href="#__codelineno-12-5" id="__codelineno-12-5" name="__codelineno-12-5"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-12-6"><a href="#__codelineno-12-6" id="__codelineno-12-6" name="__codelineno-12-6"></a>    <span class="n">client</span><span class="o">=...</span><span class="p">,</span>
-</span><span id="__span-12-7"><a href="#__codelineno-12-7" id="__codelineno-12-7" name="__codelineno-12-7"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>
-</span><span id="__span-12-8"><a href="#__codelineno-12-8" id="__codelineno-12-8" name="__codelineno-12-8"></a>    <span class="n">on_tool_error</span><span class="o">=</span><span class="n">format_error</span><span class="p">,</span>
-</span><span id="__span-12-9"><a href="#__codelineno-12-9" id="__codelineno-12-9" name="__codelineno-12-9"></a><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a href="#__codelineno-14-1" id="__codelineno-14-1" name="__codelineno-14-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">format_error</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">exc</span><span class="p">):</span>
+</span><span id="__span-14-2"><a href="#__codelineno-14-2" id="__codelineno-14-2" name="__codelineno-14-2"></a>    <span class="k">return</span> <span class="sa">f</span><span class="s2">"[</span><span class="si">{</span><span class="n">tool</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> failed: </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">]"</span>
+</span><span id="__span-14-3"><a href="#__codelineno-14-3" id="__codelineno-14-3" name="__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a href="#__codelineno-14-4" id="__codelineno-14-4" name="__codelineno-14-4"></a>
+</span><span id="__span-14-5"><a href="#__codelineno-14-5" id="__codelineno-14-5" name="__codelineno-14-5"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
+</span><span id="__span-14-6"><a href="#__codelineno-14-6" id="__codelineno-14-6" name="__codelineno-14-6"></a>    <span class="n">client</span><span class="o">=...</span><span class="p">,</span>
+</span><span id="__span-14-7"><a href="#__codelineno-14-7" id="__codelineno-14-7" name="__codelineno-14-7"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>
+</span><span id="__span-14-8"><a href="#__codelineno-14-8" id="__codelineno-14-8" name="__codelineno-14-8"></a>    <span class="n">on_tool_error</span><span class="o">=</span><span class="n">format_error</span><span class="p">,</span>
+</span><span id="__span-14-9"><a href="#__codelineno-14-9" id="__codelineno-14-9" name="__codelineno-14-9"></a><span class="p">)</span>
 </span></code></pre></div>
 <h3 id="observation">Observation</h3>
 <p><code>on_tool</code> receives a <code>ToolCallContext(name, args)</code> and must return a context manager wrapped around each tool dispatch. Use it for logging, UI updates, metrics, or span/timer scopes that need to bracket the call:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a href="#__codelineno-13-1" id="__codelineno-13-1" name="__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
-</span><span id="__span-13-2"><a href="#__codelineno-13-2" id="__codelineno-13-2" name="__codelineno-13-2"></a>
-</span><span id="__span-13-3"><a href="#__codelineno-13-3" id="__codelineno-13-3" name="__codelineno-13-3"></a>
-</span><span id="__span-13-4"><a href="#__codelineno-13-4" id="__codelineno-13-4" name="__codelineno-13-4"></a><span class="nd">@contextmanager</span>
-</span><span id="__span-13-5"><a href="#__codelineno-13-5" id="__codelineno-13-5" name="__codelineno-13-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">log_call</span><span class="p">(</span><span class="n">tc</span><span class="p">):</span>
-</span><span id="__span-13-6"><a href="#__codelineno-13-6" id="__codelineno-13-6" name="__codelineno-13-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"→ </span><span class="si">{</span><span class="n">tc</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">tc</span><span class="o">.</span><span class="n">args</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-</span><span id="__span-13-7"><a href="#__codelineno-13-7" id="__codelineno-13-7" name="__codelineno-13-7"></a>    <span class="k">yield</span>
-</span><span id="__span-13-8"><a href="#__codelineno-13-8" id="__codelineno-13-8" name="__codelineno-13-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"← </span><span class="si">{</span><span class="n">tc</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> done"</span><span class="p">)</span>
-</span><span id="__span-13-9"><a href="#__codelineno-13-9" id="__codelineno-13-9" name="__codelineno-13-9"></a>
-</span><span id="__span-13-10"><a href="#__codelineno-13-10" id="__codelineno-13-10" name="__codelineno-13-10"></a>
-</span><span id="__span-13-11"><a href="#__codelineno-13-11" id="__codelineno-13-11" name="__codelineno-13-11"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">on_tool</span><span class="o">=</span><span class="n">log_call</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a href="#__codelineno-15-1" id="__codelineno-15-1" name="__codelineno-15-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
+</span><span id="__span-15-2"><a href="#__codelineno-15-2" id="__codelineno-15-2" name="__codelineno-15-2"></a>
+</span><span id="__span-15-3"><a href="#__codelineno-15-3" id="__codelineno-15-3" name="__codelineno-15-3"></a>
+</span><span id="__span-15-4"><a href="#__codelineno-15-4" id="__codelineno-15-4" name="__codelineno-15-4"></a><span class="nd">@contextmanager</span>
+</span><span id="__span-15-5"><a href="#__codelineno-15-5" id="__codelineno-15-5" name="__codelineno-15-5"></a><span class="k">def</span><span class="w"> </span><span class="nf">log_call</span><span class="p">(</span><span class="n">tc</span><span class="p">):</span>
+</span><span id="__span-15-6"><a href="#__codelineno-15-6" id="__codelineno-15-6" name="__codelineno-15-6"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"→ </span><span class="si">{</span><span class="n">tc</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">tc</span><span class="o">.</span><span class="n">args</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+</span><span id="__span-15-7"><a href="#__codelineno-15-7" id="__codelineno-15-7" name="__codelineno-15-7"></a>    <span class="k">yield</span>
+</span><span id="__span-15-8"><a href="#__codelineno-15-8" id="__codelineno-15-8" name="__codelineno-15-8"></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"← </span><span class="si">{</span><span class="n">tc</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> done"</span><span class="p">)</span>
+</span><span id="__span-15-9"><a href="#__codelineno-15-9" id="__codelineno-15-9" name="__codelineno-15-9"></a>
+</span><span id="__span-15-10"><a href="#__codelineno-15-10" id="__codelineno-15-10" name="__codelineno-15-10"></a>
+</span><span id="__span-15-11"><a href="#__codelineno-15-11" id="__codelineno-15-11" name="__codelineno-15-11"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">on_tool</span><span class="o">=</span><span class="n">log_call</span><span class="p">)</span>
 </span></code></pre></div>
 <p>For a fire-and-forget side-effect, <code>yield</code> immediately after the action.</p>
 <h2 id="persistence">Persistence</h2>
 <p>Conversation state can be saved to any backend via the <code>ConversationStore</code> protocol:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-14-1"><a href="#__codelineno-14-1" id="__codelineno-14-1" name="__codelineno-14-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-</span><span id="__span-14-2"><a href="#__codelineno-14-2" id="__codelineno-14-2" name="__codelineno-14-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="__span-14-3"><a href="#__codelineno-14-3" id="__codelineno-14-3" name="__codelineno-14-3"></a>
-</span><span id="__span-14-4"><a href="#__codelineno-14-4" id="__codelineno-14-4" name="__codelineno-14-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConversationSnapshot</span><span class="p">,</span> <span class="n">ConversationStore</span>
-</span><span id="__span-14-5"><a href="#__codelineno-14-5" id="__codelineno-14-5" name="__codelineno-14-5"></a>
-</span><span id="__span-14-6"><a href="#__codelineno-14-6" id="__codelineno-14-6" name="__codelineno-14-6"></a>
-</span><span id="__span-14-7"><a href="#__codelineno-14-7" id="__codelineno-14-7" name="__codelineno-14-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">JsonStore</span><span class="p">:</span>
-</span><span id="__span-14-8"><a href="#__codelineno-14-8" id="__codelineno-14-8" name="__codelineno-14-8"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
-</span><span id="__span-14-9"><a href="#__codelineno-14-9" id="__codelineno-14-9" name="__codelineno-14-9"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
-</span><span id="__span-14-10"><a href="#__codelineno-14-10" id="__codelineno-14-10" name="__codelineno-14-10"></a>
-</span><span id="__span-14-11"><a href="#__codelineno-14-11" id="__codelineno-14-11" name="__codelineno-14-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="n">ConversationSnapshot</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-14-12"><a href="#__codelineno-14-12" id="__codelineno-14-12" name="__codelineno-14-12"></a>        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_id</span><span class="si">}</span><span class="s2">.json"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">snapshot</span><span class="p">))</span>
-</span><span id="__span-14-13"><a href="#__codelineno-14-13" id="__codelineno-14-13" name="__codelineno-14-13"></a>
-</span><span id="__span-14-14"><a href="#__codelineno-14-14" id="__codelineno-14-14" name="__codelineno-14-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConversationSnapshot</span><span class="p">:</span>
-</span><span id="__span-14-15"><a href="#__codelineno-14-15" id="__codelineno-14-15" name="__codelineno-14-15"></a>        <span class="n">file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_id</span><span class="si">}</span><span class="s2">.json"</span>
-</span><span id="__span-14-16"><a href="#__codelineno-14-16" id="__codelineno-14-16" name="__codelineno-14-16"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">file</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="__span-14-17"><a href="#__codelineno-14-17" id="__codelineno-14-17" name="__codelineno-14-17"></a>            <span class="k">raise</span> <span class="ne">LookupError</span><span class="p">(</span><span class="n">session_id</span><span class="p">)</span>
-</span><span id="__span-14-18"><a href="#__codelineno-14-18" id="__codelineno-14-18" name="__codelineno-14-18"></a>        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a href="#__codelineno-16-1" id="__codelineno-16-1" name="__codelineno-16-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+</span><span id="__span-16-2"><a href="#__codelineno-16-2" id="__codelineno-16-2" name="__codelineno-16-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="__span-16-3"><a href="#__codelineno-16-3" id="__codelineno-16-3" name="__codelineno-16-3"></a>
+</span><span id="__span-16-4"><a href="#__codelineno-16-4" id="__codelineno-16-4" name="__codelineno-16-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConversationSnapshot</span><span class="p">,</span> <span class="n">ConversationStore</span>
+</span><span id="__span-16-5"><a href="#__codelineno-16-5" id="__codelineno-16-5" name="__codelineno-16-5"></a>
+</span><span id="__span-16-6"><a href="#__codelineno-16-6" id="__codelineno-16-6" name="__codelineno-16-6"></a>
+</span><span id="__span-16-7"><a href="#__codelineno-16-7" id="__codelineno-16-7" name="__codelineno-16-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">JsonStore</span><span class="p">:</span>
+</span><span id="__span-16-8"><a href="#__codelineno-16-8" id="__codelineno-16-8" name="__codelineno-16-8"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
+</span><span id="__span-16-9"><a href="#__codelineno-16-9" id="__codelineno-16-9" name="__codelineno-16-9"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+</span><span id="__span-16-10"><a href="#__codelineno-16-10" id="__codelineno-16-10" name="__codelineno-16-10"></a>
+</span><span id="__span-16-11"><a href="#__codelineno-16-11" id="__codelineno-16-11" name="__codelineno-16-11"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">snapshot</span><span class="p">:</span> <span class="n">ConversationSnapshot</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-16-12"><a href="#__codelineno-16-12" id="__codelineno-16-12" name="__codelineno-16-12"></a>        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_id</span><span class="si">}</span><span class="s2">.json"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">snapshot</span><span class="p">))</span>
+</span><span id="__span-16-13"><a href="#__codelineno-16-13" id="__codelineno-16-13" name="__codelineno-16-13"></a>
+</span><span id="__span-16-14"><a href="#__codelineno-16-14" id="__codelineno-16-14" name="__codelineno-16-14"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">session_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ConversationSnapshot</span><span class="p">:</span>
+</span><span id="__span-16-15"><a href="#__codelineno-16-15" id="__codelineno-16-15" name="__codelineno-16-15"></a>        <span class="n">file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">session_id</span><span class="si">}</span><span class="s2">.json"</span>
+</span><span id="__span-16-16"><a href="#__codelineno-16-16" id="__codelineno-16-16" name="__codelineno-16-16"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">file</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="__span-16-17"><a href="#__codelineno-16-17" id="__codelineno-16-17" name="__codelineno-16-17"></a>            <span class="k">raise</span> <span class="ne">LookupError</span><span class="p">(</span><span class="n">session_id</span><span class="p">)</span>
+</span><span id="__span-16-18"><a href="#__codelineno-16-18" id="__codelineno-16-18" name="__codelineno-16-18"></a>        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
 </span></code></pre></div>
 <p><code>load()</code> must raise <code>LookupError</code> for a missing snapshot — that's the only exception <code>AgentSession.load()</code> treats as "no snapshot yet" and starts fresh from; anything else propagates.</p>
 <p>Persist after a turn completes:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a href="#__codelineno-15-1" id="__codelineno-15-1" name="__codelineno-15-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-15-2"><a href="#__codelineno-15-2" id="__codelineno-15-2" name="__codelineno-15-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
-</span><span id="__span-15-3"><a href="#__codelineno-15-3" id="__codelineno-15-3" name="__codelineno-15-3"></a>    <span class="n">store</span><span class="o">=</span><span class="n">JsonStore</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"./sessions"</span><span class="p">)),</span>
-</span><span id="__span-15-4"><a href="#__codelineno-15-4" id="__codelineno-15-4" name="__codelineno-15-4"></a>    <span class="n">session_id</span><span class="o">=</span><span class="s2">"user-42"</span><span class="p">,</span>
-</span><span id="__span-15-5"><a href="#__codelineno-15-5" id="__codelineno-15-5" name="__codelineno-15-5"></a>    <span class="n">system</span><span class="o">=</span><span class="s2">"..."</span><span class="p">,</span>
-</span><span id="__span-15-6"><a href="#__codelineno-15-6" id="__codelineno-15-6" name="__codelineno-15-6"></a><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
-</span><span id="__span-15-7"><a href="#__codelineno-15-7" id="__codelineno-15-7" name="__codelineno-15-7"></a>    <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"Hi!"</span><span class="p">)</span>
-</span><span id="__span-15-8"><a href="#__codelineno-15-8" id="__codelineno-15-8" name="__codelineno-15-8"></a>    <span class="n">session</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a href="#__codelineno-17-1" id="__codelineno-17-1" name="__codelineno-17-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="p">(</span>
+</span><span id="__span-17-2"><a href="#__codelineno-17-2" id="__codelineno-17-2" name="__codelineno-17-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
+</span><span id="__span-17-3"><a href="#__codelineno-17-3" id="__codelineno-17-3" name="__codelineno-17-3"></a>    <span class="n">store</span><span class="o">=</span><span class="n">JsonStore</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"./sessions"</span><span class="p">)),</span>
+</span><span id="__span-17-4"><a href="#__codelineno-17-4" id="__codelineno-17-4" name="__codelineno-17-4"></a>    <span class="n">session_id</span><span class="o">=</span><span class="s2">"user-42"</span><span class="p">,</span>
+</span><span id="__span-17-5"><a href="#__codelineno-17-5" id="__codelineno-17-5" name="__codelineno-17-5"></a>    <span class="n">system</span><span class="o">=</span><span class="s2">"..."</span><span class="p">,</span>
+</span><span id="__span-17-6"><a href="#__codelineno-17-6" id="__codelineno-17-6" name="__codelineno-17-6"></a><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+</span><span id="__span-17-7"><a href="#__codelineno-17-7" id="__codelineno-17-7" name="__codelineno-17-7"></a>    <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"Hi!"</span><span class="p">)</span>
+</span><span id="__span-17-8"><a href="#__codelineno-17-8" id="__codelineno-17-8" name="__codelineno-17-8"></a>    <span class="n">session</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
 </span></code></pre></div>
 <p>Resume in a later process with the classmethod constructor:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a href="#__codelineno-16-1" id="__codelineno-16-1" name="__codelineno-16-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
-</span><span id="__span-16-2"><a href="#__codelineno-16-2" id="__codelineno-16-2" name="__codelineno-16-2"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">,</span>
-</span><span id="__span-16-3"><a href="#__codelineno-16-3" id="__codelineno-16-3" name="__codelineno-16-3"></a>    <span class="n">store</span><span class="o">=</span><span class="n">JsonStore</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"./sessions"</span><span class="p">)),</span>
-</span><span id="__span-16-4"><a href="#__codelineno-16-4" id="__codelineno-16-4" name="__codelineno-16-4"></a>    <span class="n">session_id</span><span class="o">=</span><span class="s2">"user-42"</span><span class="p">,</span>
-</span><span id="__span-16-5"><a href="#__codelineno-16-5" id="__codelineno-16-5" name="__codelineno-16-5"></a><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
-</span><span id="__span-16-6"><a href="#__codelineno-16-6" id="__codelineno-16-6" name="__codelineno-16-6"></a>    <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"What were we talking about?"</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a href="#__codelineno-18-1" id="__codelineno-18-1" name="__codelineno-18-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+</span><span id="__span-18-2"><a href="#__codelineno-18-2" id="__codelineno-18-2" name="__codelineno-18-2"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">,</span>
+</span><span id="__span-18-3"><a href="#__codelineno-18-3" id="__codelineno-18-3" name="__codelineno-18-3"></a>    <span class="n">store</span><span class="o">=</span><span class="n">JsonStore</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"./sessions"</span><span class="p">)),</span>
+</span><span id="__span-18-4"><a href="#__codelineno-18-4" id="__codelineno-18-4" name="__codelineno-18-4"></a>    <span class="n">session_id</span><span class="o">=</span><span class="s2">"user-42"</span><span class="p">,</span>
+</span><span id="__span-18-5"><a href="#__codelineno-18-5" id="__codelineno-18-5" name="__codelineno-18-5"></a><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+</span><span id="__span-18-6"><a href="#__codelineno-18-6" id="__codelineno-18-6" name="__codelineno-18-6"></a>    <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"What were we talking about?"</span><span class="p">)</span>
 </span></code></pre></div>
 <p><code>load()</code> pulls the <code>system</code> prompt and full message history from the snapshot. Pass <code>client=</code> instead of <code>model=</code> when you need a pre-configured or fake client (e.g. in tests).</p>
 <p><code>session_id</code> is optional — omit it to start a fresh session that's still wired up to the store, so a later <code>session.save()</code> lands under an auto-generated id:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a href="#__codelineno-17-1" id="__codelineno-17-1" name="__codelineno-17-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">,</span> <span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
-</span><span id="__span-17-2"><a href="#__codelineno-17-2" id="__codelineno-17-2" name="__codelineno-17-2"></a>    <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"Hello!"</span><span class="p">)</span>
-</span><span id="__span-17-3"><a href="#__codelineno-17-3" id="__codelineno-17-3" name="__codelineno-17-3"></a>    <span class="n">session</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>  <span class="c1"># persisted under session.session_id</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a href="#__codelineno-19-1" id="__codelineno-19-1" name="__codelineno-19-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">,</span> <span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+</span><span id="__span-19-2"><a href="#__codelineno-19-2" id="__codelineno-19-2" name="__codelineno-19-2"></a>    <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"Hello!"</span><span class="p">)</span>
+</span><span id="__span-19-3"><a href="#__codelineno-19-3" id="__codelineno-19-3" name="__codelineno-19-3"></a>    <span class="n">session</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>  <span class="c1"># persisted under session.session_id</span>
 </span></code></pre></div>
 <h2 id="how-tool-results-are-fed-back">How tool results are fed back</h2>
 <p>When the LLM response contains tool calls, the agent:</p>
@@ -906,29 +1140,29 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 </ol>
 <p>Long tool results are truncated to <code>max_tool_result_chars</code> <strong>in the copy sent to the LLM only</strong>; the full content is preserved in <code>session.messages</code> for inspection or persistence.</p>
 <h2 id="reading-state">Reading state</h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a href="#__codelineno-18-1" id="__codelineno-18-1" name="__codelineno-18-1"></a><span class="n">session</span><span class="o">.</span><span class="n">messages</span>  <span class="c1"># full ChatMessage list including tool calls + results</span>
-</span><span id="__span-18-2"><a href="#__codelineno-18-2" id="__codelineno-18-2" name="__codelineno-18-2"></a><span class="n">session</span><span class="o">.</span><span class="n">last_usage</span>  <span class="c1"># UsageToken from the most recent LLM call</span>
-</span><span id="__span-18-3"><a href="#__codelineno-18-3" id="__codelineno-18-3" name="__codelineno-18-3"></a><span class="n">session</span><span class="o">.</span><span class="n">total_usage</span>  <span class="c1"># accumulated usage across all rounds in this session</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a href="#__codelineno-20-1" id="__codelineno-20-1" name="__codelineno-20-1"></a><span class="n">session</span><span class="o">.</span><span class="n">messages</span>  <span class="c1"># full ChatMessage list including tool calls + results</span>
+</span><span id="__span-20-2"><a href="#__codelineno-20-2" id="__codelineno-20-2" name="__codelineno-20-2"></a><span class="n">session</span><span class="o">.</span><span class="n">last_usage</span>  <span class="c1"># UsageToken from the most recent LLM call</span>
+</span><span id="__span-20-3"><a href="#__codelineno-20-3" id="__codelineno-20-3" name="__codelineno-20-3"></a><span class="n">session</span><span class="o">.</span><span class="n">total_usage</span>  <span class="c1"># accumulated usage across all rounds in this session</span>
 </span></code></pre></div>
 <p><code>session.add_user_message(text)</code> appends a user turn without running a round; <code>session.clear()</code> drops all messages. Both are for managing history by hand outside <code>send()</code>/<code>stream()</code>.</p>
 <h2 id="testing-an-agent">Testing an agent</h2>
 <p><code>padwan_ai.testing.ScriptedClient</code> stands in for any client: it answers each round with the next <code>Step</code> of a script and records what the model would have seen, so a test asserts on the conversation as well as on the outcome (no provider, key or socket needed).</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a href="#__codelineno-19-1" id="__codelineno-19-1" name="__codelineno-19-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">McpTool</span>
-</span><span id="__span-19-2"><a href="#__codelineno-19-2" id="__codelineno-19-2" name="__codelineno-19-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai.testing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScriptedClient</span><span class="p">,</span> <span class="n">Step</span>
-</span><span id="__span-19-3"><a href="#__codelineno-19-3" id="__codelineno-19-3" name="__codelineno-19-3"></a>
-</span><span id="__span-19-4"><a href="#__codelineno-19-4" id="__codelineno-19-4" name="__codelineno-19-4"></a><span class="c1"># round 1: the model calls a tool, round 2: it answers</span>
-</span><span id="__span-19-5"><a href="#__codelineno-19-5" id="__codelineno-19-5" name="__codelineno-19-5"></a><span class="n">client</span> <span class="o">=</span> <span class="n">ScriptedClient</span><span class="p">(</span>
-</span><span id="__span-19-6"><a href="#__codelineno-19-6" id="__codelineno-19-6" name="__codelineno-19-6"></a>    <span class="p">[</span>
-</span><span id="__span-19-7"><a href="#__codelineno-19-7" id="__codelineno-19-7" name="__codelineno-19-7"></a>        <span class="n">Step</span><span class="p">(</span><span class="n">tool_calls</span><span class="o">=</span><span class="p">[(</span><span class="s2">"get_weather"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"city"</span><span class="p">:</span> <span class="s2">"Paris"</span><span class="p">})]),</span>
-</span><span id="__span-19-8"><a href="#__codelineno-19-8" id="__codelineno-19-8" name="__codelineno-19-8"></a>        <span class="n">Step</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"Sunny in Paris."</span><span class="p">),</span>
-</span><span id="__span-19-9"><a href="#__codelineno-19-9" id="__codelineno-19-9" name="__codelineno-19-9"></a>    <span class="p">]</span>
-</span><span id="__span-19-10"><a href="#__codelineno-19-10" id="__codelineno-19-10" name="__codelineno-19-10"></a><span class="p">)</span>
-</span><span id="__span-19-11"><a href="#__codelineno-19-11" id="__codelineno-19-11" name="__codelineno-19-11"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span> <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="n">weather_tool</span><span class="p">])</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
-</span><span id="__span-19-12"><a href="#__codelineno-19-12" id="__codelineno-19-12" name="__codelineno-19-12"></a>    <span class="k">assert</span> <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"Weather in Paris?"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Sunny in Paris."</span>
-</span><span id="__span-19-13"><a href="#__codelineno-19-13" id="__codelineno-19-13" name="__codelineno-19-13"></a>
-</span><span id="__span-19-14"><a href="#__codelineno-19-14" id="__codelineno-19-14" name="__codelineno-19-14"></a><span class="c1"># the tool result went back to the model, and the whole script ran</span>
-</span><span id="__span-19-15"><a href="#__codelineno-19-15" id="__codelineno-19-15" name="__codelineno-19-15"></a><span class="k">assert</span> <span class="n">client</span><span class="o">.</span><span class="n">requests</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">messages</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"role"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"tool"</span>
-</span><span id="__span-19-16"><a href="#__codelineno-19-16" id="__codelineno-19-16" name="__codelineno-19-16"></a><span class="k">assert</span> <span class="n">client</span><span class="o">.</span><span class="n">remaining</span> <span class="o">==</span> <span class="mi">0</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a href="#__codelineno-21-1" id="__codelineno-21-1" name="__codelineno-21-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">McpTool</span>
+</span><span id="__span-21-2"><a href="#__codelineno-21-2" id="__codelineno-21-2" name="__codelineno-21-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai.testing</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScriptedClient</span><span class="p">,</span> <span class="n">Step</span>
+</span><span id="__span-21-3"><a href="#__codelineno-21-3" id="__codelineno-21-3" name="__codelineno-21-3"></a>
+</span><span id="__span-21-4"><a href="#__codelineno-21-4" id="__codelineno-21-4" name="__codelineno-21-4"></a><span class="c1"># round 1: the model calls a tool, round 2: it answers</span>
+</span><span id="__span-21-5"><a href="#__codelineno-21-5" id="__codelineno-21-5" name="__codelineno-21-5"></a><span class="n">client</span> <span class="o">=</span> <span class="n">ScriptedClient</span><span class="p">(</span>
+</span><span id="__span-21-6"><a href="#__codelineno-21-6" id="__codelineno-21-6" name="__codelineno-21-6"></a>    <span class="p">[</span>
+</span><span id="__span-21-7"><a href="#__codelineno-21-7" id="__codelineno-21-7" name="__codelineno-21-7"></a>        <span class="n">Step</span><span class="p">(</span><span class="n">tool_calls</span><span class="o">=</span><span class="p">[(</span><span class="s2">"get_weather"</span><span class="p">,</span> <span class="p">{</span><span class="s2">"city"</span><span class="p">:</span> <span class="s2">"Paris"</span><span class="p">})]),</span>
+</span><span id="__span-21-8"><a href="#__codelineno-21-8" id="__codelineno-21-8" name="__codelineno-21-8"></a>        <span class="n">Step</span><span class="p">(</span><span class="n">text</span><span class="o">=</span><span class="s2">"Sunny in Paris."</span><span class="p">),</span>
+</span><span id="__span-21-9"><a href="#__codelineno-21-9" id="__codelineno-21-9" name="__codelineno-21-9"></a>    <span class="p">]</span>
+</span><span id="__span-21-10"><a href="#__codelineno-21-10" id="__codelineno-21-10" name="__codelineno-21-10"></a><span class="p">)</span>
+</span><span id="__span-21-11"><a href="#__codelineno-21-11" id="__codelineno-21-11" name="__codelineno-21-11"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="p">(</span><span class="n">client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span> <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="n">weather_tool</span><span class="p">])</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+</span><span id="__span-21-12"><a href="#__codelineno-21-12" id="__codelineno-21-12" name="__codelineno-21-12"></a>    <span class="k">assert</span> <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"Weather in Paris?"</span><span class="p">)</span> <span class="o">==</span> <span class="s2">"Sunny in Paris."</span>
+</span><span id="__span-21-13"><a href="#__codelineno-21-13" id="__codelineno-21-13" name="__codelineno-21-13"></a>
+</span><span id="__span-21-14"><a href="#__codelineno-21-14" id="__codelineno-21-14" name="__codelineno-21-14"></a><span class="c1"># the tool result went back to the model, and the whole script ran</span>
+</span><span id="__span-21-15"><a href="#__codelineno-21-15" id="__codelineno-21-15" name="__codelineno-21-15"></a><span class="k">assert</span> <span class="n">client</span><span class="o">.</span><span class="n">requests</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">messages</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">"role"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"tool"</span>
+</span><span id="__span-21-16"><a href="#__codelineno-21-16" id="__codelineno-21-16" name="__codelineno-21-16"></a><span class="k">assert</span> <span class="n">client</span><span class="o">.</span><span class="n">remaining</span> <span class="o">==</span> <span class="mi">0</span>
 </span></code></pre></div>
 <p><code>Step(usage=...)</code> overrides the default token counts for that round; <code>Request.tool_names</code> is a shortcut for the names of the tools offered that round (derived from <code>Request.tools</code>).</p>
 <p>A script that runs out raises <code>AssertionError</code> on the next round: a test that drifts from its script fails loudly instead of hanging on an empty answer. <code>complete_chat</code> is scripted the same way for non-streaming callers.</p>
@@ -968,6 +1202,7 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["navigation.sections","navigation.top","navigation.expand","search.suggest","search.highlight","content.code.copy","toc.integrate"],"search":"../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
 <script src="../assets/javascripts/bundle.e886cdf1.min.js"></script>
 <script src="../javascripts/mermaid.mjs" type="module"></script>
+<script src="../javascripts/charts.mjs" type="module"></script>
 <script>// Injected into changed PR-preview pages by mark_changes.py: toggle highlights, jump between changes.
 document.querySelectorAll('.pr-diff-bar [data-toggle]').forEach((b) =>
   b.addEventListener('click', () => {
