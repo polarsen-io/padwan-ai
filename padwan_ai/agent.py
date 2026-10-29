@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import copy
 import difflib
 import inspect
 import logging
@@ -40,7 +41,11 @@ if TYPE_CHECKING:
 __all__ = (
     "AgentOutput",
     "AgentSession",
+    "AnyConversationStore",
+    "AsyncConversationStore",
+    "AsyncMemoryStore",
     "ConversationStore",
+    "MemoryStore",
     "OnMcpConnect",
     "ToolCallContext",
 )
@@ -159,12 +164,56 @@ class ConversationStore(Protocol):
     """Persistence backend for conversation snapshots.
 
     Implementations should round-trip a `ConversationSnapshot` keyed by an
-    opaque session id.
+    opaque session id, and raise `LookupError` from `load` for an unknown id.
     """
 
     def save(self, session_id: str, snapshot: ConversationSnapshot) -> None: ...
 
     def load(self, session_id: str) -> ConversationSnapshot: ...
+
+
+class AsyncConversationStore(Protocol):
+    """`ConversationStore` for backends with async I/O (a database driver, an HTTP API)."""
+
+    async def save(self, session_id: str, snapshot: ConversationSnapshot) -> None: ...
+
+    async def load(self, session_id: str) -> ConversationSnapshot: ...
+
+
+type AnyConversationStore = ConversationStore | AsyncConversationStore
+
+
+class MemoryStore:
+    """In-process `ConversationStore`: snapshots live in a dict and are copied in and out."""
+
+    def __init__(self) -> None:
+        self.snapshots: dict[str, ConversationSnapshot] = {}
+
+    def save(self, session_id: str, snapshot: ConversationSnapshot) -> None:
+        self.snapshots[session_id] = copy.deepcopy(snapshot)
+
+    def load(self, session_id: str) -> ConversationSnapshot:
+        try:
+            return copy.deepcopy(self.snapshots[session_id])
+        except KeyError:
+            raise LookupError(session_id) from None
+
+
+class AsyncMemoryStore:
+    """`MemoryStore` behind the `AsyncConversationStore` interface."""
+
+    def __init__(self) -> None:
+        self._store = MemoryStore()
+
+    @property
+    def snapshots(self) -> dict[str, ConversationSnapshot]:
+        return self._store.snapshots
+
+    async def save(self, session_id: str, snapshot: ConversationSnapshot) -> None:
+        self._store.save(session_id, snapshot)
+
+    async def load(self, session_id: str) -> ConversationSnapshot:
+        return self._store.load(session_id)
 
 
 def _extract_text(result: Any) -> str:
@@ -301,7 +350,7 @@ class AgentSession[T: Answer = Answer]:
     extra_params: dict[str, Any] | None = None
     """Extra fields merged verbatim into every request body (e.g. provider-specific kwargs)."""
     session_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
-    store: ConversationStore | None = None
+    store: AnyConversationStore | None = None
     output: AgentOutput[T] | None = None
     """Typed final answer; enables `run()`."""
     stop_reason: StopReason | None = field(init=False, default=None)
@@ -389,17 +438,19 @@ class AgentSession[T: Answer = Answer]:
     ) -> None:
         await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
-    def save(self) -> None:
+    async def save(self) -> None:
         """Persist the current state via the configured store, if any."""
         if self.store is None:
             return
-        self.store.save(self.session_id, self._state.snapshot())
+        saved = self.store.save(self.session_id, self._state.snapshot())
+        if inspect.isawaitable(saved):
+            await saved
 
     @classmethod
-    def load[O: Answer = Answer](
+    async def load[O: Answer = Answer](
         cls,
         *,
-        store: ConversationStore,
+        store: AnyConversationStore,
         session_id: str | None = None,
         model: str | None = None,
         client: ChatClient | None = None,
@@ -451,7 +502,11 @@ class AgentSession[T: Answer = Answer]:
         snapshot: ConversationSnapshot | None = None
         if session_id is not None:
             try:
-                snapshot = store.load(session_id)
+                loaded = store.load(session_id)
+                snapshot = cast(
+                    ConversationSnapshot,
+                    await loaded if inspect.isawaitable(loaded) else loaded,
+                )
             except LookupError:
                 pass
 

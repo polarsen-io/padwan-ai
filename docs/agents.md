@@ -469,30 +469,65 @@ For a fire-and-forget side-effect, `yield` immediately after the action.
 
 ## Persistence
 
-Conversation state can be saved to any backend via the `ConversationStore` protocol:
+Conversation state is saved to a store keyed by session id. A store is sync (`ConversationStore`) or async (`AsyncConversationStore`), whichever its backend needs; the session awaits it only when it is async.
 
-```python
-import json
-from pathlib import Path
+=== "Sync"
 
-from padwan_ai import ConversationSnapshot, ConversationStore
+    ```python
+    import json
+    from pathlib import Path
+
+    from padwan_ai import ConversationSnapshot
 
 
-class JsonStore:
-    def __init__(self, path: Path):
-        self.path = path
+    class JsonStore:
+        def __init__(self, path: Path):
+            self.path = path
 
-    def save(self, session_id: str, snapshot: ConversationSnapshot) -> None:
-        (self.path / f"{session_id}.json").write_text(json.dumps(snapshot))
+        def save(self, session_id: str, snapshot: ConversationSnapshot) -> None:
+            (self.path / f"{session_id}.json").write_text(json.dumps(snapshot))
 
-    def load(self, session_id: str) -> ConversationSnapshot:
-        file = self.path / f"{session_id}.json"
-        if not file.exists():
-            raise LookupError(session_id)
-        return json.loads(file.read_text())
-```
+        def load(self, session_id: str) -> ConversationSnapshot:
+            file = self.path / f"{session_id}.json"
+            if not file.exists():
+                raise LookupError(session_id)
+            return json.loads(file.read_text())
+    ```
+
+=== "Async"
+
+    ```python
+    import json
+
+    import asyncpg
+
+    from padwan_ai import ConversationSnapshot
+
+
+    class PgStore:
+        def __init__(self, pool: asyncpg.Pool):
+            self.pool = pool
+
+        async def save(self, session_id: str, snapshot: ConversationSnapshot) -> None:
+            await self.pool.execute(
+                "INSERT INTO agent_sessions (id, snapshot) VALUES ($1, $2)"
+                " ON CONFLICT (id) DO UPDATE SET snapshot = EXCLUDED.snapshot",
+                session_id,
+                json.dumps(snapshot),
+            )
+
+        async def load(self, session_id: str) -> ConversationSnapshot:
+            row = await self.pool.fetchval(
+                "SELECT snapshot FROM agent_sessions WHERE id = $1", session_id
+            )
+            if row is None:
+                raise LookupError(session_id)
+            return json.loads(row)
+    ```
 
 `load()` must raise `LookupError` for a missing snapshot — that's the only exception `AgentSession.load()` treats as "no snapshot yet" and starts fresh from; anything else propagates.
+
+`MemoryStore` and `AsyncMemoryStore` are ready-made stores that keep snapshots in a dict, for tests and single-process apps; anything that must outlive the process needs its own store.
 
 Persist after a turn completes:
 
@@ -504,17 +539,18 @@ async with AgentSession(
     system="...",
 ) as session:
     await session.send("Hi!")
-    session.save()
+    await session.save()
 ```
 
-Resume in a later process with the classmethod constructor:
+Resume in a later process with the classmethod constructor, which reads the snapshot before returning the session:
 
 ```python
-async with AgentSession.load(
+session = await AgentSession.load(
     model="gpt-4o",
     store=JsonStore(Path("./sessions")),
     session_id="user-42",
-) as session:
+)
+async with session:
     await session.send("What were we talking about?")
 ```
 
@@ -523,9 +559,10 @@ async with AgentSession.load(
 `session_id` is optional — omit it to start a fresh session that's still wired up to the store, so a later `session.save()` lands under an auto-generated id:
 
 ```python
-async with AgentSession.load(model="gpt-4o", store=store) as session:
+session = await AgentSession.load(model="gpt-4o", store=store)
+async with session:
     await session.send("Hello!")
-    session.save()  # persisted under session.session_id
+    await session.save()  # persisted under session.session_id
 ```
 
 ## How tool results are fed back
