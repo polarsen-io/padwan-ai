@@ -1516,12 +1516,12 @@ def _big_tool(name: str = "read_file") -> McpTool:
 
 
 def _seen_results(messages: Sequence[ChatMessage]) -> list[str]:
-    """Each tool result sent, as "full" or "stub"."""
-    return [
-        "full" if cast(dict[str, Any], m)["content"] == _BIG else "stub"
-        for m in messages
-        if m["role"] == "tool"
+    """Each tool result sent, as "full", "stub" (of the original result) or its raw content."""
+    names = {_BIG: "full", f"[elided: {len(_BIG)} chars of read_file result]": "stub"}
+    contents = [
+        cast(ToolResultMessage, m)["content"] for m in messages if m["role"] == "tool"
     ]
+    return [names.get(c, c) for c in contents]
 
 
 class _DropResults:

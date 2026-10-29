@@ -10,6 +10,8 @@ __all__ = (
     "ElideToolResults",
 )
 
+_STUB_PREFIX = "[elided: "
+
 
 class CompactionError(ValueError):
     """A compactor returned history whose tool calls and results no longer pair up."""
@@ -39,8 +41,11 @@ class ElideToolResults:
                 msg["role"] == "tool"
                 and (result := cast(ToolResultMessage, msg))["name"] not in self.keep
             ):
-                stub = f"[elided: {len(result['content'])} chars of {result['name']} result]"
-                if len(result["content"]) > len(stub):
+                stub = f"{_STUB_PREFIX}{len(result['content'])} chars of {result['name']} result]"
+                # a later compaction gets earlier stubs back; keep their original size
+                if len(result["content"]) > len(stub) and not result[
+                    "content"
+                ].startswith(_STUB_PREFIX):
                     msg = ToolResultMessage(
                         role="tool",
                         tool_call_id=result["tool_call_id"],
