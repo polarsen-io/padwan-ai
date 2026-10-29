@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793207648151,
+  "lastUpdate": 1793257513440,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -5028,6 +5028,66 @@ window.BENCHMARK_DATA = {
             "value": 231.16,
             "unit": "ms",
             "range": 4.32
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8781233813869ec5a86dd0a83d9f49b03a7bbb79",
+          "message": "feat(agent): pluggable history compaction past a token budget (#151)\n\n* feat(agent): pluggable history compaction past a token budget\n\ncompact_after triggers a Compactor on the history before the last\nkeep_recent_rounds rounds; its output is reused until the next trip so the\nprompt cache holds. ElideToolResults stubs old tool results by default.\n\n* fix(compaction): keep a stub's original size when it is compacted again\n\nA later compaction gets earlier stubs back; ElideToolResults re-elided them, so the stub reported its own length instead of the result's.\n\n* docs(agents): measured token savings, ElideToolResults and a custom compactor\n\nEager vs deferred input tokens and latency measured on glm-5.3 (33 tools and a small registry), shown as an interactive chart and a table; when to keep eager and how to help the model pick tools. History compaction gets its own ElideToolResults section, a summarising compactor example, and the correct rule for when the compactor runs again.",
+          "timestamp": "2026-10-29T08:04:15+01:00",
+          "tree_id": "2fc02c32c9f9994cceae9292c7a8382bd26f5b27",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/8781233813869ec5a86dd0a83d9f49b03a7bbb79"
+        },
+        "date": 1793257512897,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 234.27,
+            "unit": "ms",
+            "range": 1.62
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 233.69,
+            "unit": "ms",
+            "range": 1.52
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 248.55,
+            "unit": "ms",
+            "range": 1.63
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 52.47,
+            "unit": "ms",
+            "range": 1.63
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 186.23,
+            "unit": "ms",
+            "range": 3.71
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 228.17,
+            "unit": "ms",
+            "range": 2.73
           }
         ]
       }
