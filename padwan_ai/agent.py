@@ -6,7 +6,7 @@ import logging
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Sequence
 from contextlib import AbstractContextManager, nullcontext
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, cast
 
@@ -304,6 +304,8 @@ class AgentSession[T: Answer = Answer]:
     store: ConversationStore | None = None
     output: AgentOutput[T] | None = None
     """Typed final answer; enables `run()`."""
+    restore: InitVar[ConversationSnapshot | None] = None
+    """A `snapshot()` to start from: its history, usage and system prompt (which wins over `system`)."""
     stop_reason: StopReason | None = field(init=False, default=None)
     """How the last run ended; None before the first one, while one is in flight, or if it raised.
     Tells an empty answer or the round limit apart from real text, since a
@@ -325,7 +327,7 @@ class AgentSession[T: Answer = Answer]:
         init=False, default=None, repr=False
     )
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, restore: ConversationSnapshot | None) -> None:
         if self.max_tool_rounds is not None and self.max_tool_rounds < 1:
             raise ValueError(
                 f"max_tool_rounds must be >= 1 or None, got {self.max_tool_rounds}"
@@ -340,7 +342,11 @@ class AgentSession[T: Answer = Answer]:
             )
         if self.output is not None:
             self._output = _OutputRun(self.output)
-        self._state = ConversationState(system=self.system)
+        if restore is None:
+            self._state = ConversationState(system=self.system)
+        else:
+            self._state = ConversationState.from_snapshot(restore)
+            self.system = self._state.system
         self._exit_stack = contextlib.AsyncExitStack()
 
     @property
@@ -388,6 +394,10 @@ class AgentSession[T: Answer = Answer]:
         exc_tb: TracebackType | None,
     ) -> None:
         await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
+
+    def snapshot(self) -> ConversationSnapshot:
+        """The conversation state as a plain dict, to persist and pass back as `restore=`."""
+        return self._state.snapshot()
 
     def save(self) -> None:
         """Persist the current state via the configured store, if any."""
@@ -455,10 +465,10 @@ class AgentSession[T: Answer = Answer]:
             except LookupError:
                 pass
 
-        instance = AgentSession[O](
+        return AgentSession[O](
             client=_client,
             store=store,
-            system=snapshot.get("system") if snapshot else system,
+            system=system,
             **({} if session_id is None else {"session_id": session_id}),
             mcp_tools=mcp_tools,
             max_tool_rounds=max_tool_rounds,
@@ -475,10 +485,8 @@ class AgentSession[T: Answer = Answer]:
             on_mcp_connect=on_mcp_connect,
             extra_params=extra_params,
             output=output,
+            restore=snapshot,
         )
-        if snapshot:
-            instance._state = ConversationState.from_snapshot(snapshot)
-        return instance
 
     def _context_messages(self) -> list[ChatMessage]:
         """Return messages with tool results truncated to `max_tool_result_chars`.

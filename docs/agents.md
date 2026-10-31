@@ -469,7 +469,30 @@ For a fire-and-forget side-effect, `yield` immediately after the action.
 
 ## Persistence
 
-Conversation state can be saved to any backend via the `ConversationStore` protocol:
+`session.snapshot()` returns the conversation state as a plain dict: message history, total usage, system prompt and any compacted history. Persist it with whatever your app already uses, sync or async, and pass it back as `restore=` to continue:
+
+```python
+import json
+
+async with AgentSession(client=llm, mcp_tools=tools) as session:
+    await session.send("Hi!")
+    await db.execute(
+        "INSERT INTO agent_sessions (id, snapshot) VALUES ($1, $2)",
+        "user-42",
+        json.dumps(session.snapshot()),
+    )
+
+# later, in another process
+row = await db.fetchval("SELECT snapshot FROM agent_sessions WHERE id = $1", "user-42")
+async with AgentSession(
+    client=llm, mcp_tools=tools, restore=json.loads(row)
+) as session:
+    await session.send("What were we talking about?")
+```
+
+The system prompt comes from the snapshot; a `system=` passed next to `restore=` is ignored.
+
+For a backend with a sync API, a `ConversationStore` wraps the same calls behind `session.save()` and `AgentSession.load()`:
 
 ```python
 import json
