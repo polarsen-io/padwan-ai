@@ -11,13 +11,14 @@ import pytest
 from padwan_ai import (
     AgentOutput,
     AgentSession,
+    AsyncMemoryStore,
     ChatMessage,
     ChatStream,
     CompactionError,
-    ConversationSnapshot,
     ConversationState,
     ElideToolResults,
     McpTool,
+    MemoryStore,
     OutputError,
     OutputFailure,
     StopReason,
@@ -107,19 +108,6 @@ def make_tool_call(
         type="function",
         function=ToolCallFunction(name=name, arguments=json.dumps(args)),
     )
-
-
-class FakeStore:
-    """In-memory ConversationStore used by every persistence test."""
-
-    def __init__(self) -> None:
-        self.storage: dict[str, ConversationSnapshot] = {}
-
-    def save(self, session_id: str, snapshot: ConversationSnapshot) -> None:
-        self.storage[session_id] = snapshot
-
-    def load(self, session_id: str) -> ConversationSnapshot:
-        return self.storage[session_id]
 
 
 # Basic loop behaviour
@@ -528,6 +516,13 @@ def test_conversation_state_snapshot_round_trip() -> None:
 
 
 @pytest.mark.parametrize(
+    "store_cls",
+    [
+        pytest.param(MemoryStore, id="sync-store"),
+        pytest.param(AsyncMemoryStore, id="async-store"),
+    ],
+)
+@pytest.mark.parametrize(
     "source_chunks, source_system, load_system, expected_system",
     [
         pytest.param(
@@ -547,12 +542,13 @@ def test_conversation_state_snapshot_round_trip() -> None:
     ],
 )
 async def test_load_restores_state_from_store(
+    store_cls: type[MemoryStore | AsyncMemoryStore],
     source_chunks: list[str],
     source_system: str,
     load_system: str | None,
     expected_system: str,
 ) -> None:
-    store = FakeStore()
+    store = store_cls()
     session, _ = make_session(
         [FakeChatStream(chunks=source_chunks)],
         store=store,
@@ -560,10 +556,10 @@ async def test_load_restores_state_from_store(
         system=source_system,
     )
     await session.send("hi")
-    session.save()
+    await session.save()
 
     client2 = FakeClient(responses=[FakeChatStream(chunks=["y"])])
-    session2 = AgentSession.load(
+    session2 = await AgentSession.load(
         client=client2,
         store=store,
         session_id="abc",
@@ -573,6 +569,13 @@ async def test_load_restores_state_from_store(
     assert session2.system == expected_system
 
 
+@pytest.mark.parametrize(
+    "store_cls",
+    [
+        pytest.param(MemoryStore, id="sync-store"),
+        pytest.param(AsyncMemoryStore, id="async-store"),
+    ],
+)
 @pytest.mark.parametrize(
     "session_id_arg, expected_id_check",
     [
@@ -587,10 +590,11 @@ async def test_load_restores_state_from_store(
     ],
 )
 async def test_load_starts_fresh_when_no_snapshot(
+    store_cls: type[MemoryStore | AsyncMemoryStore],
     session_id_arg: str | None,
     expected_id_check: Any,
 ) -> None:
-    """`AgentSession.load()` is a get-or-create entry point.
+    """`await AgentSession.load()` is a get-or-create entry point.
 
     Either `session_id=None` or a `session_id` that has no snapshot in the
     store should produce an empty session that's still wired up to the
@@ -598,9 +602,9 @@ async def test_load_starts_fresh_when_no_snapshot(
     behaviour required callers to probe the store themselves before
     deciding whether to construct or restore.
     """
-    store = FakeStore()
+    store = store_cls()
     fake = FakeClient(responses=[FakeChatStream(chunks=["hi"])])
-    session = AgentSession.load(
+    session = await AgentSession.load(
         client=fake,
         store=store,
         session_id=session_id_arg,
@@ -609,8 +613,8 @@ async def test_load_starts_fresh_when_no_snapshot(
     assert expected_id_check(session.session_id)
     assert session.store is store
     await session.send("hi")
-    session.save()
-    assert session.session_id in store.storage
+    await session.save()
+    assert session.session_id in store.snapshots
 
 
 async def test_load_rejects_both_model_and_client() -> None:
@@ -620,10 +624,10 @@ async def test_load_rejects_both_model_and_client() -> None:
     adding model= — their client would be swapped for a fresh `LLMClient`
     with default auth, turning tests into real network calls.
     """
-    store = FakeStore()
+    store = AsyncMemoryStore()
     fake = FakeClient(responses=[FakeChatStream(chunks=["y"])])
     with pytest.raises(ValueError, match="exactly one of model= or client="):
-        AgentSession.load(
+        await AgentSession.load(
             client=fake,
             model="gpt-4o",
             store=store,
@@ -1286,8 +1290,10 @@ async def test_load_builds_a_typed_session(verdict: type) -> None:
     client = FakeClient(
         [FakeChatStream(chunks=[], tool_calls=[_submit({"decision": "match"})])]
     )
-    session = AgentSession.load(
-        store=FakeStore(), client=client, output=AgentOutput(verdict, max_repairs=0)
+    session = await AgentSession.load(
+        store=AsyncMemoryStore(),
+        client=client,
+        output=AgentOutput(verdict, max_repairs=0),
     )
     async with session:
         assert await session.run("go") == verdict(decision="match")
@@ -1449,7 +1455,7 @@ async def test_deferred_catalog_and_unknown_names() -> None:
 
 
 async def test_deferred_loads_survive_restore_and_registry_changes() -> None:
-    store = FakeStore()
+    store = AsyncMemoryStore()
     tools = _registry([])
     first = AgentSession(
         client=ScriptedClient(
@@ -1464,10 +1470,10 @@ async def test_deferred_loads_survive_restore_and_registry_changes() -> None:
         session_id="s",
     )
     await first.send("go")
-    first.save()
+    await first.save()
     tools.pop()  # read_file leaves the registry
     client = ScriptedClient([Step(text="again")])
-    restored = AgentSession.load(
+    restored = await AgentSession.load(
         client=client,
         store=store,
         session_id="s",
@@ -1593,7 +1599,7 @@ async def test_history_compaction(
 
 
 async def test_compaction_survives_restore_and_clear() -> None:
-    store = FakeStore()
+    store = AsyncMemoryStore()
     first = AgentSession(
         client=ScriptedClient(_THREE_CALLS),
         mcp_tools=[_big_tool()],
@@ -1603,9 +1609,9 @@ async def test_compaction_survives_restore_and_clear() -> None:
         session_id="s",
     )
     await first.send("go")
-    first.save()
+    await first.save()
     client = ScriptedClient([Step(text="again"), Step(text="fresh")])
-    restored = AgentSession.load(
+    restored = await AgentSession.load(
         client=client, store=store, session_id="s", mcp_tools=[_big_tool()]
     )
     await restored.send("again")
