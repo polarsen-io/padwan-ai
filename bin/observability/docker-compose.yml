@@ -125,7 +125,7 @@ services:
       start_period: 1s
 
   minio:
-    image: cgr.dev/chainguard/minio
+    image: cgr.dev/chainguard/minio@sha256:3b6e40c30ecd5cea627e382ff0b82ca841f58c52294578787043ee80c8ef7c82
     profiles: [langfuse]
     restart: unless-stopped
     entrypoint: sh
