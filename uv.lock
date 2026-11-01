@@ -2186,7 +2186,7 @@ dev = [
 ]
 docs = [{ name = "zensical", specifier = ">=0.0.31" }]
 llms = [
-    { name = "anthropic", specifier = ">=1.0.0" },
+    { name = "anthropic", specifier = ">=2.3.0" },
     { name = "elevenlabs", specifier = ">=2.72.0" },
     { name = "google-genai", specifier = ">=2.18.1" },
     { name = "gradium", specifier = ">=0.6.4" },
