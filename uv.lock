@@ -1874,16 +1874,16 @@ wheels = [
 
 [[package]]
 name = "niquests"
-version = "3.21.0"
+version = "3.21.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "charset-normalizer" },
     { name = "urllib3-future" },
     { name = "wassima", marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/1c/836ad34fb18fac781722019100e2bffd81eb9a0011d7a91c434a7094460d/niquests-3.21.0.tar.gz", hash = "sha256:5b7d10a05f4c7ed08cede0af74f492ae7a8a5a71291833d029e23365fc3ea80a", size = 1070211, upload-time = "2026-07-29T10:26:24.993Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1c/2a/e368ec88a02c6bfc56c031ba6da9dd8099ad998fb818c28b687bee74c91a/niquests-3.21.2.tar.gz", hash = "sha256:586d6b9475c9018a42f19f1e4688077b8158101cbf40673c63d2c1a096cc7665", size = 1094494, upload-time = "2026-09-23T06:23:46.681Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/23/9b/c08403f905f9aaffc74b483fbb0ad4cc372d1da22cccb4ca771a3e65a185/niquests-3.21.0-py3-none-any.whl", hash = "sha256:dbea441b9e9d5d755e02caa2b57b94cdb97b23d754ead21b80a4ac18ef66805f", size = 230382, upload-time = "2026-07-29T10:26:23.194Z" },
+    { url = "https://files.pythonhosted.org/packages/65/51/eb07449eb9e7ecae4350b5a40bfcb002d6d26d58cf2cfd2f928ae7c2f559/niquests-3.21.2-py3-none-any.whl", hash = "sha256:73e52614a712ee2f4d410bdd29789ca6a4ed031f8961410156e395d42b091208", size = 229060, upload-time = "2026-09-23T06:23:44.056Z" },
 ]
 
 [package.optional-dependencies]
@@ -2190,8 +2190,8 @@ research = [
 [package.metadata]
 requires-dist = [
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = ">=4.9" },
-    { name = "niquests", specifier = ">=3.21.0" },
-    { name = "niquests", extras = ["ws"], marker = "extra == 'realtime'", specifier = ">=3.21.0" },
+    { name = "niquests", specifier = ">=3.21.2" },
+    { name = "niquests", extras = ["ws"], marker = "extra == 'realtime'", specifier = ">=3.21.2" },
     { name = "opentelemetry-api", marker = "extra == 'langfuse'", specifier = ">=1.44" },
     { name = "opentelemetry-api", marker = "extra == 'otel'", specifier = ">=1.44" },
     { name = "qh3", specifier = ">=2.1.0" },
