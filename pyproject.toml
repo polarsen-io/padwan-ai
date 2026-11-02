@@ -76,7 +76,7 @@ research = [
     "python-dotenv>=1.2.4",
 ]
 docs = [
-    "zensical>=0.0.31",
+    "zensical>=0.0.73",
 ]
 bump = [
     "commitizen>=4.0.0",
