@@ -197,7 +197,8 @@ async def test_stream_chat_span(otel_setup, client, make_sse_event, make_sse_res
     client._session.post.return_value = make_sse_resp(events)
 
     stream = client.stream_chat(
-        [{"role": "user", "content": "hey"}], extra_params={"service_tier": "flex"}
+        [{"role": "user", "content": "hey"}],
+        extra_params={"service_tier": "flex", "reasoning_effort": "medium"},
     )
     assert exporter.get_finished_spans() == ()
 
@@ -219,6 +220,7 @@ async def test_stream_chat_span(otel_setup, client, make_sse_event, make_sse_res
     assert cast(str, attrs["padwan_ai.response.first_chunk_time"]).endswith("Z")
     assert attrs["openai.api.type"] == "chat_completions"
     assert attrs["openai.request.service_tier"] == "flex"
+    assert attrs["openai.request.reasoning_effort"] == "medium"
     assert attrs["openai.response.service_tier"] == "flex"
     assert attrs["openai.response.system_fingerprint"] == "fp_stream"
     assert {

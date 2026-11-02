@@ -789,6 +789,8 @@ def _set_openai_request_attrs(span: trace.Span, body: Any) -> None:
     span.set_attribute("openai.api.type", "chat_completions")
     if tier := body.get("service_tier"):
         span.set_attribute("openai.request.service_tier", tier)
+    if effort := body.get("reasoning_effort"):
+        span.set_attribute("openai.request.reasoning_effort", effort)
 
 
 def _set_openai_response_attrs(span: trace.Span, data: Any) -> None:
