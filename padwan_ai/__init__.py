@@ -35,6 +35,7 @@ from .agent import (
     AgentSession,
     ConversationStore,
     OnMcpConnect,
+    OnRound,
     StopReason,
     ToolCallContext,
 )
@@ -194,6 +195,7 @@ __all__ = (
     "ModelDeprecationWarning",
     "OnAuth",
     "OnMcpConnect",
+    "OnRound",
     "OnThought",
     "OpenAIClient",
     "OpenAIEmbeddingModel",

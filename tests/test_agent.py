@@ -546,7 +546,11 @@ def test_conversation_state_snapshot_round_trip() -> None:
         ),
     ],
 )
+@pytest.mark.parametrize(
+    "via", [pytest.param("store", id="store"), pytest.param("snapshot", id="snapshot")]
+)
 async def test_load_restores_state_from_store(
+    via: str,
     source_chunks: list[str],
     source_system: str,
     load_system: str | None,
@@ -563,13 +567,18 @@ async def test_load_restores_state_from_store(
     session.save()
 
     client2 = FakeClient(responses=[FakeChatStream(chunks=["y"])])
-    session2 = AgentSession.load(
-        client=client2,
-        store=store,
-        session_id="abc",
-        system=load_system,
-    )
+    if via == "store":
+        session2 = AgentSession.load(
+            client=client2,
+            store=store,
+            session_id="abc",
+            system=load_system,
+        )
+    else:
+        session2 = AgentSession(client=client2, system=load_system)
+        session2.restore(session.snapshot())
     assert session2.messages == session.messages
+    assert session2.total_usage == session.total_usage
     assert session2.system == expected_system
 
 
@@ -1592,7 +1601,10 @@ async def test_history_compaction(
     assert set(_seen_results(session.messages)) <= {"full"}
 
 
-async def test_compaction_survives_restore_and_clear() -> None:
+@pytest.mark.parametrize(
+    "via", [pytest.param("load", id="load"), pytest.param("restore", id="restore")]
+)
+async def test_compaction_survives_restore_and_clear(via: str) -> None:
     store = FakeStore()
     first = AgentSession(
         client=ScriptedClient(_THREE_CALLS),
@@ -1605,14 +1617,52 @@ async def test_compaction_survives_restore_and_clear() -> None:
     await first.send("go")
     first.save()
     client = ScriptedClient([Step(text="again"), Step(text="fresh")])
-    restored = AgentSession.load(
-        client=client, store=store, session_id="s", mcp_tools=[_big_tool()]
-    )
-    await restored.send("again")
-    restored.clear()
-    await restored.send("fresh")
+    if via == "load":
+        restored = AgentSession.load(
+            client=client, store=store, session_id="s", mcp_tools=[_big_tool()]
+        )
+    else:
+        restored = AgentSession(client=client, mcp_tools=[_big_tool()])
+    async with restored:
+        if via == "restore":
+            restored.restore(first.snapshot())
+        assert restored.snapshot() == first.snapshot()
+        await restored.send("again")
+        restored.clear()
+        await restored.send("fresh")
     assert [_seen_results(r.messages) for r in client.requests] == [
         ["stub", "stub", "full"],
         [],
     ]
     assert "compacted" not in restored._state.snapshot()
+
+
+@pytest.mark.parametrize(
+    "script, tool_counts, last",
+    [
+        pytest.param(_THREE_CALLS, [1, 2, 3, 3], "done", id="tool-rounds-then-answer"),
+        pytest.param([Step(text="")], [0], "(no response)", id="empty"),
+    ],
+)
+@pytest.mark.parametrize(
+    "is_async", [pytest.param(False, id="sync"), pytest.param(True, id="async")]
+)
+async def test_on_round(
+    script: list[Step], tool_counts: list[int], last: str, is_async: bool
+) -> None:
+    seen: list[ConversationSnapshot] = []
+
+    async def on_round_async(snap: ConversationSnapshot) -> None:
+        seen.append(snap)
+
+    session = AgentSession(
+        client=ScriptedClient(script),
+        mcp_tools=[_big_tool()],
+        on_round=on_round_async if is_async else seen.append,
+    )
+    await session.send("go")
+    assert [
+        sum(m["role"] == "tool" for m in s["messages"]) for s in seen
+    ] == tool_counts
+    assert seen[-1] == session.snapshot()
+    assert seen[-1]["messages"][-1] == {"role": "assistant", "content": last}
