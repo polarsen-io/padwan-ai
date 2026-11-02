@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793621060817,
+  "lastUpdate": 1793640854408,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -5868,6 +5868,66 @@ window.BENCHMARK_DATA = {
             "value": 237.71,
             "unit": "ms",
             "range": 1.54
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d5144546bbcd884ca3c43297b48ae74781e02742",
+          "message": "feat(agent): snapshot(), restore() and on_round to persist a session with any backend (#156)\n\n* feat(agent): snapshot() and restore= to persist a session with any backend\n\nA store protocol can only call sync code, so an async driver (asyncpg, redis.asyncio) could not persist a session. session.snapshot() returns the state as a dict and AgentSession(restore=...) starts from one; the caller persists it with whatever it uses. AgentSession.load() now restores through restore=.\n\n* feat(agent): restore() method and on_round checkpoint hook\n\nrestore() replaces the state on a new or entered session, and load() uses it.\non_round gets snapshot() after each round's tool results and after the final answer.\n\n* docs(agents): define the asyncpg connection in the persistence example\n\n* docs(agents): use sqlite3 in the snapshot persistence example",
+          "timestamp": "2026-11-02T18:33:06+01:00",
+          "tree_id": "329dd025610f2fdb8096478472ac061046dddf47",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/d5144546bbcd884ca3c43297b48ae74781e02742"
+        },
+        "date": 1793640851566,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 233.11,
+            "unit": "ms",
+            "range": 3.81
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 233.51,
+            "unit": "ms",
+            "range": 2.48
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 245.6,
+            "unit": "ms",
+            "range": 1.63
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 51.82,
+            "unit": "ms",
+            "range": 1.91
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 192.73,
+            "unit": "ms",
+            "range": 5.61
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 231.79,
+            "unit": "ms",
+            "range": 8.41
           }
         ]
       }
