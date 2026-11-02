@@ -1,6 +1,6 @@
 # Regenerate with `just gen-diagrams`.
 grid-rows: 3
-grid-columns: 6
+grid-columns: 7
 horizontal-gap: 70
 vertical-gap: 60
 classes: {
@@ -10,10 +10,12 @@ classes: {
 x1.class: gap
 x2.class: gap
 x3.class: gap
+x9.class: gap
 limit: "yield limit-reached message" {class: pill}
 x4.class: gap
 x5.class: gap
 start: "user sends message" {class: pill}
+compact: "compact older history\nif over compact_after" {style.stroke-dash: 4}
 pick: "tool_loading" {shape: diamond}
 defs: "" {
   style.fill: transparent; style.stroke: transparent
@@ -26,12 +28,14 @@ call: "call LLM with\nmessages + tools"
 resp: "tool calls?" {shape: diamond}
 done: "return final text" {class: pill}
 x6.class: gap
-x7.class: gap
 append: "append tool results\nto message history"
+x7.class: gap
+x11.class: gap
 dispatch: "run handlers"
 approve: "approve_tool hook"
 x8.class: gap
-start -> pick
+start -> compact
+compact -> pick
 pick -> defs.eager: eager
 pick -> defs.deferred: deferred
 defs.eager -> call
@@ -41,5 +45,5 @@ resp -> done: no
 resp -> approve: yes
 approve -> dispatch
 dispatch -> append
-append -> pick: next round
+append -> compact: next round
 call -> limit: rounds exhausted {style.stroke-dash: 4}

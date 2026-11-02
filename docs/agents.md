@@ -8,9 +8,9 @@ icon: lucide/bot
 
 ## The loop
 
-![The agent loop: each round picks the tool definitions to send (every definition when eager; always_loaded, the output= tool, the load_tools catalog and the tools loaded so far when deferred), calls the LLM, returns the text if there are no tool calls, otherwise runs approve_tool and the handlers, appends the results and starts the next round; the loop stops with a limit-reached message once the rounds are exhausted](static/agents/loop.svg){ .zoomable }
+![The agent loop: each round first compacts older history if the last call went over compact_after, then picks the tool definitions to send (every definition when eager; always_loaded, the output= tool, the load_tools catalog and the tools loaded so far when deferred), calls the LLM, returns the text if there are no tool calls, otherwise runs approve_tool and the handlers, appends the results and starts the next round; the loop stops with a limit-reached message once the rounds are exhausted](static/agents/loop.svg){ .zoomable }
 
-Each iteration of the loop is called a **round**. Tool lists are re-read at the top of every round, so MCP servers that emit `notifications/tools/list_changed` (and refresh `McpStreamable.tools` / `McpStdio.tools` in place) get picked up without restarting the session. Which definitions a round sends depends on `tool_loading` (see [Deferred tool loading](#deferred-tool-loading)).
+Each iteration of the loop is called a **round**. Tool lists are re-read at the top of every round, so MCP servers that emit `notifications/tools/list_changed` (and refresh `McpStreamable.tools` / `McpStdio.tools` in place) get picked up without restarting the session. Which definitions a round sends depends on `tool_loading` (see [Deferred tool loading](#deferred-tool-loading)). With `compact_after` set, a round first rewrites older history once the last call went over it (see [History compaction](#history-compaction)).
 
 With `output=` set (see [Typed answers](#typed-answers)), the round limit and a text answer without a tool call both raise `OutputError` instead of yielding a limit-reached message. "run handlers" above runs each handler wrapped by the `on_tool` context manager, if set.
 
