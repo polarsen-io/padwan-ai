@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793586303576,
+  "lastUpdate": 1793586327764,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -5748,6 +5748,66 @@ window.BENCHMARK_DATA = {
             "value": 228.89,
             "unit": "ms",
             "range": 4.86
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "349688757+polarsen-renovate[bot]@users.noreply.github.com",
+            "name": "polarsen-renovate[bot]",
+            "username": "polarsen-renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f9c0ae0d9d9af5e1dc029f48af5d03ffb352a3ea",
+          "message": "chore(deps): update dependency python-dotenv to >=1.2.4 (#168)\n\nCo-authored-by: polarsen-renovate[bot] <349688757+polarsen-renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-11-02T03:24:34+01:00",
+          "tree_id": "dc3f8875dd6dcdccac46165a2417e927c499da4d",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/f9c0ae0d9d9af5e1dc029f48af5d03ffb352a3ea"
+        },
+        "date": 1793586326718,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 239.74,
+            "unit": "ms",
+            "range": 1.24
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 246.7,
+            "unit": "ms",
+            "range": 3.34
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 254.89,
+            "unit": "ms",
+            "range": 2.07
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 53,
+            "unit": "ms",
+            "range": 1.21
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 189.75,
+            "unit": "ms",
+            "range": 1.29
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 229.22,
+            "unit": "ms",
+            "range": 2.73
           }
         ]
       }
