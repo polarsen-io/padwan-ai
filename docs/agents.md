@@ -474,24 +474,24 @@ For a fire-and-forget side-effect, `yield` immediately after the action.
 
 ```python
 import json
+import sqlite3
 
-import asyncpg
-
-db = await asyncpg.connect("postgresql://localhost/app")
-await db.execute(
-    "CREATE TABLE IF NOT EXISTS agent_sessions (id text PRIMARY KEY, snapshot jsonb NOT NULL)"
+db = sqlite3.connect("sessions.db", autocommit=True)
+db.execute(
+    "CREATE TABLE IF NOT EXISTS agent_sessions (id TEXT PRIMARY KEY, snapshot TEXT NOT NULL)"
 )
 
 async with AgentSession(client=llm, mcp_tools=tools) as session:
     await session.send("Hi!")
-    await db.execute(
-        "INSERT INTO agent_sessions (id, snapshot) VALUES ($1, $2)",
-        "user-42",
-        json.dumps(session.snapshot()),
+    db.execute(
+        "INSERT INTO agent_sessions (id, snapshot) VALUES (?, ?)",
+        ("user-42", json.dumps(session.snapshot())),
     )
 
 # later, in another process
-row = await db.fetchval("SELECT snapshot FROM agent_sessions WHERE id = $1", "user-42")
+(row,) = db.execute(
+    "SELECT snapshot FROM agent_sessions WHERE id = ?", ("user-42",)
+).fetchone()
 async with AgentSession(client=llm, mcp_tools=tools) as session:
     session.restore(json.loads(row))
     await session.send("What were we talking about?")
@@ -499,14 +499,13 @@ async with AgentSession(client=llm, mcp_tools=tools) as session:
 
 `restore()` replaces the whole conversation state, including the system prompt, which comes from the snapshot.
 
-To checkpoint during a run instead of after it, pass `on_round`: it gets `session.snapshot()` after each round's tool results are in, and once more after the final answer. It may be sync or async; an async callback is awaited before the next round.
+To checkpoint during a run instead of after it, pass `on_round`: it gets `session.snapshot()` after each round's tool results are in, and once more after the final answer. It may be sync, as here, or async (an asyncpg write, say), in which case it is awaited before the next round.
 
 ```python
-async def checkpoint(snapshot: ConversationSnapshot) -> None:
-    await db.execute(
-        "UPDATE agent_sessions SET snapshot = $2 WHERE id = $1",
-        "user-42",
-        json.dumps(snapshot),
+def checkpoint(snapshot: ConversationSnapshot) -> None:
+    db.execute(
+        "UPDATE agent_sessions SET snapshot = ? WHERE id = ?",
+        (json.dumps(snapshot), "user-42"),
     )
 
 
