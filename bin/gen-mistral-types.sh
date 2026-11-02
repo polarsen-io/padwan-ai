@@ -10,7 +10,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 OUTPUT_FILE="padwan_ai/mistral/types.py"
-SPEC_URL="https://raw.githubusercontent.com/mistralai/platform-docs-public/main/openapi.yaml"
+SPEC_URL="https://docs.mistral.ai/openapi.yaml"
 
 # Download spec to temp file
 TEMP_SPEC=$(mktemp --suffix=.yml)
