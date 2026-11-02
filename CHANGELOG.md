@@ -1,3 +1,21 @@
+## 0.18.0 (2026-11-02)
+
+Agent sessions can be persisted with any backend, sync or async, and checkpointed after every round.
+
+### Features
+
+- **Session snapshots**: `session.snapshot()` returns the conversation state (history, total usage, system prompt, compacted history) as a plain dict, and `session.restore(snapshot)` puts it back on a new or already entered session; `AgentSession.load()` uses it. A tool can call `snapshot()` mid-round: the pending assistant tool-call message is already in it. (#156)
+- **`on_round` hook**: `AgentSession(on_round=...)` (sync or async, also accepted by `load()`) gets `snapshot()` after each round's tool results and after the final answer, to checkpoint mid-run. (#156)
+- **OpenAI**: `gpt-6.1-terra` joins `OpenAIModel`; OpenAI and Mistral types are regenerated. (#175)
+
+### Fixes
+
+- **Dependency floors**: niquests 3.21.2 and urllib3-future 2.25.905. (#171, #172)
+
+### Docs and tooling
+
+- The Agents page documents snapshot persistence with a sqlite3 example and `on_round` (#156), and the loop diagram shows the compaction step (#173); the Mistral types generator fetches the spec from docs.mistral.ai since the old repo is gone (#174); Renovate keeps the dependency groups current (#157 onwards).
+
 ## 0.17.0 (2026-10-29)
 
 Agents get two ways to send less per round: deferred tool loading and history compaction. Tool calls with non-object arguments no longer slip past the approval hook, MCP credentials stay out of `repr()`, and HTTP/3 is back.
