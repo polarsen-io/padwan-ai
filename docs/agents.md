@@ -475,6 +475,13 @@ For a fire-and-forget side-effect, `yield` immediately after the action.
 ```python
 import json
 
+import asyncpg
+
+db = await asyncpg.connect("postgresql://localhost/app")
+await db.execute(
+    "CREATE TABLE IF NOT EXISTS agent_sessions (id text PRIMARY KEY, snapshot jsonb NOT NULL)"
+)
+
 async with AgentSession(client=llm, mcp_tools=tools) as session:
     await session.send("Hi!")
     await db.execute(
