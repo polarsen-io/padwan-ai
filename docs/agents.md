@@ -209,6 +209,7 @@ AgentSession(
     on_tool_error=None,  # custom error formatter — see below
     approve_tool=None,  # pre-execution hook returning bool | Awaitable[bool]
     on_mcp_connect=None,  # fired per MCP transport after entering + pinging
+    on_round=None,  # fired with session.snapshot() after each round — see Persistence
     extra_params=None,  # extra fields merged verbatim into every request body
     session_id=...,  # auto-generated; override to resume a saved session
     store=None,  # optional ConversationStore for persistence
@@ -469,7 +470,7 @@ For a fire-and-forget side-effect, `yield` immediately after the action.
 
 ## Persistence
 
-`session.snapshot()` returns the conversation state as a plain dict: message history, total usage, system prompt and any compacted history. Persist it with whatever your app already uses, sync or async, and pass it back as `restore=` to continue:
+`session.snapshot()` returns the conversation state as a plain dict: message history, total usage, system prompt and any compacted history. Persist it with whatever your app already uses, sync or async, and pass it back to `session.restore()` to continue:
 
 ```python
 import json
@@ -484,13 +485,28 @@ async with AgentSession(client=llm, mcp_tools=tools) as session:
 
 # later, in another process
 row = await db.fetchval("SELECT snapshot FROM agent_sessions WHERE id = $1", "user-42")
-async with AgentSession(
-    client=llm, mcp_tools=tools, restore=json.loads(row)
-) as session:
+async with AgentSession(client=llm, mcp_tools=tools) as session:
+    session.restore(json.loads(row))
     await session.send("What were we talking about?")
 ```
 
-The system prompt comes from the snapshot; a `system=` passed next to `restore=` is ignored.
+`restore()` replaces the whole conversation state, including the system prompt, which comes from the snapshot.
+
+To checkpoint during a run instead of after it, pass `on_round`: it gets `session.snapshot()` after each round's tool results are in, and once more after the final answer. It may be sync or async; an async callback is awaited before the next round.
+
+```python
+async def checkpoint(snapshot: ConversationSnapshot) -> None:
+    await db.execute(
+        "UPDATE agent_sessions SET snapshot = $2 WHERE id = $1",
+        "user-42",
+        json.dumps(snapshot),
+    )
+
+
+session = AgentSession(client=llm, mcp_tools=tools, on_round=checkpoint)
+```
+
+`snapshot()` also works from inside a tool call: the assistant message holding the pending tool calls is already in the history.
 
 For a backend with a sync API, a `ConversationStore` wraps the same calls behind `session.save()` and `AgentSession.load()`:
 

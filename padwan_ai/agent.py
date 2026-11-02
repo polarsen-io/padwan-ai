@@ -6,7 +6,7 @@ import logging
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable, Collection, Sequence
 from contextlib import AbstractContextManager, nullcontext
-from dataclasses import InitVar, dataclass, field
+from dataclasses import dataclass, field
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Self, cast
 
@@ -42,12 +42,14 @@ __all__ = (
     "AgentSession",
     "ConversationStore",
     "OnMcpConnect",
+    "OnRound",
     "ToolCallContext",
 )
 
 type ToolErrorHandler = Callable[[McpTool, dict[str, Any], Exception], str]
 type ApprovalHook = Callable[[McpTool, dict[str, Any]], bool | Awaitable[bool]]
 type OnMcpConnect = Callable[[McpTransport], Awaitable[None] | None]
+type OnRound = Callable[[ConversationSnapshot], Awaitable[None] | None]
 
 
 @dataclass
@@ -298,14 +300,14 @@ class AgentSession[T: Answer = Answer]:
     """Gate that can deny individual tool calls before they execute."""
     on_mcp_connect: OnMcpConnect | None = None
     """Fired after each MCP transport is entered and pinged successfully."""
+    on_round: OnRound | None = None
+    """Fired with `snapshot()` after each round's tool results, and after the final message."""
     extra_params: dict[str, Any] | None = None
     """Extra fields merged verbatim into every request body (e.g. provider-specific kwargs)."""
     session_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     store: ConversationStore | None = None
     output: AgentOutput[T] | None = None
     """Typed final answer; enables `run()`."""
-    restore: InitVar[ConversationSnapshot | None] = None
-    """A `snapshot()` to start from: its history, usage and system prompt (which wins over `system`)."""
     stop_reason: StopReason | None = field(init=False, default=None)
     """How the last run ended; None before the first one, while one is in flight, or if it raised.
     Tells an empty answer or the round limit apart from real text, since a
@@ -327,7 +329,7 @@ class AgentSession[T: Answer = Answer]:
         init=False, default=None, repr=False
     )
 
-    def __post_init__(self, restore: ConversationSnapshot | None) -> None:
+    def __post_init__(self) -> None:
         if self.max_tool_rounds is not None and self.max_tool_rounds < 1:
             raise ValueError(
                 f"max_tool_rounds must be >= 1 or None, got {self.max_tool_rounds}"
@@ -342,11 +344,7 @@ class AgentSession[T: Answer = Answer]:
             )
         if self.output is not None:
             self._output = _OutputRun(self.output)
-        if restore is None:
-            self._state = ConversationState(system=self.system)
-        else:
-            self._state = ConversationState.from_snapshot(restore)
-            self.system = self._state.system
+        self._state = ConversationState(system=self.system)
         self._exit_stack = contextlib.AsyncExitStack()
 
     @property
@@ -396,8 +394,13 @@ class AgentSession[T: Answer = Answer]:
         await self._exit_stack.__aexit__(exc_type, exc_val, exc_tb)
 
     def snapshot(self) -> ConversationSnapshot:
-        """The conversation state as a plain dict, to persist and pass back as `restore=`."""
+        """The conversation state as a plain dict, to persist and pass back to `restore()`."""
         return self._state.snapshot()
+
+    def restore(self, snapshot: ConversationSnapshot) -> None:
+        """Replace the conversation state with `snapshot`; its system prompt replaces `system`."""
+        self._state = ConversationState.from_snapshot(snapshot)
+        self.system = self._state.system
 
     def save(self) -> None:
         """Persist the current state via the configured store, if any."""
@@ -427,6 +430,7 @@ class AgentSession[T: Answer = Answer]:
         on_tool_error: ToolErrorHandler | None = None,
         approve_tool: ApprovalHook | None = None,
         on_mcp_connect: OnMcpConnect | None = None,
+        on_round: OnRound | None = None,
         extra_params: dict[str, Any] | None = None,
         output: AgentOutput[O] | None = None,
     ) -> "AgentSession[O]":
@@ -465,7 +469,7 @@ class AgentSession[T: Answer = Answer]:
             except LookupError:
                 pass
 
-        return AgentSession[O](
+        session = AgentSession[O](
             client=_client,
             store=store,
             system=system,
@@ -483,10 +487,13 @@ class AgentSession[T: Answer = Answer]:
             on_tool_error=on_tool_error,
             approve_tool=approve_tool,
             on_mcp_connect=on_mcp_connect,
+            on_round=on_round,
             extra_params=extra_params,
             output=output,
-            restore=snapshot,
         )
+        if snapshot is not None:
+            session.restore(snapshot)
+        return session
 
     def _context_messages(self) -> list[ChatMessage]:
         """Return messages with tool results truncated to `max_tool_result_chars`.
@@ -881,6 +888,7 @@ class AgentSession[T: Answer = Answer]:
                     text = "(no response)"
                     yield text
                 self._state.add_assistant_message(text)
+                await self._fire_on_round()
                 if self._output is not None:
                     raise OutputError(
                         f"the model answered in text without calling "
@@ -900,6 +908,7 @@ class AgentSession[T: Answer = Answer]:
                 )
             )
             await self._run_tool_calls(chat_stream.tool_calls, dispatch)
+            await self._fire_on_round()
             if self._output is not None and self._output.done:
                 if self._output.failure is not None:
                     raise self._output.failure
@@ -919,6 +928,13 @@ class AgentSession[T: Answer = Answer]:
             )
         self.stop_reason = "round_limit"
         yield msg
+
+    async def _fire_on_round(self) -> None:
+        if self.on_round is None:
+            return
+        fired = self.on_round(self.snapshot())
+        if inspect.isawaitable(fired):
+            await fired
 
     async def send(self, user_input: str | list[ContentPart]) -> str:
         """Send a message and return the complete response (non-streaming)."""
