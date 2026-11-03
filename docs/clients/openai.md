@@ -13,7 +13,7 @@ from padwan_ai.openai import OpenAIClient
 
 client = OpenAIClient(
     api_key="sk-...",  # or set OPENAI_API_KEY env var
-    model="gpt-4o",  # default model
+    model="gpt-5.5",  # default model
 )
 ```
 
@@ -125,7 +125,7 @@ async with OpenAIClient() as client:
             custom_id="q2",
         ),
     ]
-    job = await client.create_batch(requests, model="gpt-4o")
+    job = await client.create_batch(requests, model="gpt-5.5")
     print(job.id)  # e.g. "batch_abc123"
 ```
 
