@@ -277,7 +277,7 @@ class _OpenAIBase(_OpenAIAuth, LLMClientBase[Retry], OpenAIToolMixin):
     batch methods — those live on the concrete provider clients.
     """
 
-    model: str | None = "gpt-4o"
+    model: str | None = "gpt-5.5"
     base_url: str = OPENAI_ENDPOINT
     _embedding_dimensions_key: ClassVar[str] = "dimensions"
     """Wire key for the requested embedding size; differs across OpenAI-compatible APIs."""
