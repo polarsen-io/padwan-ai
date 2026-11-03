@@ -1,5 +1,6 @@
 import inspect
 import json
+import os
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from importlib.util import find_spec
 from types import UnionType
@@ -12,6 +13,7 @@ from typing import (
     get_args,
     get_origin,
     get_type_hints,
+    overload,
 )
 
 from .mcp import McpTool
@@ -144,6 +146,9 @@ class PydanticValidator:
 
         return to_jsonable_python(result)
 
+
+VALIDATOR_ENV = "PADWAN_TOOL_VALIDATOR"
+"""Picks msgspec or pydantic when both are installed and the annotations name neither."""
 
 _NEEDS_LIB = "validation needs a library: pip install msgspec or pydantic"
 _SCALARS: dict[Any, str] = {
@@ -322,32 +327,65 @@ def _resolve(
         if not installed:
             return BuiltinValidator()
         if len(installed) > 1:
-            raise ValueError(
-                "both msgspec and pydantic are installed and the annotations name neither; "
-                "pass validator='msgspec' or validator='pydantic'"
-            )
+            env = os.environ.get(VALIDATOR_ENV)
+            if env is None:
+                raise ValueError(
+                    "both msgspec and pydantic are installed and the annotations name neither; "
+                    f"pass validator='msgspec' or validator='pydantic', or set {VALIDATOR_ENV}"
+                )
+            if env not in _BACKENDS:
+                raise ValueError(
+                    f"{VALIDATOR_ENV}={env!r}: expected 'msgspec' or 'pydantic'"
+                )
+            return _BACKENDS[env]()
         return _BACKENDS[installed[0]]()
     if isinstance(validator, str):
         return _BACKENDS[validator]()
     return validator
 
 
+type _ToolFn = Callable[..., Awaitable[Any]]
+type _ValidatorArg = ToolValidator | Literal["msgspec", "pydantic"] | None
+
+
+@overload
 def tool(
-    fn: Callable[..., Awaitable[Any]],
+    fn: _ToolFn,
     *,
     name: str | None = None,
     description: str | None = None,
-    validator: ToolValidator | Literal["msgspec", "pydantic"] | None = None,
-) -> McpTool:
+    validator: _ValidatorArg = None,
+) -> McpTool: ...
+@overload
+def tool(
+    fn: None = None,
+    *,
+    name: str | None = None,
+    description: str | None = None,
+    validator: _ValidatorArg = None,
+) -> Callable[[_ToolFn], McpTool]: ...
+def tool(
+    fn: _ToolFn | None = None,
+    *,
+    name: str | None = None,
+    description: str | None = None,
+    validator: _ValidatorArg = None,
+) -> McpTool | Callable[[_ToolFn], McpTool]:
     """An `McpTool` whose schema is `fn`'s typed signature; arguments are validated before `fn` runs.
+
+    Use as ``@tool``, ``@tool(validator="msgspec")`` or ``tool(fn, ...)``.
 
     ``name`` defaults to the function name and ``description`` to its docstring. Every
     parameter needs a type annotation and must be passable by keyword; a default makes it
     optional. ``validator`` picks the library doing schema, validation and result dumping
     (``"msgspec"``, ``"pydantic"`` or any `ToolValidator`); when omitted, the library the
-    annotations name is used, else the only installed one, else `BuiltinValidator` (plain types only).
-    Constraints and error text are the chosen library's own.
+    annotations name is used, else the only installed one (``PADWAN_TOOL_VALIDATOR`` breaks a tie),
+    else `BuiltinValidator` (plain types only). Constraints and error text are the chosen library's own.
     """
+    if fn is None:
+        return lambda f: tool(
+            f, name=name, description=description, validator=validator
+        )
     hints = get_type_hints(fn, include_extras=True)
     fields: list[_Field] = []
     for param_name, param in inspect.signature(fn).parameters.items():

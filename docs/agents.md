@@ -142,11 +142,19 @@ picks pydantic.
     ```
 
 A signature of plain types uses the only library installed, the built-in validator
-when neither is, and raises when both are (pydantic is often pulled in by another SDK). Pass `validator=` to choose, or
-any object implementing `ToolValidator` to plug in another library:
+when neither is, and raises when both are (pydantic is often pulled in by another SDK).
+Set `PADWAN_TOOL_VALIDATOR=msgspec` (or `pydantic`) to pick one for the whole process, or
+pass `validator=` per tool, including any object implementing `ToolValidator` to plug in
+another library:
 
 ```python
 tool(get_weather, validator="msgspec")
+
+
+@tool(validator="pydantic")
+async def get_time(city: str) -> str: ...
+
+
 # MyValidator implements compile(name, fields), adapt(cls) and dump(result)
 tool(get_weather, validator=MyValidator())
 ```

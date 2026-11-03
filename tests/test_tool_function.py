@@ -68,6 +68,7 @@ def backend(request: pytest.FixtureRequest) -> Backend:
 def test_schema_and_metadata_come_from_the_signature(backend: Backend) -> None:
     t = tool(backend.search, validator=backend.name)
     assert (t.name, t.description) == ("search", "Search the references by name.")
+    assert tool(validator=backend.name)(backend.search).input_schema == t.input_schema
     assert t.input_schema["properties"]["query"]["type"] == "string"
     # pydantic adds a per-property title, msgspec does not
     limit = {"type": "integer", "minimum": 1, "maximum": 10, "default": 5}
@@ -171,28 +172,60 @@ def test_signature_checks_at_build_time(
 
 
 @pytest.mark.parametrize(
-    ("installed", "expected", "raises"),
+    ("installed", "env", "expected", "raises"),
     [
-        pytest.param({"msgspec"}, MsgspecValidator, nullcontext(), id="only_msgspec"),
         pytest.param(
-            {"pydantic"}, PydanticValidator, nullcontext(), id="only_pydantic"
+            {"msgspec"}, None, MsgspecValidator, nullcontext(), id="only_msgspec"
         ),
-        pytest.param(set(), BuiltinValidator, nullcontext(), id="none_installed"),
+        pytest.param(
+            {"pydantic"}, None, PydanticValidator, nullcontext(), id="only_pydantic"
+        ),
+        pytest.param(set(), None, BuiltinValidator, nullcontext(), id="none_installed"),
         pytest.param(
             {"msgspec", "pydantic"},
             None,
-            pytest.raises(ValueError, match="pass validator="),
+            None,
+            pytest.raises(ValueError, match="PADWAN_TOOL_VALIDATOR"),
             id="both_installed",
+        ),
+        pytest.param(
+            {"msgspec", "pydantic"},
+            "pydantic",
+            PydanticValidator,
+            nullcontext(),
+            id="both_installed_env_picks",
+        ),
+        pytest.param(
+            {"msgspec", "pydantic"},
+            "attrs",
+            None,
+            pytest.raises(ValueError, match="'attrs'"),
+            id="both_installed_env_invalid",
+        ),
+        pytest.param(
+            {"msgspec"},
+            "pydantic",
+            MsgspecValidator,
+            nullcontext(),
+            id="env_ignored_without_tie",
         ),
     ],
 )
 def test_default_validator_is_the_only_installed_one(
-    monkeypatch: pytest.MonkeyPatch, installed: set[str], expected: Any, raises: Any
+    monkeypatch: pytest.MonkeyPatch,
+    installed: set[str],
+    env: str | None,
+    expected: Any,
+    raises: Any,
 ) -> None:
     monkeypatch.setattr(
         "padwan_ai.tools.find_spec",
         lambda name: object() if name in installed else None,
     )
+    if env is None:
+        monkeypatch.delenv("PADWAN_TOOL_VALIDATOR", raising=False)
+    else:
+        monkeypatch.setenv("PADWAN_TOOL_VALIDATOR", env)
     with raises:
         assert isinstance(_resolve(None, {}), expected)
 
