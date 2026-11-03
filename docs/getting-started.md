@@ -14,6 +14,12 @@
     uv add padwan-ai
     ```
 
+!!! note "urllib3"
+    niquests runs on urllib3-future, which replaces `urllib3` in the same environment (backward-compatible, so
+    `requests`/`boto3` keep working). To keep the original `urllib3`, install with
+    `URLLIB3_NO_OVERRIDE=1 pip install padwan-ai --no-binary urllib3-future`
+    ([details and other package managers](https://github.com/jawah/urllib3.future#notes--frequently-asked-questions)).
+
 ## Basic Usage
 
 ### Creating a Client
