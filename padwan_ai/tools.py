@@ -2,11 +2,13 @@ import inspect
 import json
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from importlib.util import find_spec
+from types import UnionType
 from typing import (
     Annotated,
     Any,
     Literal,
     Protocol,
+    Union,
     get_args,
     get_origin,
     get_type_hints,
@@ -14,7 +16,13 @@ from typing import (
 
 from .mcp import McpTool
 
-__all__ = ("MsgspecValidator", "PydanticValidator", "ToolValidator", "tool")
+__all__ = (
+    "BuiltinValidator",
+    "MsgspecValidator",
+    "PydanticValidator",
+    "ToolValidator",
+    "tool",
+)
 
 type _Field = tuple[str, Any] | tuple[str, Any, Any]
 """(name, annotation[, default]); a 2-tuple is a required parameter."""
@@ -137,6 +145,130 @@ class PydanticValidator:
         return to_jsonable_python(result)
 
 
+_NEEDS_LIB = "validation needs a library: pip install msgspec or pydantic"
+_SCALARS: dict[Any, str] = {
+    str: "string",
+    int: "integer",
+    float: "number",
+    bool: "boolean",
+    type(None): "null",
+}
+_BOOLS = {"true": True, "false": False}
+
+
+def _plain_schema(tp: Any) -> dict[str, Any]:
+    """JSON Schema of a plain type, raising `ImportError` for anything a library must handle."""
+    origin, args = get_origin(tp), get_args(tp)
+    if tp is Any:
+        return {}
+    if tp in _SCALARS:
+        return {"type": _SCALARS[tp]}
+    if origin is Annotated:
+        return _plain_schema(args[0])
+    if origin is Literal:
+        return {"enum": list(args)}
+    if origin in (UnionType, Union):
+        return {"anyOf": [_plain_schema(a) for a in args]}
+    if origin in (list, tuple) and (origin is list or args[1:] == (...,)):
+        return {"type": "array", "items": _plain_schema(args[0])}
+    if origin is dict and args[0] is str:
+        return {"type": "object", "additionalProperties": _plain_schema(args[1])}
+    raise ImportError(f"{_NEEDS_LIB} (to handle {tp!r})")
+
+
+def _plain_convert(tp: Any, value: Any, path: str) -> Any:
+    """`value` as `tp`, coercing numeric and boolean strings like msgspec's lax mode."""
+    origin, args = get_origin(tp), get_args(tp)
+    if tp is Any:
+        return value
+    if origin is Annotated:
+        return _plain_convert(args[0], value, path)
+    if origin is Literal:
+        if value in args:
+            return value
+    elif origin in (UnionType, Union):
+        for arg in args:
+            try:
+                return _plain_convert(arg, value, path)
+            except ValueError:
+                continue
+    elif origin in (list, tuple):
+        if isinstance(value, list):
+            items = [
+                _plain_convert(args[0], v, f"{path}[{i}]") for i, v in enumerate(value)
+            ]
+            return items if origin is list else tuple(items)
+    elif origin is dict:
+        if isinstance(value, dict):
+            return {
+                k: _plain_convert(args[1], v, f"{path}.{k}") for k, v in value.items()
+            }
+    elif tp is bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str) and value.lower() in _BOOLS:
+            return _BOOLS[value.lower()]
+    elif tp is int:
+        if isinstance(value, int) and not isinstance(value, bool):
+            return value
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError:
+                pass
+    elif tp is float:
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError:
+                pass
+    elif isinstance(value, tp):
+        return value
+    raise ValueError(f"expected {tp!r} at `{path}`, got {value!r}")
+
+
+class BuiltinValidator:
+    """Plain types only, standard library only; the fallback when neither msgspec nor pydantic is installed."""
+
+    def compile(
+        self, name: str, fields: Sequence[_Field]
+    ) -> tuple[dict[str, Any], _Validate]:
+        properties: dict[str, Any] = {}
+        required: list[str] = []
+        for f in fields:
+            properties[f[0]] = _plain_schema(f[1])
+            if len(f) == 2:
+                required.append(f[0])
+            else:
+                properties[f[0]]["default"] = f[2]
+        schema: dict[str, Any] = {"type": "object", "properties": properties}
+        if required:
+            schema["required"] = required
+
+        def validate(args: dict[str, Any]) -> dict[str, Any]:
+            out: dict[str, Any] = {}
+            for f in fields:
+                if f[0] in args:
+                    out[f[0]] = _plain_convert(f[1], args[f[0]], f"$.{f[0]}")
+                elif len(f) == 2:
+                    raise ValueError(f"missing required field `{f[0]}`")
+            return out
+
+        return schema, validate
+
+    def adapt(self, cls: type) -> tuple[dict[str, Any], _Convert]:
+        schema = _plain_schema(cls)
+        return schema, lambda obj: _plain_convert(cls, obj, "$")
+
+    def dump(self, result: Any) -> Any:
+        json.dumps(result)  # raises TypeError on anything that isn't JSON-able builtins
+        return result
+
+
 _BACKENDS: dict[str, type[ToolValidator]] = {
     "msgspec": MsgspecValidator,
     "pydantic": PydanticValidator,
@@ -188,9 +320,7 @@ def _resolve(
             lib for lib in _BACKENDS if find_spec(lib) is not None
         ]
         if not installed:
-            raise ImportError(
-                "validation needs a library: pip install msgspec or pydantic"
-            )
+            return BuiltinValidator()
         if len(installed) > 1:
             raise ValueError(
                 "both msgspec and pydantic are installed and the annotations name neither; "
@@ -215,7 +345,8 @@ def tool(
     parameter needs a type annotation and must be passable by keyword; a default makes it
     optional. ``validator`` picks the library doing schema, validation and result dumping
     (``"msgspec"``, ``"pydantic"`` or any `ToolValidator`); when omitted, the library the
-    annotations name is used, else the only installed one. Constraints and error text are the chosen library's own.
+    annotations name is used, else the only installed one, else `BuiltinValidator` (plain types only).
+    Constraints and error text are the chosen library's own.
     """
     hints = get_type_hints(fn, include_extras=True)
     fields: list[_Field] = []

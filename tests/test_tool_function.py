@@ -9,6 +9,7 @@ import pydantic
 import pytest
 
 from padwan_ai.tools import (
+    BuiltinValidator,
     MsgspecValidator,
     PydanticValidator,
     ToolValidator,
@@ -176,12 +177,7 @@ def test_signature_checks_at_build_time(
         pytest.param(
             {"pydantic"}, PydanticValidator, nullcontext(), id="only_pydantic"
         ),
-        pytest.param(
-            set(),
-            None,
-            pytest.raises(ImportError, match="pip install msgspec or pydantic"),
-            id="none_installed",
-        ),
+        pytest.param(set(), BuiltinValidator, nullcontext(), id="none_installed"),
         pytest.param(
             {"msgspec", "pydantic"},
             None,
@@ -199,6 +195,104 @@ def test_default_validator_is_the_only_installed_one(
     )
     with raises:
         assert isinstance(_resolve(None, {}), expected)
+
+
+async def _plain(
+    query: str,
+    tags: list[str],
+    mode: Literal["fast", "slow"] = "fast",
+    limit: int | None = None,
+    weights: dict[str, float] | None = None,
+    exact: bool = False,
+) -> dict[str, Any]:
+    return {"query": query, "tags": tags, "mode": mode, "limit": limit, "exact": exact}
+
+
+def test_builtin_schema_matches_msgspec() -> None:
+    builtin = tool(_plain, validator=BuiltinValidator())
+    assert builtin.input_schema == tool(_plain, validator="msgspec").input_schema
+
+
+@pytest.mark.parametrize(
+    ("fn", "args", "expected", "raises"),
+    [
+        pytest.param(
+            _plain,
+            {"query": "q", "tags": ["a"], "limit": "3", "exact": "true"},
+            {"query": "q", "tags": ["a"], "mode": "fast", "limit": 3, "exact": True},
+            nullcontext(),
+            id="coerces_and_defaults",
+        ),
+        pytest.param(
+            _plain,
+            {"tags": []},
+            None,
+            pytest.raises(ValueError, match="`query`"),
+            id="missing_required",
+        ),
+        pytest.param(
+            _plain,
+            {"query": "q", "tags": ["a", 1]},
+            None,
+            pytest.raises(ValueError, match=r"\$\.tags\[1\]"),
+            id="wrong_item_type",
+        ),
+        pytest.param(
+            _plain,
+            {"query": "q", "tags": [], "mode": "medium"},
+            None,
+            pytest.raises(ValueError, match=r"\$\.mode"),
+            id="literal_rejected",
+        ),
+        pytest.param(
+            _plain,
+            {"query": "q", "tags": [], "limit": "many"},
+            None,
+            pytest.raises(ValueError, match=r"\$\.limit"),
+            id="union_rejected",
+        ),
+    ],
+)
+async def test_builtin_validator_handler(
+    fn: Callable[..., Awaitable[Any]], args: dict[str, Any], expected: Any, raises: Any
+) -> None:
+    with raises:
+        assert await tool(fn, validator=BuiltinValidator()).handler(args) == expected
+
+
+@dataclass
+class _Point:
+    x: int
+
+
+async def _takes_class(p: _Point) -> int:
+    return p.x
+
+
+async def _returns_class(x: int) -> _Point:
+    return _Point(x)
+
+
+@pytest.mark.parametrize(
+    ("fn", "raises"),
+    [
+        pytest.param(
+            _takes_class,
+            pytest.raises(ImportError, match="pip install msgspec or pydantic"),
+            id="class_param_needs_a_library",
+        ),
+        pytest.param(
+            _returns_class,
+            pytest.raises(TypeError, match="not JSON serializable"),
+            id="class_result_needs_a_library",
+        ),
+    ],
+)
+async def test_builtin_validator_rejects_classes(
+    fn: Callable[..., Awaitable[Any]], raises: Any
+) -> None:
+    with raises:
+        await tool(fn, validator=BuiltinValidator()).handler({"x": 1})
 
 
 async def test_a_custom_validator_instance_is_used_as_is() -> None:
