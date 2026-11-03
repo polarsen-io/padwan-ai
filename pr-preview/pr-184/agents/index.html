@@ -608,7 +608,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </div>
 </div>
 <div class="md-content" data-md-component="content">
-<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">1 added</span> · <span class="c">1 changed</span> · 1 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
+<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">1 added</span> · <span class="c">2 changed</span> · 1 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
 <a id="__skip" tabindex="-1"></a>
 <h1 id="agents">Agents</h1>
 <p><code>AgentSession</code> is the agentic loop built on top of the unified chat interface. Given a client, a system prompt, and zero or more tools, it repeatedly calls the LLM, dispatches any tool calls the model requests, feeds the results back, and keeps going until the model produces a plain text answer (or a round limit is hit).</p>
@@ -727,11 +727,19 @@ picks pydantic.</p>
 </div>
 </div>
 <p data-pr-diff="changed">A signature of plain types uses the only library installed, the built-in validator
-when neither is, and raises when both are (pydantic is often pulled in by another SDK). Pass <code>validator=</code> to choose, or
-any object implementing <code>ToolValidator</code> to plug in another library:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a href="#__codelineno-5-1" id="__codelineno-5-1" name="__codelineno-5-1"></a><span class="n">tool</span><span class="p">(</span><span class="n">get_weather</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="s2">"msgspec"</span><span class="p">)</span>
-</span><span id="__span-5-2"><a href="#__codelineno-5-2" id="__codelineno-5-2" name="__codelineno-5-2"></a><span class="c1"># MyValidator implements compile(name, fields), adapt(cls) and dump(result)</span>
-</span><span id="__span-5-3"><a href="#__codelineno-5-3" id="__codelineno-5-3" name="__codelineno-5-3"></a><span class="n">tool</span><span class="p">(</span><span class="n">get_weather</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">MyValidator</span><span class="p">())</span>
+when neither is, and raises when both are (pydantic is often pulled in by another SDK).
+Set <code>PADWAN_TOOL_VALIDATOR=msgspec</code> (or <code>pydantic</code>) to pick one for the whole process, or
+pass <code>validator=</code> per tool, including any object implementing <code>ToolValidator</code> to plug in
+another library:</p>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-5-1"><a href="#__codelineno-5-1" id="__codelineno-5-1" name="__codelineno-5-1"></a><span class="n">tool</span><span class="p">(</span><span class="n">get_weather</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="s2">"msgspec"</span><span class="p">)</span>
+</span><span id="__span-5-2"><a href="#__codelineno-5-2" id="__codelineno-5-2" name="__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a href="#__codelineno-5-3" id="__codelineno-5-3" name="__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a href="#__codelineno-5-4" id="__codelineno-5-4" name="__codelineno-5-4"></a><span class="nd">@tool</span><span class="p">(</span><span class="n">validator</span><span class="o">=</span><span class="s2">"pydantic"</span><span class="p">)</span>
+</span><span id="__span-5-5"><a href="#__codelineno-5-5" id="__codelineno-5-5" name="__codelineno-5-5"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_time</span><span class="p">(</span><span class="n">city</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-5-6"><a href="#__codelineno-5-6" id="__codelineno-5-6" name="__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a href="#__codelineno-5-7" id="__codelineno-5-7" name="__codelineno-5-7"></a>
+</span><span id="__span-5-8"><a href="#__codelineno-5-8" id="__codelineno-5-8" name="__codelineno-5-8"></a><span class="c1"># MyValidator implements compile(name, fields), adapt(cls) and dump(result)</span>
+</span><span id="__span-5-9"><a href="#__codelineno-5-9" id="__codelineno-5-9" name="__codelineno-5-9"></a><span class="n">tool</span><span class="p">(</span><span class="n">get_weather</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">MyValidator</span><span class="p">())</span>
 </span></code></pre></div>
 <p>Malformed arguments raise the chosen library's <code>ValidationError</code> inside the handler,
 which <code>AgentSession</code> reports to the model as a tool error like any other exception.
