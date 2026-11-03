@@ -32,7 +32,8 @@ Extras: `[realtime]` for voice sessions, `[otel]` for OpenTelemetry, `[langfuse]
 ## Quickstart
 
 Requires Python 3.13+. The provider is picked from the model name; only the matching `*_API_KEY` env var is needed
-(`OPENAI_API_KEY` here).
+(`OPENAI_API_KEY` here). Behind a gateway? Set `PADWAN_BASE_URL` and `PADWAN_API_KEY` instead and every model routes
+through it ([gateway mode](docs/clients/openai-compatible.md#unified-gateway-via-environment)).
 
 ```python
 import asyncio
