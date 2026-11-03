@@ -4,9 +4,9 @@ Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, ElevenLab
 
 ## Why
 
-Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock you into a single provider's SDK. Padwan AI takes a different approach:
+Most LLM client libraries pull in a stack of dependencies and lock you into a single provider's SDK. Padwan AI takes a different approach:
 
-- **One HTTP dependency** — [niquests](https://github.com/jawah/niquests) (plus its qh3/urllib3-future stack), no pydantic, no httpx. Zero overhead beyond the HTTP layer.
+- **One dependency** — [niquests](https://github.com/jawah/niquests), nothing else. No provider SDKs: Padwan talks to each API directly.
 - **TypedDict-only** — all request/response types are plain `TypedDict`s, no validation framework required. No runtime cost, full editor support.
 - **Multi-provider, extensible** — supports the major providers (OpenAI, Gemini, Mistral, Grok, Anthropic) with a shared base class that makes adding new ones straightforward.
 

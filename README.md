@@ -6,7 +6,7 @@
 
 <p align="center">
   Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, ElevenLabs (experimental), Gradium (experimental), TypeSafe (JEV, experimental), and any OpenAI-compatible API.<br>
-  One HTTP dependency (<a href="https://github.com/jawah/niquests">niquests</a>, plus its qh3/urllib3-future stack), TypedDict everywhere, HTTP/2 and HTTP/3 out of the box.
+  One dependency (<a href="https://github.com/jawah/niquests">niquests</a>), TypedDict everywhere, HTTP/2 and HTTP/3 out of the box.
 </p>
 
 <p align="center">
