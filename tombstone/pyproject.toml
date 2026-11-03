@@ -11,7 +11,7 @@ dependencies = ["padwan-ai"]
 Repository = "https://github.com/polarsen-io/padwan-ai"
 
 [build-system]
-requires = ["uv_build>=0.9.18,<0.10.0"]
+requires = ["uv_build>=0.13.6,<0.13.7"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
