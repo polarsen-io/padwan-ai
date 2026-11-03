@@ -66,7 +66,7 @@ llms = [
     "google-genai>=2.34.0",
     "gradium>=0.6.4",
     "mcp>=2.3.0",
-    "openai>=3.3.0",
+    "openai>=3.42.0",
     # grpcio (via xai-sdk) has no 3.15 wheels yet and segfaults when built from source
     "xai-sdk>=1.21.0; python_version < '3.15'",
 ]
