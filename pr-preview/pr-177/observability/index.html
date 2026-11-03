@@ -229,7 +229,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../clients/gemini/">
@@ -241,7 +241,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../clients/mistral/">
@@ -277,7 +277,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../clients/voyage/">
@@ -339,7 +339,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../mcp/">
@@ -363,7 +363,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item md-nav__item--active">
 <label class="md-nav__link md-nav__link--active" for="__toc">
@@ -386,7 +386,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 <nav aria-label="On this page" class="md-nav md-nav--secondary">
 <label class="md-nav__title" for="__toc">
 <span class="md-nav__icon md-icon"></span>
@@ -496,7 +496,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </div>
 </div>
 <div class="md-content" data-md-component="content">
-<article class="md-content__inner md-typeset">
+<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">0 added</span> · <span class="c">2 changed</span> · 0 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
 <a id="__skip" tabindex="-1"></a>
 <h1 id="observability-opentelemetry">Observability (OpenTelemetry)</h1>
 <p>Padwan AI ships opt-in OpenTelemetry instrumentation following the <a href="https://github.com/open-telemetry/semantic-conventions-genai">GenAI semantic conventions</a>. It only depends on <code>opentelemetry-api</code>, behind the <code>otel</code> extra:</p>
@@ -525,14 +525,14 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </span><span id="__span-3-4"><a href="#__codelineno-3-4" id="__codelineno-3-4" name="__codelineno-3-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">LANGFUSE_SECRET_KEY</span><span class="o">=</span><span class="s2">"&lt;SECRET_KEY&gt;"</span>
 </span><span id="__span-3-5"><a href="#__codelineno-3-5" id="__codelineno-3-5" name="__codelineno-3-5"></a><span class="nb">export</span><span class="w"> </span><span class="nv">LANGFUSE_BASE_URL</span><span class="o">=</span><span class="s2">"https://cloud.langfuse.com"</span>
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a href="#__codelineno-4-1" id="__codelineno-4-1" name="__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-4-1"><a href="#__codelineno-4-1" id="__codelineno-4-1" name="__codelineno-4-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 </span><span id="__span-4-2"><a href="#__codelineno-4-2" id="__codelineno-4-2" name="__codelineno-4-2"></a>
 </span><span id="__span-4-3"><a href="#__codelineno-4-3" id="__codelineno-4-3" name="__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMClient</span>
 </span><span id="__span-4-4"><a href="#__codelineno-4-4" id="__codelineno-4-4" name="__codelineno-4-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai.langfuse</span><span class="w"> </span><span class="kn">import</span> <span class="n">instrument</span>
 </span><span id="__span-4-5"><a href="#__codelineno-4-5" id="__codelineno-4-5" name="__codelineno-4-5"></a>
 </span><span id="__span-4-6"><a href="#__codelineno-4-6" id="__codelineno-4-6" name="__codelineno-4-6"></a>
 </span><span id="__span-4-7"><a href="#__codelineno-4-7" id="__codelineno-4-7" name="__codelineno-4-7"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="__span-4-8"><a href="#__codelineno-4-8" id="__codelineno-4-8" name="__codelineno-4-8"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o-mini"</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+</span><span id="__span-4-8"><a href="#__codelineno-4-8" id="__codelineno-4-8" name="__codelineno-4-8"></a>    <span class="k">async</span> <span class="k">with</span> <span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.4-mini"</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
 </span><span id="__span-4-9"><a href="#__codelineno-4-9" id="__codelineno-4-9" name="__codelineno-4-9"></a>        <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">complete_chat</span><span class="p">([{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="s2">"Hello!"</span><span class="p">}])</span>
 </span><span id="__span-4-10"><a href="#__codelineno-4-10" id="__codelineno-4-10" name="__codelineno-4-10"></a>
 </span><span id="__span-4-11"><a href="#__codelineno-4-11" id="__codelineno-4-11" name="__codelineno-4-11"></a>
@@ -644,9 +644,9 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 <td><code>openai</code>, <code>gcp.gemini</code>, <code>mistral_ai</code>, <code>x_ai</code>, <code>anthropic</code>, <code>voyage</code>, <code>elevenlabs</code>, <code>gradium</code></td>
 <td>semconv well-known values (<code>voyage</code>, <code>elevenlabs</code> and <code>gradium</code> have none); ElevenLabs and Gradium report only their realtime clients; OpenAI-compatible endpoints report <code>openai</code>, distinguished by <code>server.address</code></td>
 </tr>
-<tr>
+<tr data-pr-diff="changed">
 <td><code>gen_ai.request.model</code></td>
-<td><code>gpt-4o</code></td>
+<td><code>gpt-5.5</code></td>
 <td>omitted when no model is set</td>
 </tr>
 <tr>
@@ -1068,5 +1068,21 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 <script src="../assets/javascripts/bundle.77dd0ce9.min.js"></script>
 <script src="../javascripts/mermaid.mjs" type="module"></script>
 <script src="../javascripts/charts.mjs" type="module"></script>
-</body>
+<script>// Injected into changed PR-preview pages by mark_changes.py: toggle highlights, jump between changes.
+document.querySelectorAll('.pr-diff-bar [data-toggle]').forEach((b) =>
+  b.addEventListener('click', () => {
+    const off = document.documentElement.classList.toggle('pr-diff-off');
+    b.textContent = off ? 'show changes' : 'hide changes';
+  }),
+);
+document.querySelectorAll('.pr-diff-bar [data-next]').forEach((b) => {
+  let i = -1;
+  b.addEventListener('click', () => {
+    const marks = document.querySelectorAll('[data-pr-diff]');
+    if (!marks.length) return;
+    i = (i + 1) % marks.length;
+    marks[i].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+});
+</script></body>
 </html>

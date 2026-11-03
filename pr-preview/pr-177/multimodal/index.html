@@ -230,7 +230,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../clients/gemini/">
@@ -242,7 +242,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../clients/mistral/">
@@ -278,7 +278,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../clients/voyage/">
@@ -350,7 +350,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 <nav aria-label="On this page" class="md-nav md-nav--secondary">
 <label class="md-nav__title" for="__toc">
 <span class="md-nav__icon md-icon"></span>
@@ -427,7 +427,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../observability/">
@@ -439,7 +439,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 </ul>
 </nav>
@@ -447,7 +447,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </div>
 </div>
 <div class="md-content" data-md-component="content">
-<article class="md-content__inner md-typeset">
+<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">0 added</span> · <span class="c">3 changed</span> · 0 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
 <a id="__skip" tabindex="-1"></a>
 <h1 id="multimodal-content">Multimodal Content</h1>
 <p>User messages can carry a list of content parts (text, images, and audio) instead of a plain string. Parts use the OpenAI content-part shape: OpenAI-compatible providers (OpenAI, Grok) receive them verbatim, the Gemini client converts them to <code>inlineData</code> parts, and the Mistral client rewrites audio parts to its plain base64 <code>input_audio</code> chunk.</p>
@@ -477,7 +477,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </span></code></pre></div>
 <p><code>image_part</code> accepts a path (<code>str | Path</code>) and guesses the MIME type from the file name; pass <code>mime=</code> to override. Unknown extensions fall back to <code>image/png</code>. <code>audio_part</code> accepts a path (<code>str | Path</code>) and guesses the format from the extension (wav, mp3, flac, ogg, aac, aiff, m4a); <code>fmt=</code> overrides the guess and unknown extensions raise <code>ValueError</code>. Supported audio extensions take precedence over host MIME mappings. Format support varies per provider (see the audio table below). <code>text_file_part</code> reads the file as UTF-8 (<code>encoding=</code> overrides) and prefixes the text with <code>--- &lt;name&gt; ---</code> so the model can tell files apart.</p>
 <h2 id="sending-images">Sending images</h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a href="#__codelineno-2-1" id="__codelineno-2-1" name="__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConversationState</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">image_part</span><span class="p">,</span> <span class="n">text_part</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-2-1"><a href="#__codelineno-2-1" id="__codelineno-2-1" name="__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">ConversationState</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">image_part</span><span class="p">,</span> <span class="n">text_part</span>
 </span><span id="__span-2-2"><a href="#__codelineno-2-2" id="__codelineno-2-2" name="__codelineno-2-2"></a>
 </span><span id="__span-2-3"><a href="#__codelineno-2-3" id="__codelineno-2-3" name="__codelineno-2-3"></a><span class="n">state</span> <span class="o">=</span> <span class="n">ConversationState</span><span class="p">()</span>
 </span><span id="__span-2-4"><a href="#__codelineno-2-4" id="__codelineno-2-4" name="__codelineno-2-4"></a><span class="n">state</span><span class="o">.</span><span class="n">add_user_message</span><span class="p">(</span>
@@ -487,14 +487,14 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </span><span id="__span-2-8"><a href="#__codelineno-2-8" id="__codelineno-2-8" name="__codelineno-2-8"></a>    <span class="p">]</span>
 </span><span id="__span-2-9"><a href="#__codelineno-2-9" id="__codelineno-2-9" name="__codelineno-2-9"></a><span class="p">)</span>
 </span><span id="__span-2-10"><a href="#__codelineno-2-10" id="__codelineno-2-10" name="__codelineno-2-10"></a>
-</span><span id="__span-2-11"><a href="#__codelineno-2-11" id="__codelineno-2-11" name="__codelineno-2-11"></a><span class="k">async</span> <span class="k">with</span> <span class="n">LLMClient</span><span class="p">(</span><span class="s2">"gpt-4o"</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+</span><span id="__span-2-11"><a href="#__codelineno-2-11" id="__codelineno-2-11" name="__codelineno-2-11"></a><span class="k">async</span> <span class="k">with</span> <span class="n">LLMClient</span><span class="p">(</span><span class="s2">"gpt-5.5"</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
 </span><span id="__span-2-12"><a href="#__codelineno-2-12" id="__codelineno-2-12" name="__codelineno-2-12"></a>    <span class="n">response</span><span class="p">,</span> <span class="n">usage</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">complete_chat</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="checking-vision-support">Checking vision support</h2>
 <p><code>supports_vision</code> is a best-effort, curated check of whether a model accepts image input:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a href="#__codelineno-3-1" id="__codelineno-3-1" name="__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_vision</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-3-1"><a href="#__codelineno-3-1" id="__codelineno-3-1" name="__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_vision</span>
 </span><span id="__span-3-2"><a href="#__codelineno-3-2" id="__codelineno-3-2" name="__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a href="#__codelineno-3-3" id="__codelineno-3-3" name="__codelineno-3-3"></a><span class="n">supports_vision</span><span class="p">(</span><span class="s2">"gpt-4o"</span><span class="p">)</span>  <span class="c1"># True</span>
+</span><span id="__span-3-3"><a href="#__codelineno-3-3" id="__codelineno-3-3" name="__codelineno-3-3"></a><span class="n">supports_vision</span><span class="p">(</span><span class="s2">"gpt-5.5"</span><span class="p">)</span>  <span class="c1"># True</span>
 </span><span id="__span-3-4"><a href="#__codelineno-3-4" id="__codelineno-3-4" name="__codelineno-3-4"></a><span class="n">supports_vision</span><span class="p">(</span><span class="s2">"mistral-large-latest"</span><span class="p">)</span>  <span class="c1"># False - text-only</span>
 </span><span id="__span-3-5"><a href="#__codelineno-3-5" id="__codelineno-3-5" name="__codelineno-3-5"></a><span class="n">supports_vision</span><span class="p">(</span><span class="s2">"some-local-model"</span><span class="p">)</span>  <span class="c1"># True - unknown models are attempted</span>
 </span></code></pre></div>
@@ -531,11 +531,11 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </table>
 <h2 id="checking-audio-support">Checking audio support</h2>
 <p><code>supports_audio</code> is the audio counterpart of <code>supports_vision</code>, with the same dispatch and unknown-model behaviour; pass <code>fmt=</code> to also check a specific format:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a href="#__codelineno-4-1" id="__codelineno-4-1" name="__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_audio</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-4-1"><a href="#__codelineno-4-1" id="__codelineno-4-1" name="__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_audio</span>
 </span><span id="__span-4-2"><a href="#__codelineno-4-2" id="__codelineno-4-2" name="__codelineno-4-2"></a>
 </span><span id="__span-4-3"><a href="#__codelineno-4-3" id="__codelineno-4-3" name="__codelineno-4-3"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"gpt-audio"</span><span class="p">)</span>  <span class="c1"># True</span>
 </span><span id="__span-4-4"><a href="#__codelineno-4-4" id="__codelineno-4-4" name="__codelineno-4-4"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"gpt-audio"</span><span class="p">,</span> <span class="s2">"flac"</span><span class="p">)</span>  <span class="c1"># False - OpenAI takes wav/mp3 only</span>
-</span><span id="__span-4-5"><a href="#__codelineno-4-5" id="__codelineno-4-5" name="__codelineno-4-5"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"gemini-2.5-flash"</span><span class="p">,</span> <span class="s2">"flac"</span><span class="p">)</span>  <span class="c1"># True</span>
+</span><span id="__span-4-5"><a href="#__codelineno-4-5" id="__codelineno-4-5" name="__codelineno-4-5"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"gemini-3.8-flash"</span><span class="p">,</span> <span class="s2">"flac"</span><span class="p">)</span>  <span class="c1"># True</span>
 </span><span id="__span-4-6"><a href="#__codelineno-4-6" id="__codelineno-4-6" name="__codelineno-4-6"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"grok-4"</span><span class="p">)</span>  <span class="c1"># False - no Grok chat model takes audio</span>
 </span></code></pre></div>
 <table>
@@ -612,5 +612,21 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 <script src="../assets/javascripts/bundle.77dd0ce9.min.js"></script>
 <script src="../javascripts/mermaid.mjs" type="module"></script>
 <script src="../javascripts/charts.mjs" type="module"></script>
-</body>
+<script>// Injected into changed PR-preview pages by mark_changes.py: toggle highlights, jump between changes.
+document.querySelectorAll('.pr-diff-bar [data-toggle]').forEach((b) =>
+  b.addEventListener('click', () => {
+    const off = document.documentElement.classList.toggle('pr-diff-off');
+    b.textContent = off ? 'show changes' : 'hide changes';
+  }),
+);
+document.querySelectorAll('.pr-diff-bar [data-next]').forEach((b) => {
+  let i = -1;
+  b.addEventListener('click', () => {
+    const marks = document.querySelectorAll('[data-pr-diff]');
+    if (!marks.length) return;
+    i = (i + 1) % marks.length;
+    marks[i].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+});
+</script></body>
 </html>

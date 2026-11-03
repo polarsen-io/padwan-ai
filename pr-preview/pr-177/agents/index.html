@@ -230,7 +230,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../clients/gemini/">
@@ -242,7 +242,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../clients/mistral/">
@@ -278,7 +278,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../clients/voyage/">
@@ -340,7 +340,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../mcp/">
@@ -375,7 +375,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 <nav aria-label="On this page" class="md-nav md-nav--secondary">
 <label class="md-nav__title" for="__toc">
 <span class="md-nav__icon md-icon"></span>
@@ -600,7 +600,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 </ul>
 </nav>
@@ -608,7 +608,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </div>
 </div>
 <div class="md-content" data-md-component="content">
-<article class="md-content__inner md-typeset">
+<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">0 added</span> · <span class="c">7 changed</span> · 0 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
 <a id="__skip" tabindex="-1"></a>
 <h1 id="agents">Agents</h1>
 <p><code>AgentSession</code> is the agentic loop built on top of the unified chat interface. Given a client, a system prompt, and zero or more tools, it repeatedly calls the LLM, dispatches any tool calls the model requests, feeds the results back, and keeps going until the model produces a plain text answer (or a round limit is hit).</p>
@@ -618,10 +618,10 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 <p>With <code>output=</code> set (see <a href="#typed-answers">Typed answers</a>), the round limit and a text answer without a tool call both raise <code>OutputError</code> instead of yielding a limit-reached message. "run handlers" above runs each handler wrapped by the <code>on_tool</code> context manager, if set.</p>
 <p>A text run never raises on those: an empty answer yields <code>"(no response)"</code> and the round limit a limit-reached message, both as text. <code>session.stop_reason</code> tells them apart from a real answer once the run is over: <code>"answer"</code>, <code>"empty"</code> or <code>"round_limit"</code> (<code>None</code> before the first run, while one is in flight, and after a run that raised, such as a typed run's <code>OutputError</code>).</p>
 <h2 id="quick-start">Quick start</h2>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a href="#__codelineno-0-1" id="__codelineno-0-1" name="__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">McpStdio</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-0-1"><a href="#__codelineno-0-1" id="__codelineno-0-1" name="__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">McpStdio</span>
 </span><span id="__span-0-2"><a href="#__codelineno-0-2" id="__codelineno-0-2" name="__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a href="#__codelineno-0-3" id="__codelineno-0-3" name="__codelineno-0-3"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-0-4"><a href="#__codelineno-0-4" id="__codelineno-0-4" name="__codelineno-0-4"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
+</span><span id="__span-0-4"><a href="#__codelineno-0-4" id="__codelineno-0-4" name="__codelineno-0-4"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.5"</span><span class="p">),</span>
 </span><span id="__span-0-5"><a href="#__codelineno-0-5" id="__codelineno-0-5" name="__codelineno-0-5"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="n">McpStdio</span><span class="p">(</span><span class="n">command</span><span class="o">=</span><span class="s2">"uvx"</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="s2">"weather-mcp"</span><span class="p">])],</span>
 </span><span id="__span-0-6"><a href="#__codelineno-0-6" id="__codelineno-0-6" name="__codelineno-0-6"></a>    <span class="n">system</span><span class="o">=</span><span class="s2">"You are a weather assistant."</span><span class="p">,</span>
 </span><span id="__span-0-7"><a href="#__codelineno-0-7" id="__codelineno-0-7" name="__codelineno-0-7"></a><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
@@ -636,7 +636,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 <p><code>user_input</code> is plain text or a <code>list[ContentPart]</code> for multimodal input (text + images).</p>
 <h2 id="tools-individual-or-whole-transports">Tools: individual or whole transports</h2>
 <p><code>mcp_tools</code> accepts a heterogeneous list of <code>McpTool</code> and <code>McpTransport</code> (i.e. <code>McpStreamable</code> / <code>McpStdio</code>) instances. This is the main ergonomic win over managing transports by hand:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a href="#__codelineno-1-1" id="__codelineno-1-1" name="__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">McpStdio</span><span class="p">,</span> <span class="n">McpStreamable</span><span class="p">,</span> <span class="n">McpTool</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-1-1"><a href="#__codelineno-1-1" id="__codelineno-1-1" name="__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">McpStdio</span><span class="p">,</span> <span class="n">McpStreamable</span><span class="p">,</span> <span class="n">McpTool</span>
 </span><span id="__span-1-2"><a href="#__codelineno-1-2" id="__codelineno-1-2" name="__codelineno-1-2"></a>
 </span><span id="__span-1-3"><a href="#__codelineno-1-3" id="__codelineno-1-3" name="__codelineno-1-3"></a><span class="n">weather_tool</span> <span class="o">=</span> <span class="n">McpTool</span><span class="p">(</span>
 </span><span id="__span-1-4"><a href="#__codelineno-1-4" id="__codelineno-1-4" name="__codelineno-1-4"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">"get_weather"</span><span class="p">,</span>
@@ -646,7 +646,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </span><span id="__span-1-8"><a href="#__codelineno-1-8" id="__codelineno-1-8" name="__codelineno-1-8"></a><span class="p">)</span>
 </span><span id="__span-1-9"><a href="#__codelineno-1-9" id="__codelineno-1-9" name="__codelineno-1-9"></a>
 </span><span id="__span-1-10"><a href="#__codelineno-1-10" id="__codelineno-1-10" name="__codelineno-1-10"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-1-11"><a href="#__codelineno-1-11" id="__codelineno-1-11" name="__codelineno-1-11"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
+</span><span id="__span-1-11"><a href="#__codelineno-1-11" id="__codelineno-1-11" name="__codelineno-1-11"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.5"</span><span class="p">),</span>
 </span><span id="__span-1-12"><a href="#__codelineno-1-12" id="__codelineno-1-12" name="__codelineno-1-12"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span>
 </span><span id="__span-1-13"><a href="#__codelineno-1-13" id="__codelineno-1-13" name="__codelineno-1-13"></a>        <span class="n">weather_tool</span><span class="p">,</span>  <span class="c1"># local definition</span>
 </span><span id="__span-1-14"><a href="#__codelineno-1-14" id="__codelineno-1-14" name="__codelineno-1-14"></a>        <span class="n">McpStdio</span><span class="p">(</span><span class="n">command</span><span class="o">=</span><span class="s2">"uvx"</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="s2">"filesystem-mcp"</span><span class="p">,</span> <span class="s2">"/home/me/docs"</span><span class="p">]),</span>  <span class="c1"># subprocess</span>
@@ -1040,8 +1040,8 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 <p>A later compaction gets the earlier summary back as part of <code>messages</code>, so it summarises the summary and the rounds since. A compactor may drop whole rounds but not half of one: if a tool call and its result no longer pair up, the session raises <code>CompactionError</code> instead of sending the request.</p>
 <h3 id="parallel-tool-execution">Parallel tool execution</h3>
 <p>When a single LLM response contains multiple tool calls, <code>execution="parallel"</code> dispatches them via <code>asyncio.gather</code>. Results are still appended to the message history in original call order:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a href="#__codelineno-12-1" id="__codelineno-12-1" name="__codelineno-12-1"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-12-2"><a href="#__codelineno-12-2" id="__codelineno-12-2" name="__codelineno-12-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-12-1"><a href="#__codelineno-12-1" id="__codelineno-12-1" name="__codelineno-12-1"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
+</span><span id="__span-12-2"><a href="#__codelineno-12-2" id="__codelineno-12-2" name="__codelineno-12-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.5"</span><span class="p">),</span>
 </span><span id="__span-12-3"><a href="#__codelineno-12-3" id="__codelineno-12-3" name="__codelineno-12-3"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>
 </span><span id="__span-12-4"><a href="#__codelineno-12-4" id="__codelineno-12-4" name="__codelineno-12-4"></a>    <span class="n">execution</span><span class="o">=</span><span class="s2">"parallel"</span><span class="p">,</span>
 </span><span id="__span-12-5"><a href="#__codelineno-12-5" id="__codelineno-12-5" name="__codelineno-12-5"></a><span class="p">)</span>
@@ -1049,12 +1049,12 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 <p>Use the default <code>"sequential"</code> if you care about ordering side effects or want to rate-limit the downstream servers.</p>
 <h3 id="approval-hooks">Approval hooks</h3>
 <p><code>approve_tool</code> runs before every tool dispatch. Return <code>False</code> to block the call — the agent will append <code>{"error": "Tool call denied by approval hook: &lt;name&gt;"}</code> as the result instead of executing the handler. The hook may be sync or async:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-13-1"><a href="#__codelineno-13-1" id="__codelineno-13-1" name="__codelineno-13-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">prompt_user</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-13-1"><a href="#__codelineno-13-1" id="__codelineno-13-1" name="__codelineno-13-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">prompt_user</span><span class="p">(</span><span class="n">tool</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
 </span><span id="__span-13-2"><a href="#__codelineno-13-2" id="__codelineno-13-2" name="__codelineno-13-2"></a>    <span class="k">return</span> <span class="nb">input</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Run </span><span class="si">{</span><span class="n">tool</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">(</span><span class="si">{</span><span class="n">args</span><span class="si">}</span><span class="s2">)? [y/N] "</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">"y"</span>
 </span><span id="__span-13-3"><a href="#__codelineno-13-3" id="__codelineno-13-3" name="__codelineno-13-3"></a>
 </span><span id="__span-13-4"><a href="#__codelineno-13-4" id="__codelineno-13-4" name="__codelineno-13-4"></a>
 </span><span id="__span-13-5"><a href="#__codelineno-13-5" id="__codelineno-13-5" name="__codelineno-13-5"></a><span class="n">session</span> <span class="o">=</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-13-6"><a href="#__codelineno-13-6" id="__codelineno-13-6" name="__codelineno-13-6"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
+</span><span id="__span-13-6"><a href="#__codelineno-13-6" id="__codelineno-13-6" name="__codelineno-13-6"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.5"</span><span class="p">),</span>
 </span><span id="__span-13-7"><a href="#__codelineno-13-7" id="__codelineno-13-7" name="__codelineno-13-7"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="o">...</span><span class="p">],</span>
 </span><span id="__span-13-8"><a href="#__codelineno-13-8" id="__codelineno-13-8" name="__codelineno-13-8"></a>    <span class="n">approve_tool</span><span class="o">=</span><span class="n">prompt_user</span><span class="p">,</span>
 </span><span id="__span-13-9"><a href="#__codelineno-13-9" id="__codelineno-13-9" name="__codelineno-13-9"></a><span class="p">)</span>
@@ -1145,8 +1145,8 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 </span></code></pre></div>
 <p><code>load()</code> must raise <code>LookupError</code> for a missing snapshot — that's the only exception <code>AgentSession.load()</code> treats as "no snapshot yet" and starts fresh from; anything else propagates.</p>
 <p>Persist after a turn completes:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a href="#__codelineno-19-1" id="__codelineno-19-1" name="__codelineno-19-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-19-2"><a href="#__codelineno-19-2" id="__codelineno-19-2" name="__codelineno-19-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-19-1"><a href="#__codelineno-19-1" id="__codelineno-19-1" name="__codelineno-19-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="p">(</span>
+</span><span id="__span-19-2"><a href="#__codelineno-19-2" id="__codelineno-19-2" name="__codelineno-19-2"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.5"</span><span class="p">),</span>
 </span><span id="__span-19-3"><a href="#__codelineno-19-3" id="__codelineno-19-3" name="__codelineno-19-3"></a>    <span class="n">store</span><span class="o">=</span><span class="n">JsonStore</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"./sessions"</span><span class="p">)),</span>
 </span><span id="__span-19-4"><a href="#__codelineno-19-4" id="__codelineno-19-4" name="__codelineno-19-4"></a>    <span class="n">session_id</span><span class="o">=</span><span class="s2">"user-42"</span><span class="p">,</span>
 </span><span id="__span-19-5"><a href="#__codelineno-19-5" id="__codelineno-19-5" name="__codelineno-19-5"></a>    <span class="n">system</span><span class="o">=</span><span class="s2">"..."</span><span class="p">,</span>
@@ -1155,8 +1155,8 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 </span><span id="__span-19-8"><a href="#__codelineno-19-8" id="__codelineno-19-8" name="__codelineno-19-8"></a>    <span class="n">session</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
 </span></code></pre></div>
 <p>Resume in a later process with the classmethod constructor:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a href="#__codelineno-20-1" id="__codelineno-20-1" name="__codelineno-20-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
-</span><span id="__span-20-2"><a href="#__codelineno-20-2" id="__codelineno-20-2" name="__codelineno-20-2"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">,</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-20-1"><a href="#__codelineno-20-1" id="__codelineno-20-1" name="__codelineno-20-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+</span><span id="__span-20-2"><a href="#__codelineno-20-2" id="__codelineno-20-2" name="__codelineno-20-2"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.5"</span><span class="p">,</span>
 </span><span id="__span-20-3"><a href="#__codelineno-20-3" id="__codelineno-20-3" name="__codelineno-20-3"></a>    <span class="n">store</span><span class="o">=</span><span class="n">JsonStore</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"./sessions"</span><span class="p">)),</span>
 </span><span id="__span-20-4"><a href="#__codelineno-20-4" id="__codelineno-20-4" name="__codelineno-20-4"></a>    <span class="n">session_id</span><span class="o">=</span><span class="s2">"user-42"</span><span class="p">,</span>
 </span><span id="__span-20-5"><a href="#__codelineno-20-5" id="__codelineno-20-5" name="__codelineno-20-5"></a><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
@@ -1164,7 +1164,7 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 </span></code></pre></div>
 <p><code>load()</code> pulls the <code>system</code> prompt and full message history from the snapshot. Pass <code>client=</code> instead of <code>model=</code> when you need a pre-configured or fake client (e.g. in tests).</p>
 <p><code>session_id</code> is optional — omit it to start a fresh session that's still wired up to the store, so a later <code>session.save()</code> lands under an auto-generated id:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a href="#__codelineno-21-1" id="__codelineno-21-1" name="__codelineno-21-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">,</span> <span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-21-1"><a href="#__codelineno-21-1" id="__codelineno-21-1" name="__codelineno-21-1"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.5"</span><span class="p">,</span> <span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
 </span><span id="__span-21-2"><a href="#__codelineno-21-2" id="__codelineno-21-2" name="__codelineno-21-2"></a>    <span class="k">await</span> <span class="n">session</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="s2">"Hello!"</span><span class="p">)</span>
 </span><span id="__span-21-3"><a href="#__codelineno-21-3" id="__codelineno-21-3" name="__codelineno-21-3"></a>    <span class="n">session</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>  <span class="c1"># persisted under session.session_id</span>
 </span></code></pre></div>
@@ -1243,5 +1243,21 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
 <script src="../assets/javascripts/bundle.77dd0ce9.min.js"></script>
 <script src="../javascripts/mermaid.mjs" type="module"></script>
 <script src="../javascripts/charts.mjs" type="module"></script>
-</body>
+<script>// Injected into changed PR-preview pages by mark_changes.py: toggle highlights, jump between changes.
+document.querySelectorAll('.pr-diff-bar [data-toggle]').forEach((b) =>
+  b.addEventListener('click', () => {
+    const off = document.documentElement.classList.toggle('pr-diff-off');
+    b.textContent = off ? 'show changes' : 'hide changes';
+  }),
+);
+document.querySelectorAll('.pr-diff-bar [data-next]').forEach((b) => {
+  let i = -1;
+  b.addEventListener('click', () => {
+    const marks = document.querySelectorAll('[data-pr-diff]');
+    if (!marks.length) return;
+    i = (i + 1) % marks.length;
+    marks[i].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+});
+</script></body>
 </html>

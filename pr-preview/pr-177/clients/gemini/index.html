@@ -230,7 +230,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item md-nav__item--active">
 <label class="md-nav__link md-nav__link--active" for="__toc">
@@ -253,7 +253,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 <nav aria-label="On this page" class="md-nav md-nav--secondary">
 <label class="md-nav__title" for="__toc">
 <span class="md-nav__icon md-icon"></span>
@@ -422,7 +422,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../voyage/">
@@ -484,7 +484,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../../mcp/">
@@ -508,7 +508,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="../../observability/">
@@ -520,7 +520,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 </ul>
 </nav>
@@ -528,7 +528,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </div>
 </div>
 <div class="md-content" data-md-component="content">
-<article class="md-content__inner md-typeset">
+<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">0 added</span> · <span class="c">1 changed</span> · 0 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
 <a id="__skip" tabindex="-1"></a>
 <h1 id="gemini-client">Gemini Client</h1>
 <p>The Gemini client provides access to Google's Gemini models.</p>
@@ -561,7 +561,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </span></code></pre></div>
 <p>Unlike the OpenAI-family clients and Anthropic's <code>stream_chat</code>, Gemini's <code>stream_chat</code> silently ignores <code>extra_params</code>, and <code>complete_chat</code> doesn't accept it at all.</p>
 <h2 id="thinking-models">Thinking models</h2>
-<p>Gemini's reasoning models (e.g. <code>gemini-2.5-flash</code>, <code>gemini-2.5-pro</code>) can emit internal thought tokens alongside the final answer. Configure them via two fields:</p>
+<p data-pr-diff="changed">Gemini's reasoning models (e.g. <code>gemini-3.8-flash</code>) can emit internal thought tokens alongside the final answer. Configure them via two fields:</p>
 <ul>
 <li><code>thinking_config: ThinkingConfig | None</code> (Gemini-specific) — merged into every <code>generationConfig</code>. Set <code>thinkingBudget</code> to allocate tokens for reasoning and <code>includeThoughts=True</code> to have the thought parts streamed back.</li>
 <li><code>on_thought: Callable[[str], None] | None</code> (defined on <code>LLMClientBase</code>, so any provider can adopt it) — called with each thought text chunk as it arrives. Thought chunks are <strong>not</strong> yielded as part of the normal text stream; this callback is the only way to see them.</li>
@@ -723,5 +723,21 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 <script src="../../assets/javascripts/bundle.77dd0ce9.min.js"></script>
 <script src="../../javascripts/mermaid.mjs" type="module"></script>
 <script src="../../javascripts/charts.mjs" type="module"></script>
-</body>
+<script>// Injected into changed PR-preview pages by mark_changes.py: toggle highlights, jump between changes.
+document.querySelectorAll('.pr-diff-bar [data-toggle]').forEach((b) =>
+  b.addEventListener('click', () => {
+    const off = document.documentElement.classList.toggle('pr-diff-off');
+    b.textContent = off ? 'show changes' : 'hide changes';
+  }),
+);
+document.querySelectorAll('.pr-diff-bar [data-next]').forEach((b) => {
+  let i = -1;
+  b.addEventListener('click', () => {
+    const marks = document.querySelectorAll('[data-pr-diff]');
+    if (!marks.length) return;
+    i = (i + 1) % marks.length;
+    marks[i].scrollIntoView({ block: 'center', behavior: 'smooth' });
+  });
+});
+</script></body>
 </html>

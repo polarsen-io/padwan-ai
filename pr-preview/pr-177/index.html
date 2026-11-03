@@ -319,7 +319,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="./clients/gemini/">
@@ -331,7 +331,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="./clients/mistral/">
@@ -367,7 +367,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="./clients/voyage/">
@@ -429,7 +429,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="./mcp/">
@@ -453,7 +453,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="./observability/">
@@ -465,7 +465,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 
     
   </span>
-</a>
+<span class="pr-diff-badge">PR</span></a>
 </li>
 </ul>
 </nav>
@@ -473,7 +473,7 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 </div>
 </div>
 <div class="md-content" data-md-component="content">
-<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">1 added</span> · <span class="c">1 changed</span> · 1 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
+<article class="md-content__inner md-typeset"><div class="pr-diff-bar"><b>This PR:</b> <span class="a">1 added</span> · <span class="c">5 changed</span> · 1 removed<button data-next="">next change</button><button data-toggle="">hide changes</button></div>
 <a id="__skip" tabindex="-1"></a>
 <h1 id="padwan-ai">Padwan AI</h1>
 <p>Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, ElevenLabs (experimental), Gradium (experimental), TypeSafe (JEV, experimental), and any OpenAI-compatible API.</p>
@@ -612,12 +612,12 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 <li>Realtime: Gradium's is speech-to-speech translation, not a voice-agent session; ElevenLabs and Gradium also stream TTS and STT over WebSocket.</li>
 </ul>
 <h2 id="quick-example">Quick Example</h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a href="#__codelineno-0-1" id="__codelineno-0-1" name="__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">"sk-..."</span>
-</span><span id="__span-0-2"><a href="#__codelineno-0-2" id="__codelineno-0-2" name="__codelineno-0-2"></a>uvx<span class="w"> </span>padwan-ai<span class="w"> </span><span class="s2">"Hello!"</span><span class="w"> </span>-m<span class="w"> </span>gpt-4o-mini
+<div class="language-bash highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-0-1"><a href="#__codelineno-0-1" id="__codelineno-0-1" name="__codelineno-0-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_API_KEY</span><span class="o">=</span><span class="s2">"sk-..."</span>
+</span><span id="__span-0-2"><a href="#__codelineno-0-2" id="__codelineno-0-2" name="__codelineno-0-2"></a>uvx<span class="w"> </span>padwan-ai<span class="w"> </span><span class="s2">"Hello!"</span><span class="w"> </span>-m<span class="w"> </span>gpt-5.4-mini
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a href="#__codelineno-1-1" id="__codelineno-1-1" name="__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMClient</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-1-1"><a href="#__codelineno-1-1" id="__codelineno-1-1" name="__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">LLMClient</span>
 </span><span id="__span-1-2"><a href="#__codelineno-1-2" id="__codelineno-1-2" name="__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a href="#__codelineno-1-3" id="__codelineno-1-3" name="__codelineno-1-3"></a><span class="k">async</span> <span class="k">with</span> <span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+</span><span id="__span-1-3"><a href="#__codelineno-1-3" id="__codelineno-1-3" name="__codelineno-1-3"></a><span class="k">async</span> <span class="k">with</span> <span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.5"</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
 </span><span id="__span-1-4"><a href="#__codelineno-1-4" id="__codelineno-1-4" name="__codelineno-1-4"></a>    <span class="n">response</span><span class="p">,</span> <span class="n">usage</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">complete_chat</span><span class="p">(</span>
 </span><span id="__span-1-5"><a href="#__codelineno-1-5" id="__codelineno-1-5" name="__codelineno-1-5"></a>        <span class="p">[{</span><span class="s2">"role"</span><span class="p">:</span> <span class="s2">"user"</span><span class="p">,</span> <span class="s2">"content"</span><span class="p">:</span> <span class="s2">"Hello!"</span><span class="p">}]</span>
 </span><span id="__span-1-6"><a href="#__codelineno-1-6" id="__codelineno-1-6" name="__codelineno-1-6"></a>    <span class="p">)</span>
@@ -633,10 +633,10 @@ html:not(.pr-diff-off) :is(.admonition, .tabbed-set, .highlight)[data-pr-diff] {
 <p><code>AgentSession</code> wraps a conversation with the loop that calls the LLM, dispatches any tool calls, feeds the results back, 
 and repeats until the model produces a plain text answer.
 It accepts individual <code>McpTool</code> instances and whole <code>McpTransport</code> servers in the same list, transports are entered as part of the session lifecycle:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a href="#__codelineno-4-1" id="__codelineno-4-1" name="__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">McpStdio</span>
+<div class="language-python highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-4-1"><a href="#__codelineno-4-1" id="__codelineno-4-1" name="__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentSession</span><span class="p">,</span> <span class="n">LLMClient</span><span class="p">,</span> <span class="n">McpStdio</span>
 </span><span id="__span-4-2"><a href="#__codelineno-4-2" id="__codelineno-4-2" name="__codelineno-4-2"></a>
 </span><span id="__span-4-3"><a href="#__codelineno-4-3" id="__codelineno-4-3" name="__codelineno-4-3"></a><span class="k">async</span> <span class="k">with</span> <span class="n">AgentSession</span><span class="p">(</span>
-</span><span id="__span-4-4"><a href="#__codelineno-4-4" id="__codelineno-4-4" name="__codelineno-4-4"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-4o"</span><span class="p">),</span>
+</span><span id="__span-4-4"><a href="#__codelineno-4-4" id="__codelineno-4-4" name="__codelineno-4-4"></a>    <span class="n">client</span><span class="o">=</span><span class="n">LLMClient</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="s2">"gpt-5.5"</span><span class="p">),</span>
 </span><span id="__span-4-5"><a href="#__codelineno-4-5" id="__codelineno-4-5" name="__codelineno-4-5"></a>    <span class="n">mcp_tools</span><span class="o">=</span><span class="p">[</span><span class="n">McpStdio</span><span class="p">(</span><span class="n">command</span><span class="o">=</span><span class="s2">"uvx"</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="s2">"weather-mcp"</span><span class="p">])],</span>
 </span><span id="__span-4-6"><a href="#__codelineno-4-6" id="__codelineno-4-6" name="__codelineno-4-6"></a>    <span class="n">system</span><span class="o">=</span><span class="s2">"You have access to weather tools."</span><span class="p">,</span>
 </span><span id="__span-4-7"><a href="#__codelineno-4-7" id="__codelineno-4-7" name="__codelineno-4-7"></a><span class="p">)</span> <span class="k">as</span> <span class="n">session</span><span class="p">:</span>
@@ -653,11 +653,11 @@ It accepts individual <code>McpTool</code> instances and whole <code>McpTranspor
 <p>See the <a href="mcp/">MCP page</a> for architecture diagrams, the dual-channel design of <code>McpStreamable</code>, the stdio reader model, and the reconnection flow.</p>
 <h2 id="cli-tui">CLI / TUI</h2>
 <p>The interactive CLI/TUI is available as a separate package: <code>padwan-cli</code>.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a href="#__codelineno-6-1" id="__codelineno-6-1" name="__codelineno-6-1"></a><span class="c1"># One-shot prompt</span>
-</span><span id="__span-6-2"><a href="#__codelineno-6-2" id="__codelineno-6-2" name="__codelineno-6-2"></a>uvx<span class="w"> </span>padwan-cli<span class="w"> </span><span class="s2">"Explain Python decorators"</span><span class="w"> </span>-m<span class="w"> </span>gemini-2.5-flash
+<div class="language-bash highlight" data-pr-diff="changed"><pre><span></span><code><span id="__span-6-1"><a href="#__codelineno-6-1" id="__codelineno-6-1" name="__codelineno-6-1"></a><span class="c1"># One-shot prompt</span>
+</span><span id="__span-6-2"><a href="#__codelineno-6-2" id="__codelineno-6-2" name="__codelineno-6-2"></a>uvx<span class="w"> </span>padwan-cli<span class="w"> </span><span class="s2">"Explain Python decorators"</span><span class="w"> </span>-m<span class="w"> </span>gemini-3.8-flash
 </span><span id="__span-6-3"><a href="#__codelineno-6-3" id="__codelineno-6-3" name="__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a href="#__codelineno-6-4" id="__codelineno-6-4" name="__codelineno-6-4"></a><span class="c1"># Interactive chat</span>
-</span><span id="__span-6-5"><a href="#__codelineno-6-5" id="__codelineno-6-5" name="__codelineno-6-5"></a>uvx<span class="w"> </span>padwan-cli<span class="w"> </span>chat<span class="w"> </span>-m<span class="w"> </span>gpt-4o
+</span><span id="__span-6-5"><a href="#__codelineno-6-5" id="__codelineno-6-5" name="__codelineno-6-5"></a>uvx<span class="w"> </span>padwan-cli<span class="w"> </span>chat<span class="w"> </span>-m<span class="w"> </span>gpt-5.5
 </span></code></pre></div>
 </article>
 </div>
