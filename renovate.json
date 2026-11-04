@@ -10,13 +10,6 @@
         "requires-python"
       ],
       "enabled": false
-    },
-    {
-      "description": "xai-sdk 1.21 needs packaging<26; commitizen 4.19.3 needs packaging>=26",
-      "matchPackageNames": [
-        "commitizen"
-      ],
-      "allowedVersions": "<4.19.3"
     }
   ]
 }
