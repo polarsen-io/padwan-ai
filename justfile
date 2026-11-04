@@ -104,4 +104,4 @@ gen-diagrams:
 # Bump version (commitizen — updates pyproject.toml and CHANGELOG)
 [group('release')]
 bump *args:
-    uv run --group bump cz bump {{ args }}
+    uvx --from "commitizen>=4.15.1" cz bump {{ args }}
