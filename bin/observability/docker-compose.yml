@@ -91,7 +91,7 @@ services:
 
   # one-shot: seed model prices so generation costs stop reading 0
   langfuse-init:
-    image: python:3.13-alpine
+    image: python:3.13-alpine@sha256:7984cf56ceaddebe4fefeb75d64000b9f45d8b77b11a09b24524da6cdc3af0c8
     profiles: [langfuse]
     restart: "no"
     depends_on:
@@ -106,7 +106,7 @@ services:
     command: python /seed.py
 
   clickhouse:
-    image: docker.io/clickhouse/clickhouse-server:25.12
+    image: docker.io/clickhouse/clickhouse-server:25.12@sha256:8a790dd3468db22b1d4e7b18a176f378ff5ff6053b9c48dd4ea1fa71a24c5ba6
     profiles: [langfuse]
     restart: unless-stopped
     user: "101:101"
@@ -144,7 +144,7 @@ services:
       start_period: 1s
 
   redis:
-    image: docker.io/redis:7
+    image: docker.io/redis:7@sha256:b6b6e3dc0c0952737748e55d5d885272840c7e42ba41ab1d5489f693419882f5
     profiles: [langfuse]
     restart: unless-stopped
     command: >
@@ -159,7 +159,7 @@ services:
       retries: 10
 
   postgres:
-    image: docker.io/postgres:17
+    image: docker.io/postgres:17@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba8e6d99d784e1
     profiles: [langfuse]
     restart: unless-stopped
     healthcheck:
