@@ -34,11 +34,11 @@ jobs:
       contents: write
       pull-requests: write # preview link comment
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Install uv
         if: github.event.action != 'closed'
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
 
@@ -58,7 +58,7 @@ jobs:
             dev/
 
       # Production, the base the preview is diffed against; absent on the site's first preview.
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
         continue-on-error: true
         with:
@@ -75,7 +75,7 @@ jobs:
       # Deploys on open/sync, removes on close; the sticky comment below links it.
       - name: Publish or remove the PR preview
         if: github.event_name == 'pull_request'
-        uses: rossjrw/pr-preview-action@ffa7509e91a3ec8dfc2e5536c4d5c1acdf7a6de9 # v1.8.1
+        uses: rossjrw/pr-preview-action@873417d2df72380da1f3978378fb58560bcde976 # v1.8.2
         with:
           source-dir: site
           comment: false
