@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from langfuse.types import (
+    AttributeValue,
     MaskOtelSpansParams,
     MaskOtelSpansResult,
     OtelSpanData,
@@ -10,7 +11,6 @@ from langfuse.types import (
 )
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.util.instrumentation import InstrumentationScope
-from opentelemetry.util.types import AttributeValue
 
 import padwan_ai.langfuse as langfuse_integration
 from padwan_ai import otel

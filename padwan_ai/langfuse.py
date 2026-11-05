@@ -7,6 +7,7 @@ try:
     from langfuse import Langfuse
     from langfuse.span_filter import is_default_export_span
     from langfuse.types import (
+        AttributeValue,
         MaskOtelSpansFunction,
         MaskOtelSpansParams,
         MaskOtelSpansResult,
@@ -16,7 +17,6 @@ try:
     )
     from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
     from opentelemetry.sdk.trace.export import SpanExporter
-    from opentelemetry.util.types import AttributeValue
 except ImportError as e:
     raise ImportError(
         "padwan_ai.langfuse requires Langfuse: pip install 'padwan-ai[langfuse]'"
