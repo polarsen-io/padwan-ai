@@ -24,7 +24,7 @@
       
       
       <link rel="icon" href="../static/favicon.png">
-      <meta name="generator" content="zensical-0.0.73">
+      <meta name="generator" content="zensical-0.0.74">
     
     
       
@@ -1126,8 +1126,9 @@
 <li>the docstring the description</li>
 <li>the arguments the model sends are validated before the function runs</li>
 </ul>
-<p>Validation needs either <code>msgspec</code> or <code>pydantic</code> installed (neither is a dependency
-of padwan-ai).</p>
+<p>Plain types (<code>str</code>, <code>int</code>, <code>float</code>, <code>bool</code>, <code>None</code>, <code>list</code>, <code>dict[str, ...]</code>, <code>Literal</code>,
+unions) work out of the box. Constraints and class types (<code>Struct</code>, <code>BaseModel</code>) need
+<code>msgspec</code> or <code>pydantic</code> installed (neither is a dependency of padwan-ai).</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai.tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">tool</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -1185,12 +1186,20 @@ picks pydantic.</p>
 </div>
 </div>
 </div>
-<p>A signature of plain types uses the only library installed and raises when both
-are (pydantic is often pulled in by another SDK). Pass <code>validator=</code> to choose, or
-any object implementing <code>ToolValidator</code> to plug in another library:</p>
+<p>A signature of plain types uses the only library installed, the built-in validator
+when neither is, and raises when both are (pydantic is often pulled in by another SDK).
+Set <code>PADWAN_TOOL_VALIDATOR=msgspec</code> (or <code>pydantic</code>) to pick one for the whole process, or
+pass <code>validator=</code> per tool, including any object implementing <code>ToolValidator</code> to plug in
+another library:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">tool</span><span class="p">(</span><span class="n">get_weather</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="s2">"msgspec"</span><span class="p">)</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1"># MyValidator implements compile(name, fields), adapt(cls) and dump(result)</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">tool</span><span class="p">(</span><span class="n">get_weather</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">MyValidator</span><span class="p">())</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nd">@tool</span><span class="p">(</span><span class="n">validator</span><span class="o">=</span><span class="s2">"pydantic"</span><span class="p">)</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_time</span><span class="p">(</span><span class="n">city</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span> <span class="o">...</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1"># MyValidator implements compile(name, fields), adapt(cls) and dump(result)</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="n">tool</span><span class="p">(</span><span class="n">get_weather</span><span class="p">,</span> <span class="n">validator</span><span class="o">=</span><span class="n">MyValidator</span><span class="p">())</span>
 </span></code></pre></div>
 <p>Malformed arguments raise the chosen library's <code>ValidationError</code> inside the handler,
 which <code>AgentSession</code> reports to the model as a tool error like any other exception.
@@ -1736,10 +1745,10 @@ The model sees one extra tool, <code>submit</code> (rename it with <code>AgentOu
       
         
         
-      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["navigation.sections","navigation.top","navigation.expand","search.suggest","search.highlight","content.code.copy","toc.integrate"],"redirect":null,"search":"../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["navigation.sections","navigation.top","navigation.expand","search.suggest","search.highlight","content.code.copy","toc.integrate"],"redirect":null,"search":"../assets/javascripts/workers/search.719e0d91.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../assets/javascripts/bundle.77dd0ce9.min.js"></script>
+      <script src="../assets/javascripts/bundle.d31f0ffa.min.js"></script>
       
         <script src="../javascripts/mermaid.mjs" type="module"></script>
       
