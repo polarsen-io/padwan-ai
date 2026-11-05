@@ -77,8 +77,9 @@ Writing a JSON Schema by hand for every local tool gets old.
 - the docstring the description
 - the arguments the model sends are validated before the function runs
 
-Validation needs either `msgspec` or `pydantic` installed (neither is a dependency
-of padwan-ai).
+Plain types (`str`, `int`, `float`, `bool`, `None`, `list`, `dict[str, ...]`, `Literal`,
+unions) work out of the box. Constraints and class types (`Struct`, `BaseModel`) need
+`msgspec` or `pydantic` installed (neither is a dependency of padwan-ai).
 
 ```python
 from padwan_ai.tools import tool
@@ -140,12 +141,20 @@ picks pydantic.
     read_tool = tool(read)  # the model is dumped to JSON data
     ```
 
-A signature of plain types uses the only library installed and raises when both
-are (pydantic is often pulled in by another SDK). Pass `validator=` to choose, or
-any object implementing `ToolValidator` to plug in another library:
+A signature of plain types uses the only library installed, the built-in validator
+when neither is, and raises when both are (pydantic is often pulled in by another SDK).
+Set `PADWAN_TOOL_VALIDATOR=msgspec` (or `pydantic`) to pick one for the whole process, or
+pass `validator=` per tool, including any object implementing `ToolValidator` to plug in
+another library:
 
 ```python
 tool(get_weather, validator="msgspec")
+
+
+@tool(validator="pydantic")
+async def get_time(city: str) -> str: ...
+
+
 # MyValidator implements compile(name, fields), adapt(cls) and dump(result)
 tool(get_weather, validator=MyValidator())
 ```
