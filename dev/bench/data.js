@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793891610699,
+  "lastUpdate": 1793912614201,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -6947,6 +6947,66 @@ window.BENCHMARK_DATA = {
             "name": "3.15 · padwan_ai.otel",
             "value": 243.25,
             "range": "2.02",
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "efcd11b5fbb2cd45b5be366d0010262fbe482e1a",
+          "message": "feat(tools): validate plain-type tools without msgspec or pydantic (#184)\n\n* feat(tools): validate plain-type tools without msgspec or pydantic\n\ntool() now falls back to a stdlib BuiltinValidator when neither library is installed, instead of raising ImportError. Classes and constraints still need a library.\n\n* feat(tools): @tool(validator=...) decorator form and PADWAN_TOOL_VALIDATOR tie-break",
+          "timestamp": "2026-11-05T22:02:40+01:00",
+          "tree_id": "22d7b46d82427d406641b591db7adbbe4346db8f",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/efcd11b5fbb2cd45b5be366d0010262fbe482e1a"
+        },
+        "date": 1793912613017,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 231.53,
+            "range": "3.32",
+            "unit": "ms"
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 226.3,
+            "range": "2.13",
+            "unit": "ms"
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 245.83,
+            "range": "3.86",
+            "unit": "ms"
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 52.18,
+            "range": "1.12",
+            "unit": "ms"
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 198.88,
+            "range": "4.29",
+            "unit": "ms"
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 244.31,
+            "range": "5.34",
             "unit": "ms"
           }
         ]
