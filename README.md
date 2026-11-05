@@ -75,7 +75,8 @@ async with LLMClient(model="gemini-3.5-flash") as client:
 
 `AgentSession` runs the tool loop: call the model, dispatch tool calls, feed results back, repeat until a final answer. Tools come from typed Python functions or from MCP servers.
 
-`@tool` builds the parameter schema with `msgspec` or `pydantic`, so install one first: `pip install padwan-ai msgspec`.
+`@tool` validates plain types out of the box. Constraints and `Struct`/`BaseModel` types use `msgspec` or `pydantic`;
+with both installed, pick one with `@tool(validator="msgspec")` or `PADWAN_TOOL_VALIDATOR=msgspec`.
 
 ```python
 from padwan_ai import AgentSession, LLMClient, McpStdio
