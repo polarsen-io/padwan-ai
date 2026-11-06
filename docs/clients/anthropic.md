@@ -159,7 +159,7 @@ body: AnthropicCompatBody = {
     "max_tokens": 1024,
     "messages": [{"role": "user", "content": "Hello!"}],
 }
-request = messages_to_gemini(body, model="gemini-2.5-flash")
+request = messages_to_gemini(body, model="gemini-3.8-flash")
 async with GeminiClient() as client:
     data, usage = await client.complete(request)
     response = gemini_response_to_anthropic(data, model=body["model"])

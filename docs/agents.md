@@ -22,7 +22,7 @@ A text run never raises on those: an empty answer yields `"(no response)"` and t
 from padwan_ai import AgentSession, LLMClient, McpStdio
 
 async with AgentSession(
-    client=LLMClient(model="gpt-4o"),
+    client=LLMClient(model="gpt-5.5"),
     mcp_tools=[McpStdio(command="uvx", args=["weather-mcp"])],
     system="You are a weather assistant.",
 ) as session:
@@ -52,7 +52,7 @@ weather_tool = McpTool(
 )
 
 async with AgentSession(
-    client=LLMClient(model="gpt-4o"),
+    client=LLMClient(model="gpt-5.5"),
     mcp_tools=[
         weather_tool,  # local definition
         McpStdio(command="uvx", args=["filesystem-mcp", "/home/me/docs"]),  # subprocess
@@ -417,7 +417,7 @@ When a single LLM response contains multiple tool calls, `execution="parallel"` 
 
 ```python
 session = AgentSession(
-    client=LLMClient(model="gpt-4o"),
+    client=LLMClient(model="gpt-5.5"),
     mcp_tools=[...],
     execution="parallel",
 )
@@ -435,7 +435,7 @@ def prompt_user(tool, args):
 
 
 session = AgentSession(
-    client=LLMClient(model="gpt-4o"),
+    client=LLMClient(model="gpt-5.5"),
     mcp_tools=[...],
     approve_tool=prompt_user,
 )
@@ -552,7 +552,7 @@ Persist after a turn completes:
 
 ```python
 async with AgentSession(
-    client=LLMClient(model="gpt-4o"),
+    client=LLMClient(model="gpt-5.5"),
     store=JsonStore(Path("./sessions")),
     session_id="user-42",
     system="...",
@@ -565,7 +565,7 @@ Resume in a later process with the classmethod constructor:
 
 ```python
 async with AgentSession.load(
-    model="gpt-4o",
+    model="gpt-5.5",
     store=JsonStore(Path("./sessions")),
     session_id="user-42",
 ) as session:
@@ -577,7 +577,7 @@ async with AgentSession.load(
 `session_id` is optional — omit it to start a fresh session that's still wired up to the store, so a later `session.save()` lands under an auto-generated id:
 
 ```python
-async with AgentSession.load(model="gpt-4o", store=store) as session:
+async with AgentSession.load(model="gpt-5.5", store=store) as session:
     await session.send("Hello!")
     session.save()  # persisted under session.session_id
 ```

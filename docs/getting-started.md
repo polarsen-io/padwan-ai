@@ -14,6 +14,12 @@
     uv add padwan-ai
     ```
 
+!!! note "urllib3"
+    niquests runs on urllib3-future, which replaces `urllib3` in the same environment (backward-compatible, so
+    `requests`/`boto3` keep working). To keep the original `urllib3`, install with
+    `URLLIB3_NO_OVERRIDE=1 pip install padwan-ai --no-binary urllib3-future`
+    ([details and other package managers](https://github.com/jawah/urllib3.future#notes--frequently-asked-questions)).
+
 ## Basic Usage
 
 ### Creating a Client
@@ -23,7 +29,7 @@ from padwan_ai import LLMClient
 from padwan_ai.conversation import Message
 
 # Using context manager (recommended)
-async with LLMClient("gpt-4o") as client:
+async with LLMClient("gpt-5.5") as client:
     response, usage = await client.complete_chat(
         [Message(role="user", content="Hello!")]
     )
@@ -85,7 +91,7 @@ Gateway mode routes every model through one OpenAI-compatible endpoint instead: 
 from padwan_ai import LLMClient
 from padwan_ai.conversation import Message
 
-async with LLMClient("gpt-4o") as client:
+async with LLMClient("gpt-5.5") as client:
     response, usage = await client.complete_chat(
         [Message(role="user", content="Hello!")]
     )
@@ -99,7 +105,7 @@ the standalone [TypeSafe client](clients/typesafe.md).
 ```python
 from padwan_ai import LLMClient, Message
 
-async with LLMClient("gpt-4o") as client:
+async with LLMClient("gpt-5.5") as client:
     stream = client.stream_chat([Message(role="user", content="Tell me a story")])
     async for chunk in stream:
         print(chunk, end="", flush=True)
@@ -118,7 +124,7 @@ from padwan_ai import LLMClient, ConversationState
 state = ConversationState(system="You are a helpful assistant.")
 state.add_user_message("What is Python?")
 
-async with LLMClient("gpt-4o") as client:
+async with LLMClient("gpt-5.5") as client:
     stream = client.stream_chat(state.messages)
     chunks = []
     async for chunk in stream:
@@ -141,7 +147,7 @@ When the model needs to call tools, use `AgentSession` — it handles the full l
 from padwan_ai import AgentSession, LLMClient, McpStdio
 
 async with AgentSession(
-    client=LLMClient("gpt-4o"),
+    client=LLMClient("gpt-5.5"),
     mcp_tools=[McpStdio(command="uvx", args=["weather-mcp"])],
     system="You have access to weather tools.",
 ) as session:

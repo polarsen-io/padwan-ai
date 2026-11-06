@@ -4,9 +4,9 @@ Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, ElevenLab
 
 ## Why
 
-Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock you into a single provider's SDK. Padwan AI takes a different approach:
+Most LLM client libraries pull in a stack of dependencies and lock you into a single provider's SDK. Padwan AI takes a different approach:
 
-- **One HTTP dependency** — [niquests](https://github.com/jawah/niquests) (plus its qh3/urllib3-future stack), no pydantic, no httpx. Zero overhead beyond the HTTP layer.
+- **One dependency** — [niquests](https://github.com/jawah/niquests), nothing else. No provider SDKs: Padwan talks to each API directly.
 - **TypedDict-only** — all request/response types are plain `TypedDict`s, no validation framework required. No runtime cost, full editor support.
 - **Multi-provider, extensible** — supports the major providers (OpenAI, Gemini, Mistral, Grok, Anthropic) with a shared base class that makes adding new ones straightforward.
 
@@ -47,13 +47,13 @@ Most LLM client libraries pull in heavy dependencies (pydantic, httpx) and lock 
 
 ```bash
 export OPENAI_API_KEY="sk-..."
-uvx padwan-ai "Hello!" -m gpt-4o-mini
+uvx padwan-ai "Hello!" -m gpt-5.4-mini
 ```
 
 ```python
 from padwan_ai import LLMClient
 
-async with LLMClient(model="gpt-4o") as client:
+async with LLMClient(model="gpt-5.5") as client:
     response, usage = await client.complete_chat(
         [{"role": "user", "content": "Hello!"}]
     )
@@ -82,7 +82,7 @@ It accepts individual `McpTool` instances and whole `McpTransport` servers in th
 from padwan_ai import AgentSession, LLMClient, McpStdio
 
 async with AgentSession(
-    client=LLMClient(model="gpt-4o"),
+    client=LLMClient(model="gpt-5.5"),
     mcp_tools=[McpStdio(command="uvx", args=["weather-mcp"])],
     system="You have access to weather tools.",
 ) as session:
@@ -110,8 +110,8 @@ The interactive CLI/TUI is available as a separate package: `padwan-cli`.
 
 ```bash
 # One-shot prompt
-uvx padwan-cli "Explain Python decorators" -m gemini-2.5-flash
+uvx padwan-cli "Explain Python decorators" -m gemini-3.8-flash
 
 # Interactive chat
-uvx padwan-cli chat -m gpt-4o
+uvx padwan-cli chat -m gpt-5.5
 ```

@@ -65,7 +65,7 @@ def main() -> None:
         description="One-shot LLM query",
     )
     parser.add_argument("prompt", help="Prompt to send")
-    parser.add_argument("-m", "--model", default="gpt-4o-mini", help="Model to use")
+    parser.add_argument("-m", "--model", default="gpt-5.4-mini", help="Model to use")
     parser.add_argument(
         "--base-url", default=None, help="Custom base URL for the LLM provider"
     )

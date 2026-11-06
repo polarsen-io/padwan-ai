@@ -6,7 +6,7 @@
 
 <p align="center">
   Lightweight async client for OpenAI, Gemini, Mistral, Grok, Anthropic, ElevenLabs (experimental), Gradium (experimental), TypeSafe (JEV, experimental), and any OpenAI-compatible API.<br>
-  One HTTP dependency (<a href="https://github.com/jawah/niquests">niquests</a>, plus its qh3/urllib3-future stack), TypedDict everywhere, HTTP/2 and HTTP/3 out of the box.
+  One dependency (<a href="https://github.com/jawah/niquests">niquests</a>), TypedDict everywhere, HTTP/2 and HTTP/3 out of the box.
 </p>
 
 <p align="center">
@@ -31,17 +31,29 @@ Extras: `[realtime]` for voice sessions, `[otel]` for OpenTelemetry, `[langfuse]
 
 ## Quickstart
 
+Requires Python 3.13+. The provider is picked from the model name; only the matching `*_API_KEY` env var is needed
+(`OPENAI_API_KEY` here). Behind a gateway? Set `PADWAN_BASE_URL` and `PADWAN_API_KEY` instead and every model routes
+through it ([gateway mode](docs/clients/openai-compatible.md#unified-gateway-via-environment)).
+
 ```python
+import asyncio
+
 from padwan_ai import LLMClient
 
-async with LLMClient(model="gpt-5.5") as client:
-    response, usage = await client.complete_chat(
-        [{"role": "user", "content": "Hello!"}]
-    )
-    print(response["content"])
+
+async def main() -> None:
+    async with LLMClient(model="gpt-5.5") as client:
+        response, usage = await client.complete_chat(
+            [{"role": "user", "content": "Hello!"}]
+        )
+        print(response["content"])
+
+
+asyncio.run(main())
 ```
 
-The provider is picked from the model name; only the matching `*_API_KEY` env var is needed.
+The examples below skip the `asyncio.run(main())` wrapper; paste them into `python -m asyncio` or a notebook, or wrap
+them the same way.
 
 ### Streaming
 
@@ -63,6 +75,9 @@ async with LLMClient(model="gemini-3.5-flash") as client:
 
 `AgentSession` runs the tool loop: call the model, dispatch tool calls, feed results back, repeat until a final answer. Tools come from typed Python functions or from MCP servers.
 
+`@tool` validates plain types out of the box. Constraints and `Struct`/`BaseModel` types use `msgspec` or `pydantic`;
+with both installed, pick one with `@tool(validator="msgspec")` or `PADWAN_TOOL_VALIDATOR=msgspec`.
+
 ```python
 from padwan_ai import AgentSession, LLMClient, McpStdio
 from padwan_ai.tools import tool
@@ -76,13 +91,11 @@ async def add(a: int, b: int) -> int:
 
 async with AgentSession(
     client=LLMClient(model="claude-sonnet-5"),
-    mcp_tools=[add, McpStdio(command="uvx", args=["my-mcp-server"])],
+    mcp_tools=[add, McpStdio(command="uvx", args=["mcp-server-time"])],
     system="Use tools when helpful.",
 ) as session:
-    print(await session.send("What is 2 + 3, and what's the weather in Paris?"))
+    print(await session.send("What is 2 + 3, and what time is it in Paris?"))
 ```
-
-`@tool` needs `msgspec` or `pydantic` installed to build the parameter schema.
 
 Typed final answers (`AgentOutput`), approval hooks, parallel tool execution and snapshot persistence are covered in the [agents guide](docs/agents.md).
 

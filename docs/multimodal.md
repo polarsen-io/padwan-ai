@@ -49,7 +49,7 @@ state.add_user_message(
     ]
 )
 
-async with LLMClient("gpt-4o") as client:
+async with LLMClient("gpt-5.5") as client:
     response, usage = await client.complete_chat(state.messages)
 ```
 
@@ -60,7 +60,7 @@ async with LLMClient("gpt-4o") as client:
 ```python
 from padwan_ai import supports_vision
 
-supports_vision("gpt-4o")  # True
+supports_vision("gpt-5.5")  # True
 supports_vision("mistral-large-latest")  # False - text-only
 supports_vision("some-local-model")  # True - unknown models are attempted
 ```
@@ -84,7 +84,7 @@ from padwan_ai import supports_audio
 
 supports_audio("gpt-audio")  # True
 supports_audio("gpt-audio", "flac")  # False - OpenAI takes wav/mp3 only
-supports_audio("gemini-2.5-flash", "flac")  # True
+supports_audio("gemini-3.8-flash", "flac")  # True
 supports_audio("grok-4")  # False - no Grok chat model takes audio
 ```
 
