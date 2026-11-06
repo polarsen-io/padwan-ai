@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793912614201,
+  "lastUpdate": 1793996281328,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -7007,6 +7007,66 @@ window.BENCHMARK_DATA = {
             "name": "3.15 · padwan_ai.otel",
             "value": 244.31,
             "range": "5.34",
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64f46a2ecb3af2700c69aa01883feae3b1a078b4",
+          "message": "docs: tighten README and docs claims, default to current models (#177)\n\n* docs(readme): make the examples runnable as copied\n\nThe quickstart now runs as a script, the async-with examples say how to run them, the msgspec/pydantic requirement comes before the agent example, and the placeholder MCP server is replaced by mcp-server-time.\n\n* docs(readme): point to gateway mode from the quickstart\n\n* docs: say one dependency (niquests) and drop the zero-overhead claim\n\n* docs: note that urllib3-future replaces urllib3\n\n* docs: replace retired and dated model names\n\n* feat: default to gpt-5.5 (client) and gpt-5.4-mini (CLI)\n\n* docs(readme): @tool works without msgspec or pydantic",
+          "timestamp": "2026-11-06T21:17:10+01:00",
+          "tree_id": "b1fdbd2370c09437acae4b115987ae47f5164c2e",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/64f46a2ecb3af2700c69aa01883feae3b1a078b4"
+        },
+        "date": 1793996280048,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 233.19,
+            "range": "0.97",
+            "unit": "ms"
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 232.82,
+            "range": "0.87",
+            "unit": "ms"
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 248.77,
+            "range": "1.84",
+            "unit": "ms"
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 52.81,
+            "range": "1.19",
+            "unit": "ms"
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 188.89,
+            "range": "0.63",
+            "unit": "ms"
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 229.14,
+            "range": "1.45",
             "unit": "ms"
           }
         ]
