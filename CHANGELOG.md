@@ -1,3 +1,18 @@
+## 0.19.0 (2026-11-06)
+
+`@tool` works on a bare install, and the default OpenAI models move to current ones.
+
+### Features
+
+- **Tools without a validation library**: `tool()` falls back to a stdlib `BuiltinValidator` when neither msgspec nor pydantic is installed. It covers plain types (`str`, `int`, `float`, `bool`, `None`, `Any`, `list`, `tuple[X, ...]`, `dict[str, X]`, `Literal`, unions, `Annotated`), coerces numeric and boolean strings like msgspec's lax mode, and emits the same schema as msgspec. Classes and constraints still need a library. (#184)
+- **`@tool(validator=...)`**: the decorator takes `name`, `description` and `validator`, alongside `@tool` and `tool(fn, ...)`. (#184)
+- **`PADWAN_TOOL_VALIDATOR`**: set to `msgspec` or `pydantic` to pick the library when both are installed and the annotations name neither. (#184)
+- **Default models**: `OpenAIClient` defaults to `gpt-5.5` (was `gpt-4o`) and the `padwan-ai` CLI to `gpt-5.4-mini` (was `gpt-4o-mini`). Pass `model=` / `-m` to keep the old ones. (#177)
+
+### Docs and tooling
+
+- README examples run as copied (the quickstart is a full script, the agent example uses a real MCP server), the docs use current model names instead of `gpt-4o` and `gemini-2.5-flash`, and Getting started notes that urllib3-future replaces `urllib3` in the same environment, with the opt-out (#177); commitizen runs via `uvx` (#192); Renovate keeps the dev dependency groups current (#181 onwards).
+
 ## 0.18.0 (2026-11-02)
 
 Agent sessions can be persisted with any backend, sync or async, and checkpointed after every round.
