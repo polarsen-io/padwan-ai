@@ -906,14 +906,14 @@
 </span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="p">]</span>
 </span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="p">)</span>
 </span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="k">async</span> <span class="k">with</span> <span class="n">LLMClient</span><span class="p">(</span><span class="s2">"gpt-4o"</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="k">async</span> <span class="k">with</span> <span class="n">LLMClient</span><span class="p">(</span><span class="s2">"gpt-5.5"</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
 </span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">response</span><span class="p">,</span> <span class="n">usage</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">complete_chat</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">messages</span><span class="p">)</span>
 </span></code></pre></div>
 <h2 id="checking-vision-support">Checking vision support</h2>
 <p><code>supports_vision</code> is a best-effort, curated check of whether a model accepts image input:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">padwan_ai</span><span class="w"> </span><span class="kn">import</span> <span class="n">supports_vision</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">supports_vision</span><span class="p">(</span><span class="s2">"gpt-4o"</span><span class="p">)</span>  <span class="c1"># True</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">supports_vision</span><span class="p">(</span><span class="s2">"gpt-5.5"</span><span class="p">)</span>  <span class="c1"># True</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">supports_vision</span><span class="p">(</span><span class="s2">"mistral-large-latest"</span><span class="p">)</span>  <span class="c1"># False - text-only</span>
 </span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">supports_vision</span><span class="p">(</span><span class="s2">"some-local-model"</span><span class="p">)</span>  <span class="c1"># True - unknown models are attempted</span>
 </span></code></pre></div>
@@ -954,7 +954,7 @@
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"gpt-audio"</span><span class="p">)</span>  <span class="c1"># True</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"gpt-audio"</span><span class="p">,</span> <span class="s2">"flac"</span><span class="p">)</span>  <span class="c1"># False - OpenAI takes wav/mp3 only</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"gemini-2.5-flash"</span><span class="p">,</span> <span class="s2">"flac"</span><span class="p">)</span>  <span class="c1"># True</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"gemini-3.8-flash"</span><span class="p">,</span> <span class="s2">"flac"</span><span class="p">)</span>  <span class="c1"># True</span>
 </span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="n">supports_audio</span><span class="p">(</span><span class="s2">"grok-4"</span><span class="p">)</span>  <span class="c1"># False - no Grok chat model takes audio</span>
 </span></code></pre></div>
 <table>

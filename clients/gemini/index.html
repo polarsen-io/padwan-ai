@@ -1001,7 +1001,7 @@
 </span></code></pre></div>
 <p>Unlike the OpenAI-family clients and Anthropic's <code>stream_chat</code>, Gemini's <code>stream_chat</code> silently ignores <code>extra_params</code>, and <code>complete_chat</code> doesn't accept it at all.</p>
 <h2 id="thinking-models">Thinking models</h2>
-<p>Gemini's reasoning models (e.g. <code>gemini-2.5-flash</code>, <code>gemini-2.5-pro</code>) can emit internal thought tokens alongside the final answer. Configure them via two fields:</p>
+<p>Gemini's reasoning models (e.g. <code>gemini-3.8-flash</code>) can emit internal thought tokens alongside the final answer. Configure them via two fields:</p>
 <ul>
 <li><code>thinking_config: ThinkingConfig | None</code> (Gemini-specific) — merged into every <code>generationConfig</code>. Set <code>thinkingBudget</code> to allocate tokens for reasoning and <code>includeThoughts=True</code> to have the thought parts streamed back.</li>
 <li><code>on_thought: Callable[[str], None] | None</code> (defined on <code>LLMClientBase</code>, so any provider can adopt it) — called with each thought text chunk as it arrives. Thought chunks are <strong>not</strong> yielded as part of the normal text stream; this callback is the only way to see them.</li>
