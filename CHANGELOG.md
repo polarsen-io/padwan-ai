@@ -1,3 +1,20 @@
+## 0.19.1 (2026-11-09)
+
+Gemini streaming drops a niquests workaround, and two new models join the typed `Literal`s.
+
+### Features
+
+- **Models**: `claude-fable-5-2` joins `AnthropicModel` and `gemini-omni-1.2-flash` joins `GeminiModel`; OpenAI and Mistral types are regenerated (Mistral `reasoning_effort` accepts `"max"`). (#201)
+
+### Fixes
+
+- **niquests 3.21.3**: the new floor fixes `params` being dropped on `sse+<impl>://` URLs (jawah/niquests#469) and long extension schemes being treated as relative to `base_url` (jawah/niquests#468). Gemini streaming now passes `alt=sse` as `params` instead of an inline query string. (#200)
+- **Extras floors**: `langfuse` needs langfuse 5.2.0 and opentelemetry-api 1.45.2, `otel` needs opentelemetry-api 1.45.2. (#196)
+
+### Docs and tooling
+
+- Renovate keeps the dev dependency groups and GitHub Actions current (#196, #198, #199).
+
 ## 0.19.0 (2026-11-06)
 
 `@tool` works on a bare install, and the default OpenAI models move to current ones.
