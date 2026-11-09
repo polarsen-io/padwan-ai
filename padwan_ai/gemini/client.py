@@ -570,8 +570,8 @@ class GeminiClient(_GeminiAuth, LLMClientBase[GeminiRetry], GeminiToolMixin):
             payload["toolConfig"] = tool_config
 
         resp = await self.session.post(
-            # inline query: niquests drops `params` on custom SSE schemes
-            self._sse_url(f"/models/{_model}:streamGenerateContent?alt=sse"),
+            self._sse_url(f"/models/{_model}:streamGenerateContent"),
+            params={"alt": "sse"},
             json=payload,
         )
         _check_resp_status(resp)

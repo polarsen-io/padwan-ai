@@ -88,7 +88,6 @@ def env_api_key(provider: Provider, var: str) -> str:
     return api_key
 
 
-# niquests parse_scheme() ignores schemes longer than 9 chars ("psse+ai" is 7)
 SSE_IMPLEMENTATION: Literal["ai"] = "ai"
 
 
