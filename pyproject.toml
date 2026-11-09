@@ -29,15 +29,15 @@ Source = "https://github.com/polarsen-io/padwan-ai"
 Changelog = "https://github.com/polarsen-io/padwan-ai/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
-langfuse = ["langfuse>=4.9", "opentelemetry-api>=1.44"]
-otel = ["opentelemetry-api>=1.44"]
+langfuse = ["langfuse>=5.2.0", "opentelemetry-api>=1.45.2"]
+otel = ["opentelemetry-api>=1.45.2"]
 realtime = ["niquests[ws]>=3.21.3"]
 
 [project.scripts]
 padwan-ai = "padwan_ai.__main__:main"
 
 [build-system]
-requires = ["uv_build>=0.13.6,<0.13.7"]
+requires = ["uv_build>=0.13.7,<0.13.8"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
@@ -50,29 +50,29 @@ dev = [
     "msgspec>=0.22.0",
     "opentelemetry-exporter-otlp-proto-http>=1.45.2",
     "opentelemetry-sdk>=1.45.2",
-    "prek>=0.5.9",
-    "pydantic>=2.14.2",
+    "prek>=0.5.10",
+    "pydantic>=2.14.3",
     "beautifulsoup4>=4.15.0",  # tests/test_docs_preview.py
     "pyright>=1.1.414",
     "pytest>=9.2.0",
-    "pytest-asyncio>=1.4.1",
+    "pytest-asyncio>=1.4.1.post1",
     "pytest-cov>=7.1.0",
     "python-dotenv>=1.2.4",
-    "ruff>=0.17.3",
+    "ruff>=0.17.4",
 ]
 llms = [
-    "anthropic>=2.3.0",
-    "elevenlabs>=2.75.0",
+    "anthropic>=2.6.0",
+    "elevenlabs>=2.76.0",
     "google-genai>=2.34.0",
     "gradium>=0.6.4",
     "mcp>=2.3.0",
-    "openai>=3.42.0",
+    "openai>=3.46.0",
     # grpcio (via xai-sdk) has no 3.15 wheels yet and segfaults when built from source
     "xai-sdk>=1.21.0; python_version < '3.15'",
 ]
 research = [
     "jupyter>=1.1.1",
-    "pandas>=3.1.0",
+    "pandas>=3.1.1",
     "python-dotenv>=1.2.4",
 ]
 docs = [
