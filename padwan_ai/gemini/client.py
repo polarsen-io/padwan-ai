@@ -118,6 +118,7 @@ GeminiModel = Literal[
     "gemini-flash-lite-latest",
     "gemini-omni-flash-preview",
     "gemini-omni-1.1-flash",
+    "gemini-omni-1.2-flash",
     "gemini-pro-latest",
 ]
 
