@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793997852197,
+  "lastUpdate": 1794218635100,
   "repoUrl": "https://github.com/polarsen-io/padwan-ai",
   "entries": {
     "Import Performance": [
@@ -7127,6 +7127,66 @@ window.BENCHMARK_DATA = {
             "name": "3.15 · padwan_ai.otel",
             "value": 212.9,
             "range": "7.75",
+            "unit": "ms"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "julien.brayere@obitrain.com",
+            "name": "Julien Brayere",
+            "username": "Andarius"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e26056d30bff877c6a9a4460e935e8fc983bb323",
+          "message": "fix(deps): bump niquests to 3.21.3, drop SSE params workaround (#200)\n\nniquests 3.21.3 applies params to sse+impl:// URLs (jawah/niquests#469) and no longer treats long extension schemes as relative (jawah/niquests#468).",
+          "timestamp": "2026-11-09T11:03:08+01:00",
+          "tree_id": "a7242d4d4502a3624a11fd02a840a0cc83fdcbb6",
+          "url": "https://github.com/polarsen-io/padwan-ai/commit/e26056d30bff877c6a9a4460e935e8fc983bb323"
+        },
+        "date": 1794218634414,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "3.13 · padwan_ai (facade)",
+            "value": 233.1,
+            "range": "1.37",
+            "unit": "ms"
+          },
+          {
+            "name": "3.13 · padwan_ai.openai",
+            "value": 233,
+            "range": "0.69",
+            "unit": "ms"
+          },
+          {
+            "name": "3.13 · padwan_ai.otel",
+            "value": 248.99,
+            "range": "1.17",
+            "unit": "ms"
+          },
+          {
+            "name": "3.15 · padwan_ai (facade)",
+            "value": 52.67,
+            "range": "0.33",
+            "unit": "ms"
+          },
+          {
+            "name": "3.15 · padwan_ai.openai",
+            "value": 189.09,
+            "range": "1.1",
+            "unit": "ms"
+          },
+          {
+            "name": "3.15 · padwan_ai.otel",
+            "value": 230.65,
+            "range": "4.31",
             "unit": "ms"
           }
         ]
