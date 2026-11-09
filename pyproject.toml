@@ -76,7 +76,7 @@ research = [
     "python-dotenv>=1.2.4",
 ]
 docs = [
-    "zensical>=0.0.74",
+    "zensical>=0.1.0",
 ]
 
 [tool.ruff.lint]
