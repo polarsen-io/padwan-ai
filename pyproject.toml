@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     "niquests>=3.21.3",
     "qh3>=2.1.0",
-    "urllib3-future>=2.25.905",
+    "urllib3-future>=2.25.906",
 ]
 
 [project.urls]
@@ -37,7 +37,7 @@ realtime = ["niquests[ws]>=3.21.3"]
 padwan-ai = "padwan_ai.__main__:main"
 
 [build-system]
-requires = ["uv_build>=0.13.7,<0.13.8"]
+requires = ["uv_build>=0.13.8,<0.13.9"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
@@ -55,18 +55,18 @@ dev = [
     "beautifulsoup4>=4.15.0",  # tests/test_docs_preview.py
     "pyright>=1.1.414",
     "pytest>=9.2.0",
-    "pytest-asyncio>=1.4.1.post1",
+    "pytest-asyncio>=1.5.0",
     "pytest-cov>=7.1.0",
     "python-dotenv>=1.2.4",
-    "ruff>=0.17.4",
+    "ruff>=0.17.5",
 ]
 llms = [
-    "anthropic>=2.6.0",
-    "elevenlabs>=2.77.0",
-    "google-genai>=3.0.0",
+    "anthropic>=2.8.0",
+    "elevenlabs>=2.78.0",
+    "google-genai>=3.3.0",
     "gradium>=0.6.4",
     "mcp>=2.3.0",
-    "openai>=3.46.0",
+    "openai>=3.50.0",
     # grpcio (via xai-sdk) has no 3.15 wheels yet and segfaults when built from source
     "xai-sdk>=1.21.0; python_version < '3.15'",
 ]
@@ -76,7 +76,7 @@ research = [
     "python-dotenv>=1.2.4",
 ]
 docs = [
-    "zensical>=0.1.0",
+    "zensical>=0.1.1",
 ]
 
 [tool.ruff.lint]
