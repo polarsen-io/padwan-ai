@@ -99,6 +99,8 @@ if TYPE_CHECKING:
 
 GeminiModel = Literal[
     "gemini-4-argon",
+    "gemini-4-carbon",
+    "gemini-4-hydrogen",
     "gemini-3.1-pro-preview",
     "gemini-3.1-flash-lite",
     "gemini-3.1-flash-lite-preview",
