@@ -1,3 +1,19 @@
+## 0.19.2 (2026-11-23)
+
+New OpenAI and Gemini model aliases, and a newer urllib3-future floor.
+
+### Features
+
+- **Models**: `gpt-6.2-astra` and `gpt-6.2-sol` join `OpenAIModel`, `gemini-4-carbon`, `gemini-4-hydrogen` and `gemini-4-neon` join `GeminiModel`; OpenAI types are regenerated. (#205, #207)
+
+### Fixes
+
+- **urllib3-future 2.25.907**: the runtime floor moves from 2.25.905. (#204, #206)
+
+### Docs and tooling
+
+- Dev, docs and `llms` dependency groups and the `uv_build` backend are bumped (#203, #204, #206).
+
 ## 0.19.1 (2026-11-09)
 
 Gemini streaming drops a niquests workaround, and two new models join the typed `Literal`s.
