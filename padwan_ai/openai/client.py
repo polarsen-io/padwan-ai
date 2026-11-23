@@ -135,6 +135,8 @@ OpenAIModel = Literal[
     "gpt-6-sol",
     "gpt-6.1-sol",
     "gpt-6.1-terra",
+    "gpt-6.2-astra",
+    "gpt-6.2-sol",
     "o1",
     "o1-mini",
     "o1-preview",
