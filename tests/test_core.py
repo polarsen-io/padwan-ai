@@ -226,7 +226,14 @@ def test_is_model(func, model, expected: bool):
     "model, expected_type, ctx",
     [
         pytest.param("gpt-4o", OpenAIClient, nullcontext(), id="openai"),
+        pytest.param(
+            "gpt-6.2-astra", OpenAIClient, nullcontext(), id="openai-gpt6.2-astra"
+        ),
+        pytest.param(
+            "gpt-6.2-sol", OpenAIClient, nullcontext(), id="openai-gpt6.2-sol"
+        ),
         pytest.param("gemini-2.5-flash", GeminiClient, nullcontext(), id="gemini"),
+        pytest.param("gemini-4-neon", GeminiClient, nullcontext(), id="gemini-4-neon"),
         pytest.param(
             "mistral-large-latest", MistralClient, nullcontext(), id="mistral"
         ),

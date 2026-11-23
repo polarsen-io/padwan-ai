@@ -21,6 +21,7 @@ from padwan_ai.conversation import Message
 from padwan_ai.errors import LLMError, QuotaExceededError, TooManyRequestsError
 from padwan_ai.gemini.batch import BatchJob, BatchResult
 from padwan_ai.gemini.client import (
+    GEMINI_MODELS,
     GeminiChatStream,
     GeminiClient,
     GeminiRetry,
@@ -41,6 +42,10 @@ from padwan_ai.gemini.models import (
     StreamBody,
     ThinkingConfig,
 )
+
+
+def test_gemini_model_literal_includes_stable_drift_addition() -> None:
+    assert "gemini-4-neon" in GEMINI_MODELS
 
 
 @pytest.mark.parametrize(

@@ -23,6 +23,8 @@ from padwan_ai.openai.types import CreateChatCompletionStreamResponse
 def test_openai_model_literal_includes_stable_drift_addition() -> None:
     assert "gpt-6.1-sol" in OPENAI_MODELS
     assert "gpt-6.1-terra" in OPENAI_MODELS
+    assert "gpt-6.2-astra" in OPENAI_MODELS
+    assert "gpt-6.2-sol" in OPENAI_MODELS
 
 
 _NOT_JSON = ValueError("not json")
