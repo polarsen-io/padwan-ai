@@ -1,0 +1,24 @@
+# Regenerate with `just gen-diagrams`.
+direction: right
+registry: "Tools" {
+  pinned: "always_loaded" {style.fill: "#cfe5ff"; style.font-color: "#1f2328"}
+  output: "output= tool (submit)" {style.fill: "#cfe5ff"; style.font-color: "#1f2328"}
+  rest: "every other tool" {style.fill: "#ffe8d6"; style.font-color: "#1f2328"}
+}
+request: "Request sent each round" {
+  history: "system + history"
+  full: "full definitions" {
+    style.fill: "#cfe5ff"
+    style.font-color: "#1f2328"
+    a: "always_loaded + output= tool" {style.fill: "#e8f2ff"; style.font-color: "#1f2328"}
+    l: "tools loaded so far" {style.fill: "#e8f2ff"; style.font-color: "#1f2328"}
+  }
+  catalog: "load_tools\none line per other tool" {style.fill: "#ffe8d6"; style.font-color: "#1f2328"; style.stroke-dash: 3}
+}
+model: Model {shape: circle}
+registry.pinned -> request.full.a: every round
+registry.output -> request.full.a: every round
+registry.rest -> request.catalog: name + first sentence
+registry.rest -> request.full.l: "once a load_tools result names it"
+request -> model: round N
+model -> request.catalog: "calls load_tools(names=[…])" {style.stroke-dash: 4}
