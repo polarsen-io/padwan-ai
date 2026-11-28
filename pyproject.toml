@@ -37,7 +37,7 @@ realtime = ["niquests[ws]>=3.21.3"]
 padwan-ai = "padwan_ai.__main__:main"
 
 [build-system]
-requires = ["uv_build>=0.13.9,<0.13.10"]
+requires = ["uv_build>=0.13.10,<0.13.11"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
@@ -61,12 +61,12 @@ dev = [
     "ruff>=0.17.6",
 ]
 llms = [
-    "anthropic>=2.12.0",
-    "elevenlabs>=2.79.0",
+    "anthropic>=2.14.0",
+    "elevenlabs>=2.80.0",
     "google-genai>=3.6.1",
     "gradium>=0.6.5",
     "mcp>=2.3.0",
-    "openai>=3.57.0",
+    "openai>=3.59.0",
     # grpcio (via xai-sdk) has no 3.15 wheels yet and segfaults when built from source
     "xai-sdk>=1.21.0; python_version < '3.15'",
 ]
